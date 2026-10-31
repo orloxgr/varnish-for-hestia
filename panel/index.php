@@ -44,11 +44,18 @@ $respond = static function (int $code, array $data): never {
     echo json_encode($data, JSON_THROW_ON_ERROR);
     exit;
 };
-if ((isset($_GET['owner']) && $_GET['owner'] !== $owner) ||
-    (isset($_POST['owner']) && $_POST['owner'] !== $owner)) {
-    $respond(403, ['ok' => false, 'error' => 'Another account cannot be selected.']);
+$headerOwner = $owner;
+$actorData = get_user_data($actor)[$actor] ?? [];
+$isAdmin = ($actorData['ROLE'] ?? '') === 'admin' && empty($_SESSION['look']);
+$requestedOwner = $_POST['owner'] ?? $_GET['owner'] ?? null;
+if ($requestedOwner !== null) {
+    if (!is_string($requestedOwner) || (!$isAdmin && $requestedOwner !== $owner)) {
+        $respond(403, ['ok' => false, 'error' => 'Another account cannot be selected.']);
+    }
+    $owner = $requestedOwner;
 }
-$action = 'inventory';
+$adminOverview = $isAdmin && $requestedOwner === null;
+$action = $adminOverview ? 'admin-inventory' : 'inventory';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_string($_POST['token'] ?? null) ||
         !hash_equals($_SESSION['token'] ?? '', $_POST['token']) || !empty($read_only)) {
@@ -58,6 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } elseif ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     $respond(405, ['ok' => false, 'error' => 'Method not supported.']);
 }
+if (!is_string($action)) {
+    $respond(400, ['ok' => false, 'error' => 'Invalid operation.']);
+}
 $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'domain' => $_POST['domain'] ?? null,
             'enabled' => ($_POST['enabled'] ?? '') === '1',
@@ -65,6 +75,21 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'password' => $_POST['password'] ?? null,
             'custom_recv' => $_POST['custom_recv'] ?? '',
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
+if (str_starts_with((string)$action, 'admin-')) {
+    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk'], true)) {
+        $respond(403, ['ok' => false, 'error' => 'Administrator access required.']);
+    }
+    $adminOverview = true;
+    $request['scope'] = $_POST['scope'] ?? null;
+    $request['operation'] = $_POST['operation'] ?? null;
+    $request['profile'] = $_POST['profile'] ?? null;
+    $request['accounts'] = $_POST['accounts'] ?? [];
+    $targets = $_POST['targets'] ?? [];
+    if (!is_array($targets)) {
+        $respond(400, ['ok' => false, 'error' => 'Invalid website selection.']);
+    }
+    $request['targets'] = array_map(static fn($value) => is_string($value) ? json_decode($value, true) : null, $targets);
+}
 $jsonResponse = ($_GET['format'] ?? '') === 'json' ||
     ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html');
 $bridge = static function (array $payload) use ($root, $meta): array {
@@ -93,7 +118,12 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
     $pageError = $action === 'configure-site'
         ? 'The profile or VCL could not be applied. The previous configuration is still active.'
         : 'The operation could not be completed. Check that the service is running and access is enabled.';
-    [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner, 'action' => 'inventory']);
+    if ($adminOverview) {
+        $pageError = $action === 'admin-bulk'
+            ? 'The bulk change could not be applied. Check the selection and that the service is running.'
+            : 'Could not load accounts. Check that the service is installed and running.';
+    }
+    [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner, 'action' => $adminOverview ? 'admin-inventory' : 'inventory']);
     $data = $status === 0 && is_array($current) && !empty($current['ok']) ? $current : ['sites' => []];
 } elseif ($jsonResponse) {
     $respond(200, $data);
@@ -101,7 +131,7 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
 header('Content-Type: text/html; charset=utf-8');
 $escape = static fn($s) => htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $managed = !empty($data['service_installed']) || isset($data['enabled']);
-$selectedDomain = is_string($_POST['domain'] ?? null) ? $_POST['domain'] : ($data['sites'][0]['domain'] ?? '');
+$selectedDomain = is_string($_POST['domain'] ?? $_GET['domain'] ?? null) ? ($_POST['domain'] ?? $_GET['domain']) : ($data['sites'][0]['domain'] ?? '');
 $message = '';
 $messageType = 'success';
 if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -127,12 +157,15 @@ if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Website access was verified.';
     }
 }
-$formFields = static function (string $operation, ?string $domain = null) use ($escape): void {
+$formFields = static function (string $operation, ?string $domain = null) use ($escape, $isAdmin, $adminOverview, $owner): void {
     echo '<input type="hidden" name="token" value="' . $escape($_SESSION['token']) . '">';
     echo '<input type="hidden" name="display" value="html">';
     echo '<input type="hidden" name="action" value="' . $escape($operation) . '">';
+    if ($isAdmin && !$adminOverview) {
+        echo '<input type="hidden" name="owner" value="' . $escape($owner) . '">';
+    }
     if ($domain !== null) {
         echo '<input type="hidden" name="domain" value="' . $escape($domain) . '">';
     }
 };
-require '__INSTALL_ROOT__/panel/view.php';
+require $adminOverview ? '__INSTALL_ROOT__/panel/admin-view.php' : '__INSTALL_ROOT__/panel/view.php';

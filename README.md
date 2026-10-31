@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.5.4** Ξ’Β· GPL-3.0-or-later.
+profiles and VCL controls. Version **0.6.0** Ξ’Β· GPL-3.0-or-later.
 
 ## Quick start
 
@@ -30,8 +30,8 @@ installer also installs Varnish **9.1.0**; do not install the service separately
 4. **Log into Hestia as the site owner. Click Plugins → Varnish in the top bar.**
 
    Sites start enabled with **General**. Choose **WordPress**, **WooCommerce**
-   or **UltraCache for Hestia** per site and save. Administrators can use Hestia's **Log in as**
-   action to open the owner's account.
+   or **UltraCache for Hestia** per site and save. Administrators see all accounts
+   and websites, with bulk profile and enable/disable controls.
 
 Done. Existing users and sites are added during installation; new ones are picked
 up automatically within a minute. Each owner can edit the supported VCL sections,

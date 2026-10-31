@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.5.4**.
+Version **0.6.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -62,7 +62,14 @@ https://YOUR-SERVER:8083/plugins/varnish/
 Direct bookmarks first show an **Open Varnish for Hestia** link, retaining Hestia's
 native same-origin/session policy. The top-bar **Plugins** menu is loaded from an addon-owned script in
 `/usr/local/hestia/web/js/custom_scripts/`. Existing menu files are not modified.
-Administrators use Hestia's account impersonation to manage a selected owner.
+Administrators see all accounts and websites on the addon home page. Select
+accounts or individual websites for bulk changes, or choose **All accounts / websites**.
+Account selections include every website belonging to those accounts. **Manage account**
+and **Manage website** open the existing owner controls without impersonation.
+Varnish profile changes preserve each site's optional VCL sections and purge token.
+Bulk website enable/disable retains the separate account enable/disable choice.
+Native hosting suspension and package restrictions continue to apply.
+Bulk changes affect the current websites; newly created sites start with General.
 
 Each owner can:
 

@@ -36,12 +36,19 @@ def dispatch(request):
     owner = account_name(request.get('owner'))
     actor = account_name(request.get('actor'))
     actor_data = hestia('v-list-user', actor, 'json').get(actor)
+    action = request.get('action', 'inventory')
+    is_admin = bool(actor_data and actor_data.get('ROLE') == 'admin' and actor_data.get('SUSPENDED') != 'yes')
+    if action in ('admin-inventory', 'admin-bulk'):
+        if not is_admin:
+            raise RequestError('Administrator access required.')
+        from administration import request as admin_request
+        return admin_request(hestia, action, request, META['slug'])
     owner_data = hestia('v-list-user', owner, 'json').get(owner)
     if not actor_data or not owner_data or actor_data.get('SUSPENDED') == 'yes':
         raise RequestError('Account unavailable.')
     if owner != actor and actor_data.get('ROLE') != 'admin':
         raise RequestError('Another account cannot be selected.')
-    if owner_data.get('SUSPENDED') == 'yes':
+    if owner_data.get('SUSPENDED') == 'yes' and not is_admin:
         raise RequestError('Account suspended.')
     domains = hestia('v-list-web-domains', owner, 'json')
     action = request.get('action', 'inventory')

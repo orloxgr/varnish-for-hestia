@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Add an administrator dashboard listing all native accounts and websites.
+- Add bulk account/site enable and disable, plus direct owner management.
+- Apply a profile to selected or all websites while retaining site VCL and tokens.
+
 ## 0.5.4
 
 - Render addon pages with Hestia’s native header, navigation, selected theme, forms and alerts.

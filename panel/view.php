@@ -1,9 +1,10 @@
 <?php
 require $root . '/web/templates/header.php';
-$panel = top_panel($owner, $TAB);
+$panel = top_panel($headerOwner, $TAB);
 ?>
 <script>document.title = <?= json_encode($meta['title'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
 <div class="toolbar"><div class="toolbar-inner"><div class="toolbar-buttons">
+    <?php if ($isAdmin): ?><a class="button button-secondary" href="./">All accounts</a><?php endif; ?>
     <a class="button button-secondary" href="/list/web/"><i class="fas fa-arrow-left icon-blue"></i>Back</a>
 </div></div></div>
 <div class="container"><div class="form-container form-container-wide">
@@ -52,6 +53,7 @@ $panel = top_panel($owner, $TAB);
                                     <option value="<?= $escape($value) ?>" <?= $site['profile'] === $value ? 'selected' : '' ?>><?= $escape($label) ?></option>
                                 <?php endforeach; ?>
                             </select></div>
+                            <p class="u-mb20">Optional rules added to this profile. Leave empty to use the profile as supplied.</p>
                             <div class="u-mb20"><label class="form-label" for="recv-<?= $escape($site['domain']) ?>">Request VCL</label><textarea class="form-control" id="recv-<?= $escape($site['domain']) ?>" name="custom_recv" rows="6" maxlength="16384" spellcheck="false"><?= $escape($site['custom_recv']) ?></textarea></div>
                             <div class="u-mb20"><label class="form-label" for="backend-<?= $escape($site['domain']) ?>">Backend response VCL</label><textarea class="form-control" id="backend-<?= $escape($site['domain']) ?>" name="custom_backend_response" rows="6" maxlength="16384" spellcheck="false"><?= $escape($site['custom_backend_response']) ?></textarea></div>
                             <button type="submit" class="button"><i class="fas fa-floppy-disk icon-purple"></i>Validate and apply</button>
