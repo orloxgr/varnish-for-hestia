@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.5.2**.
+Version **0.5.3**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -60,7 +60,8 @@ https://YOUR-SERVER:8083/plugins/varnish/
 ```
 
 Direct bookmarks first show an **Open Varnish for Hestia** link, retaining Hestia's
-native same-origin/session policy. Existing menu files are not modified.
+native same-origin/session policy. The top-bar **Plugins** menu is loaded from an addon-owned script in
+`/usr/local/hestia/web/js/custom_scripts/`. Existing menu files are not modified.
 Administrators use Hestia's account impersonation to manage a selected owner.
 
 Each owner can:
@@ -256,3 +257,14 @@ GPL-3.0-or-later; see `LICENSE` and `CHANGELOG.md`.
 - [Hestia web templates](https://hestiacp.com/docs/server-administration/web-templates)
 - [Varnish CLI](https://varnish-cache.org/docs/7.4/users-guide/run_cli.html)
 - [Apache FastCGI environment controls](https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html#proxyfcgisetenvif)
+
+## Panel menu
+
+Hestia automatically includes the addon-owned `varnish-for-hestia.js` script from
+`/usr/local/hestia/web/js/custom_scripts/`. Installed addons share one **Plugins**
+dropdown; each installer and uninstaller manages only its own script. Native
+Hestia login, account context and permission checks continue to apply. If the
+header layout is unfamiliar, the script leaves the page alone; the direct
+`/plugins/varnish/` URL remains available.
+
+See [Hestia’s custom-script extension point](https://github.com/hestiacp/hestiacp/blob/1.10.5/web/js/custom_scripts/README.txt).

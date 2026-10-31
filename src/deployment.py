@@ -18,6 +18,7 @@ PENDING = Path('/var/lib')/ID/'code-update.json'
 
 
 def check():
+    check_menu()
     if TARGET.is_symlink():
         real=TARGET.resolve()
         if real.parent != RELEASES or RELEASES.is_symlink() or not real.is_dir():
@@ -63,6 +64,38 @@ def check_panel(path):
         details = b'\n'.join(output for output in (result.stdout, result.stderr) if output).decode(errors='replace').strip()
         raise RuntimeError('Panel PHP syntax check failed (exit ' + str(result.returncode) + '): ' +
                            str(path) + '\n' + details)
+
+
+def menu_path():
+    return HESTIA/'web/js/custom_scripts'/(ID+'.js')
+
+
+def check_menu():
+    path = menu_path()
+    if path.is_symlink() or path.parent.resolve() != path.parent:
+        raise ValueError('Unexpected addon menu script path')
+    if path.exists() and (not path.is_file() or not path.read_text().startswith('// Managed by '+ID+'\n')):
+        raise ValueError('Refusing an unmanaged menu script')
+
+
+def shared_directory(path):
+    try:
+        path.mkdir(mode=0o755)
+    except FileExistsError:
+        pass
+    else:
+        path.chmod(0o755)
+
+
+def sync_menu(release):
+    check_menu()
+    asset = release/'panel/menu.js'
+    if asset.is_file():
+        shared_directory(menu_path().parent)
+        write(menu_path(),asset.read_bytes(),0o644)
+    else:
+        menu_path().unlink(missing_ok=True)
+
 
 
 def publish(source,meta):
@@ -113,16 +146,12 @@ def publish(source,meta):
         else:
             switch(stage)
         route=HESTIA/'web/plugins'/meta['slug']
-        try:
-            route.parent.mkdir(mode=0o755)
-        except FileExistsError:
-            pass
-        else:
-            route.parent.chmod(0o755)
+        shared_directory(route.parent)
         ensure_owned_directory(route,ID);route.chmod(0o755)
         write(route/'index.php',page,0o644)
         command=HESTIA/'bin'/meta['command']
         write(command,'#!/bin/sh\n# Managed by '+ID+'\nexec /usr/bin/python3 -I '+str(TARGET/'src/addon.py')+' "$@"\n',0o755)
+        sync_menu(stage)
     except Exception:
         if not TARGET.is_symlink() or TARGET.resolve()!=stage:
             shutil.rmtree(stage)
@@ -142,11 +171,13 @@ def rollback():
         meta=json.loads((TARGET/'addon.json').read_text())
         page=(TARGET/'panel/index.php').read_text().replace('__INSTALL_ROOT__',str(TARGET))
         write(HESTIA/'web/plugins'/meta['slug']/'index.php',page,0o644)
+        sync_menu(TARGET)
     commit()
 
 
 def remove():
     check()
+    menu_path().unlink(missing_ok=True)
     if TARGET.is_symlink():
         TARGET.unlink();sync_directory(TARGET.parent)
     elif TARGET.exists():

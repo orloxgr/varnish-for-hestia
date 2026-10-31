@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3
+
+- Add a Plugins menu in Hestia’s top bar through its native custom-scripts loader.
+- Share one dropdown with other installed addons, without editing Hestia templates.
+- Install, update, roll back and remove only this addon’s menu script.
+
 ## 0.5.2
 
 - Create the shared Hestia plugins directory when installing the first addon.
