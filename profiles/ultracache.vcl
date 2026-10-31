@@ -174,11 +174,12 @@ if (
     return (pass);
 }
 
-# WooCommerce customer-specific actions are request-visible and can be
-# passed here without assuming site-specific Cart/Checkout/Account paths.
-# Dynamic WooCommerce page URLs are resolved by UltraCache itself and
-# protected through the origin's standard private/no-store cache policy.
-if (req.url ~ "(?i)(\?|&)(add-to-cart|wc-ajax|wc-api)=") {
+# Keep standard WooCommerce private paths safe without any application plugin.
+# Other/localized paths follow the origin's private/no-store cache policy.
+if (
+    req.url ~ "(?i)^/(cart|checkout|my-account)(/|[?]|$)" ||
+    req.url ~ "(?i)(\?|&)(add-to-cart|wc-ajax|wc-api)="
+) {
     set req.http.X-Cache-Mode = "PASS";
     return (pass);
 }
@@ -289,24 +290,9 @@ if (req.http.Cookie) {
     }
 }
 
-# Canonicalize browser Accept values into the three HTML representation
-# buckets used by modern WordPress image negotiation. Varnish compares
-# Vary request headers exactly, so raw browser Accept strings would create
-# many equivalent objects. A media type explicitly disabled with q=0 is
-# never selected.
-if (
-    req.http.Accept &&
-    req.http.Accept ~ "(?i)(^|,)[ ]*image/avif(?=[ ]*(?:;|,|$))(?![^,]*;[ ]*q[ ]*=[ ]*0(?:[.]0*)?(?:[ ;,]|$))"
-) {
-    set req.http.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8";
-} else if (
-    req.http.Accept &&
-    req.http.Accept ~ "(?i)(^|,)[ ]*image/webp(?=[ ]*(?:;|,|$))(?![^,]*;[ ]*q[ ]*=[ ]*0(?:[.]0*)?(?:[ ;,]|$))"
-) {
-    set req.http.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
-} else {
-    set req.http.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-}
+# Preserve the client's exact content negotiation, including JSON/XML APIs,
+# image formats, quality values and an absent Accept header. Native Vary: Accept
+# keeps representations separate without assuming a particular application.
 
 return (hash);
 }

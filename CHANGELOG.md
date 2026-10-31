@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- Keep the original Accept header in the UltraCache profile for ordinary PHP APIs and content negotiation.
+- Bypass standard cart, checkout and account paths in UltraCache without relying on an application plugin.
+- Verify all profiles against plain HTTP origins, sessions, private responses and optional ESI.
+
 ## 0.6.0
 
 - Add an administrator dashboard listing all native accounts and websites.

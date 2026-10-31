@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.6.0**.
+Version **0.6.1**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -99,8 +99,15 @@ Public proxy requests cannot use either invalidation method.
 General respects request cookies/authentication and origin privacy headers.
 WordPress adds private administration/API paths; WooCommerce adds cart, checkout
 and account/action paths. UltraCache uses a WordPress/WooCommerce VCL profile with ESI, approved
-shared parents, private cookie carriers, canonical image representation variants,
+shared parents, private cookie carriers, native content-negotiation variants,
 grace and keep. ESI can use the same site's aliases and cannot cross site scopes.
+
+All profiles also work with ordinary PHP or WordPress without the named plugins.
+Absent ESI response headers mean normal HTTP delivery and caching; optional shared
+parents without approval are delivered uncached. No application detection occurs.
+The origin receives the original `Accept` header, and native `Vary: Accept` keeps
+JSON, XML, text and image representations separate. WooCommerce and UltraCache
+both bypass the standard cart, checkout and account URLs without requiring a plugin.
 
 The site-local language supports `if`/`else`, request-side `return(pass)`, custom
 `X-User-*` headers, and backend-response TTL/grace/keep values. For example:

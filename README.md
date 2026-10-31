@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.6.0** Ξ’Β· GPL-3.0-or-later.
+profiles and VCL controls. Version **0.6.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -36,7 +36,7 @@ installer also installs Varnish **9.1.0**; do not install the service separately
 Done. Existing users and sites are added during installation; new ones are picked
 up automatically within a minute. Each owner can edit the supported VCL sections,
 change purge tokens, clear cache, or disable Varnish for a site or their account.
-Profiles work independently of installed applications.
+All profiles work with plain PHP or WordPress, independently of installed plugins.
 
 The **8 GiB budget is shared by all sites**, not allocated per user. This example
 is sized for a **32 GB server**: Varnish also uses RAM outside cache storage,
