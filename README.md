@@ -1,12 +1,12 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.5.1** Β· GPL-3.0-or-later.
+profiles and VCL controls. Version **0.5.2** Ξ’Β· GPL-3.0-or-later.
 
 ## Quick start
 
 Requires **Ubuntu 26.04 amd64 with Hestia 1.10.5 already installed**, using
-**Nginx β†’ Apache/PHP-FPM**. Run commands over SSH as an administrator. The
+**Nginx Ξ²β€ β€™ Apache/PHP-FPM**. Run commands over SSH as an administrator. The
 installer also installs Varnish **9.1.0**; do not install the service separately.
 
 1. **Clone.**

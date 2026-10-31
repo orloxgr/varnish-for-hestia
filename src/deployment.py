@@ -11,6 +11,7 @@ import tempfile
 from files import write, write_json, sync_directory, ensure_owned_directory
 
 ID = json.loads((Path(__file__).resolve().parents[1]/'addon.json').read_text())['id']
+HESTIA = Path('/usr/local/hestia')
 TARGET = Path('/opt')/ID
 RELEASES = Path('/opt')/(ID+'.releases')
 PENDING = Path('/var/lib')/ID/'code-update.json'
@@ -56,7 +57,7 @@ def switch(release):
 
 
 def check_panel(path):
-    result = subprocess.run(['/usr/local/hestia/php/bin/php', '-l', str(path)],
+    result = subprocess.run([str(HESTIA/'php/bin/php'), '-l', str(path)],
                             capture_output=True, timeout=20)
     if result.returncode:
         details = b'\n'.join(output for output in (result.stdout, result.stderr) if output).decode(errors='replace').strip()
@@ -111,10 +112,16 @@ def publish(source,meta):
             shutil.rmtree(temporary);sync_directory(TARGET.parent)
         else:
             switch(stage)
-        route=Path('/usr/local/hestia/web/plugins')/meta['slug']
+        route=HESTIA/'web/plugins'/meta['slug']
+        try:
+            route.parent.mkdir(mode=0o755)
+        except FileExistsError:
+            pass
+        else:
+            route.parent.chmod(0o755)
         ensure_owned_directory(route,ID);route.chmod(0o755)
         write(route/'index.php',page,0o644)
-        command=Path('/usr/local/hestia/bin')/meta['command']
+        command=HESTIA/'bin'/meta['command']
         write(command,'#!/bin/sh\n# Managed by '+ID+'\nexec /usr/bin/python3 -I '+str(TARGET/'src/addon.py')+' "$@"\n',0o755)
     except Exception:
         if not TARGET.is_symlink() or TARGET.resolve()!=stage:
@@ -134,7 +141,7 @@ def rollback():
         switch(previous)
         meta=json.loads((TARGET/'addon.json').read_text())
         page=(TARGET/'panel/index.php').read_text().replace('__INSTALL_ROOT__',str(TARGET))
-        write(Path('/usr/local/hestia/web/plugins')/meta['slug']/'index.php',page,0o644)
+        write(HESTIA/'web/plugins'/meta['slug']/'index.php',page,0o644)
     commit()
 
 
