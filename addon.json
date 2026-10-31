@@ -1,0 +1,8 @@
+{
+  "id": "varnish-for-hestia",
+  "slug": "varnish",
+  "title": "Varnish for Hestia",
+  "version": "0.5.0",
+  "command": "v-varnish-hestia",
+  "service": "varnish"
+}
