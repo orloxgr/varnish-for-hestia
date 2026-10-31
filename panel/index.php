@@ -65,97 +65,74 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'password' => $_POST['password'] ?? null,
             'custom_recv' => $_POST['custom_recv'] ?? '',
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
-$pipes = [];
-$process = proc_open(['/usr/bin/sudo', '-n', $root . '/bin/' . $meta['command']],
-    [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-if (!is_resource($process)) {
-    $respond(503, ['ok' => false, 'error' => 'Addon bridge unavailable.']);
-}
-fwrite($pipes[0], json_encode($request, JSON_THROW_ON_ERROR));
-fclose($pipes[0]);
-$output = stream_get_contents($pipes[1], 1048576);
-fclose($pipes[1]);
-stream_get_contents($pipes[2], 4096);
-fclose($pipes[2]);
-$code = proc_close($process);
-$data = json_decode($output, true);
+$jsonResponse = ($_GET['format'] ?? '') === 'json' ||
+    ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html');
+$bridge = static function (array $payload) use ($root, $meta): array {
+    $pipes = [];
+    $process = proc_open(['/usr/bin/sudo', '-n', $root . '/bin/' . $meta['command']],
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($process)) {
+        return [1, null];
+    }
+    fwrite($pipes[0], json_encode($payload, JSON_THROW_ON_ERROR));
+    fclose($pipes[0]);
+    $output = stream_get_contents($pipes[1], 1048576);
+    fclose($pipes[1]);
+    stream_get_contents($pipes[2], 4096);
+    fclose($pipes[2]);
+    return [proc_close($process), json_decode($output, true)];
+};
+[$code, $data] = $bridge($request);
+$pageError = '';
 if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
-    $respond(403, ['ok' => false, 'error' => 'Request refused or service unavailable.']);
-}
-if (($_GET['format'] ?? '') === 'json' || ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html')) {
+    if ($jsonResponse) {
+        $respond(403, ['ok' => false, 'error' => 'Request refused or service unavailable.']);
+    }
+    // Hestia intercepts 4xx pages. Render form errors normally; JSON requests
+    // still receive the 403 response above.
+    $pageError = $action === 'configure-site'
+        ? 'The profile or VCL could not be applied. The previous configuration is still active.'
+        : 'The operation could not be completed. Check that the service is running and access is enabled.';
+    [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner, 'action' => 'inventory']);
+    $data = $status === 0 && is_array($current) && !empty($current['ok']) ? $current : ['sites' => []];
+} elseif ($jsonResponse) {
     $respond(200, $data);
 }
+header('Content-Type: text/html; charset=utf-8');
 $escape = static fn($s) => htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-?><!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title><?= $escape($meta['title']) ?></title>
-<style>body{font:16px system-ui;background:#f4f6f8;color:#1d2939;margin:3rem auto;max-width:900px;padding:0 20px}main{background:white;border:1px solid #d0d5dd;border-radius:12px;padding:28px}a{color:#175cd3}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:14px 8px;border-bottom:1px solid #eaecf0}small{color:#475467}</style>
-</head><body><main>
-<a href="/list/web/">Back to Hestia websites</a>
-<h1><?= $escape($meta['title']) ?></h1>
-<p>Account: <strong><?= $escape($owner) ?></strong></p>
-<?php if (empty($data['service_installed']) && !isset($data['enabled'])): ?>
-<p>Service management has not been installed yet.</p>
-<?php else: ?>
-<?php if (isset($data['connection'])): ?>
-<h2>Site connection</h2><pre><?= $escape(json_encode($data['connection'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?></pre>
-<?php endif; ?>
-<?php if (!empty($data['purged'])): ?><p>The selected site's cache was cleared.</p><?php endif; ?>
-<?php if (empty($data['allowed'])): ?><p>The hosting package does not currently allow Varnish.</p><?php endif; ?>
-<form method="post">
-<input type="hidden" name="token" value="<?= $escape($_SESSION['token']) ?>">
-<input type="hidden" name="action" value="toggle-account"><input type="hidden" name="display" value="html">
-<input type="hidden" name="enabled" value="<?= !empty($data['enabled']) ? '0' : '1' ?>">
-<button type="submit"><?= !empty($data['enabled']) ? 'Disable Varnish for this account' : 'Enable Varnish for this account' ?></button>
-</form>
-<?php foreach ($data['sites'] as $site): ?>
-<section><h2><?= $escape($site['domain']) ?></h2>
-<p>Aliases: <?= $escape(implode(', ', $site['aliases'])) ?> · <?= !empty($site['routing_active']) ? 'Varnish route selected' : 'Original route selected' ?></p>
-<?php foreach (['toggle-site' => !empty($site['enabled']) ? 'Disable site cache' : 'Enable site cache', 'credentials' => 'View site token', 'flush' => 'Clear site cache'] as $operation => $label): ?>
-<form method="post" style="display:inline-block">
-<input type="hidden" name="token" value="<?= $escape($_SESSION['token']) ?>">
-<input type="hidden" name="action" value="<?= $escape($operation) ?>"><input type="hidden" name="display" value="html">
-<input type="hidden" name="domain" value="<?= $escape($site['domain']) ?>">
-<input type="hidden" name="enabled" value="<?= !empty($site['enabled']) ? '0' : '1' ?>">
-<button type="submit"><?= $escape($label) ?></button></form>
-<?php endforeach; ?>
-<details><summary>Profile and site VCL</summary>
-<form method="post">
-<input type="hidden" name="token" value="<?= $escape($_SESSION['token']) ?>">
-<input type="hidden" name="action" value="configure-site"><input type="hidden" name="display" value="html">
-<input type="hidden" name="domain" value="<?= $escape($site['domain']) ?>">
-<p><label>Profile <select name="profile">
-<?php foreach (['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' => 'WooCommerce', 'ultracache' => 'UltraCache for Hestia'] as $value => $label): ?>
-<option value="<?= $escape($value) ?>" <?= $site['profile'] === $value ? 'selected' : '' ?>><?= $escape($label) ?></option>
-<?php endforeach; ?></select></label></p>
-<p><label>Request section<br><textarea name="custom_recv" rows="6" maxlength="16384" style="width:100%;font-family:monospace"><?= $escape($site['custom_recv']) ?></textarea></label></p>
-<p><label>Backend response section<br><textarea name="custom_backend_response" rows="6" maxlength="16384" style="width:100%;font-family:monospace"><?= $escape($site['custom_backend_response']) ?></textarea></label></p>
-<button type="submit">Validate and apply</button></form>
-</details>
-<details><summary>Change site purge token</summary><form method="post">
-<input type="hidden" name="token" value="<?= $escape($_SESSION['token']) ?>">
-<input type="hidden" name="action" value="token"><input type="hidden" name="display" value="html">
-<input type="hidden" name="domain" value="<?= $escape($site['domain']) ?>">
-<label>New token <input type="password" name="password" minlength="12" maxlength="256" pattern="[A-Za-z0-9_-]+" autocomplete="new-password" required></label>
-<button type="submit">Change token</button></form></details>
-</section>
-<?php endforeach; ?>
-<?php endif; ?>
-<?php if (empty($data['service_installed']) && !isset($data['enabled'])): ?>
-<table><thead><tr><th>Website</th><th>Aliases</th><th>Status</th></tr></thead><tbody>
-<?php foreach ($data['sites'] as $site): ?>
-<tr><td><?= $escape($site['domain']) ?></td><td><?= $escape(implode(', ', $site['aliases'])) ?></td><td><?= $site['suspended'] ? 'Suspended' : 'Active' ?></td></tr>
-<?php endforeach; ?>
-</tbody></table>
-<form method="post">
-<input type="hidden" name="token" value="<?= $escape($_SESSION['token']) ?>">
-<input type="hidden" name="action" value="validate-site">
-<label>Website <select name="domain">
-<?php foreach ($data['sites'] as $site): ?>
-<option value="<?= $escape($site['domain']) ?>"><?= $escape($site['domain']) ?></option>
-<?php endforeach; ?>
-</select></label> <button type="submit">Check site access</button>
-</form>
-<?php endif; ?>
-<small>Version <?= $escape($meta['version']) ?></small>
-</main></body></html>
+$managed = !empty($data['service_installed']) || isset($data['enabled']);
+$selectedDomain = is_string($_POST['domain'] ?? null) ? $_POST['domain'] : ($data['sites'][0]['domain'] ?? '');
+$message = '';
+$messageType = 'success';
+if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($action === 'test' && isset($data['connection_ok'])) {
+        $messageType = $data['connection_ok'] ? 'success' : 'danger';
+        $message = $data['connection_ok']
+            ? 'Connection test passed for ' . $selectedDomain . ': Dragonfly authenticated, stored, read and deleted a test key.'
+            : 'Connection test failed for ' . $selectedDomain . ': the stored value could not be read back.';
+    } elseif ($action === 'flush') {
+        $message = isset($data['removed_keys']) ? 'Cleared ' . $data['removed_keys'] . ' cache entries for ' . $selectedDomain . '.'
+            : 'The cache for ' . $selectedDomain . ' was cleared.';
+    } elseif ($action === 'password') {
+        $message = 'Your Dragonfly password was changed.';
+    } elseif ($action === 'token') {
+        $message = 'The purge token for ' . $selectedDomain . ' was changed.';
+    } elseif ($action === 'configure-site') {
+        $message = 'The profile and VCL for ' . $selectedDomain . ' were applied.';
+    } elseif ($action === 'toggle-site') {
+        $message = 'Cache access for ' . $selectedDomain . ' was ' . (!empty($request['enabled']) ? 'enabled.' : 'disabled.');
+    } elseif ($action === 'toggle-account') {
+        $message = 'Cache access for this account was ' . (!empty($data['enabled']) ? 'enabled.' : 'disabled.');
+    } elseif ($action === 'validate-site') {
+        $message = 'Website access was verified.';
+    }
+}
+$formFields = static function (string $operation, ?string $domain = null) use ($escape): void {
+    echo '<input type="hidden" name="token" value="' . $escape($_SESSION['token']) . '">';
+    echo '<input type="hidden" name="display" value="html">';
+    echo '<input type="hidden" name="action" value="' . $escape($operation) . '">';
+    if ($domain !== null) {
+        echo '<input type="hidden" name="domain" value="' . $escape($domain) . '">';
+    }
+};
+require '__INSTALL_ROOT__/panel/view.php';

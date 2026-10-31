@@ -111,7 +111,8 @@ def publish(source,meta):
         page=(stage/'panel/index.php').read_text().replace('__INSTALL_ROOT__',str(TARGET))
         (stage/'panel/index.php').write_text(page)
         write(stage/'.addon-owner',ID+'\n',0o644)
-        check_panel(stage/'panel/index.php')
+        for panel_file in (stage/'panel').glob('*.php'):
+            check_panel(panel_file)
         for directory,_,files in os.walk(stage):
             os.chmod(directory,0o755)
             for name in files:
