@@ -55,6 +55,15 @@ def switch(release):
         if temporary.is_symlink():temporary.unlink()
 
 
+def check_panel(path):
+    result = subprocess.run(['/usr/local/hestia/php/bin/php', '-l', str(path)],
+                            capture_output=True, timeout=20)
+    if result.returncode:
+        details = b'\n'.join(output for output in (result.stdout, result.stderr) if output).decode(errors='replace').strip()
+        raise RuntimeError('Panel PHP syntax check failed (exit ' + str(result.returncode) + '): ' +
+                           str(path) + '\n' + details)
+
+
 def publish(source,meta):
     check()
     ensure_owned_directory(RELEASES,ID); RELEASES.chmod(0o755)
@@ -68,8 +77,7 @@ def publish(source,meta):
         page=(stage/'panel/index.php').read_text().replace('__INSTALL_ROOT__',str(TARGET))
         (stage/'panel/index.php').write_text(page)
         write(stage/'.addon-owner',ID+'\n',0o644)
-        subprocess.run(['/usr/local/hestia/php/bin/php','-l',str(stage/'panel/index.php')],
-                       check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=20)
+        check_panel(stage/'panel/index.php')
         for directory,_,files in os.walk(stage):
             os.chmod(directory,0o755)
             for name in files:

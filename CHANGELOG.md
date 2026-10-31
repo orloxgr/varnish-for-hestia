@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Administrator installation failures show command arguments, exit status, subprocess output and Python tracebacks.
+- Panel PHP syntax-check failures retain native compiler diagnostics.
+
 ## 0.5.0
 
 Initial release.
