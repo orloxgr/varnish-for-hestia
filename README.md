@@ -44,7 +44,7 @@ change purge tokens, clear cache, or disable Varnish for a site or their account
 Profiles work independently of installed applications.
 
 The **8 GiB budget is shared by all sites**, not allocated per user. This example
-is sized for a **32 GiB server**: Varnish also uses RAM outside cache storage,
+is sized for a **32 GB server**: Varnish also uses RAM outside cache storage,
 and PHP, databases and other services need their own RAM. Hestia's existing code
 and templates are not replaced.
 
