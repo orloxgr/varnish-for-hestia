@@ -84,6 +84,10 @@ def render(state, config):
   unset req.http.X-HVH-Site;
   unset req.http.X-HVH-Profile;
   unset req.http.X-HVH-Disabled;
+  unset req.http.X-HVH-Ban-Host;
+  unset req.http.X-HVH-Ban-Pattern;
+  unset req.http.X-HVH-Ban-HTML;
+  unset req.http.X-HVH-Control;
   unset req.http.X-Cache-Mode;
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
   ''' + '\n'.join(dispatch) + '''
@@ -100,13 +104,14 @@ def render(state, config):
       return (synth(403, "Purge source denied"));
     }
     ''' + '\n'.join(purge) + '''
-    if (req.method == "PURGE") { return (purge); }
-    ban("obj.http.X-HVH-Site == " + req.http.X-HVH-Site);
-    return (synth(200, "Site cache invalidated"));
+    call hvh_http_control;
   }
   unset req.http.X-Hestia-Varnish-Token;
   unset req.http.X-UltraCache-Token;
   unset req.http.X-Ban-Expression;
+  unset req.http.X-UltraCache-Contract;
+  unset req.http.X-UltraCache-Operation;
+  unset req.http.X-UltraCache-Object-Expression;
   if (req.http.X-HVH-Disabled == "1") {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
@@ -133,6 +138,9 @@ def render(state, config):
   return (hash);
 }
 sub vcl_hash {
+  # Older non-UltraCache profiles lack the metadata needed for scoped BAN.
+  # UltraCache objects already have it and retain their existing cache keys.
+  if (req.http.X-HVH-Profile != "ultracache") { hash_data("hvh-http-control-v2"); }
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.url);
@@ -154,6 +162,8 @@ sub vcl_backend_response {
   }
   ''' + '\n'.join(custom_response) + '''
   set beresp.http.X-HVH-Site = bereq.http.X-HVH-Site;
+  set beresp.http.X-Cache-Object-Host = bereq.http.host;
+  set beresp.http.X-Cache-Object-URL = bereq.url;
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_response; }
   if (beresp.status >= 400 || beresp.http.Set-Cookie || beresp.http.Vary == "*" ||
       beresp.http.Cache-Control ~ "(?i)(private|no-cache|no-store)" || beresp.http.Pragma ~ "(?i)no-cache") {
@@ -170,9 +180,12 @@ sub vcl_deliver {
   unset resp.http.X-HVH-Site;
   unset resp.http.X-HVH-ESI-Parent;
   unset resp.http.X-HVH-Profile;
+  unset resp.http.X-Cache-Object-Host;
+  unset resp.http.X-Cache-Object-URL;
 }
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
     text.insert(4, (ROOT / 'profiles/ultracache.vcl').read_text())
+    text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'

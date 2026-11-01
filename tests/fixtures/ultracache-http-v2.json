@@ -1,0 +1,59 @@
+{
+    "contractVersion": 2,
+    "rows": [
+        {
+            "host": "example.test",
+            "targetPath": "/item/?q=1&next=%2Ffoo",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "exact-ban",
+            "cliExpression": "req.http.host == \"example.test\" && req.url ~ \"^\\\\/item\\\\/\\\\?q\\\\=1&next\\\\=%2Ffoo$\"",
+            "portableExpression": "req.http.host == example.test && req.url ~ ^\\/item\\/\\?q\\=1&next\\=%2Ffoo$",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.X-Cache-Object-URL ~ \"^\\\\/item\\\\/\\\\?q\\\\=1&next\\\\=%2Ffoo$\""
+        },
+        {
+            "host": "example.test",
+            "targetPath": "/item/[a]+(b)|c?x=y",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "exact-ban",
+            "cliExpression": "req.http.host == \"example.test\" && req.url ~ \"^\\\\/item\\\\/\\\\[a\\\\]\\\\+\\\\(b\\\\)\\\\|c\\\\?x\\\\=y$\"",
+            "portableExpression": "req.http.host == example.test && req.url ~ ^\\/item\\/\\[a\\]\\+\\(b\\)\\|c\\?x\\=y$",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.X-Cache-Object-URL ~ \"^\\\\/item\\\\/\\\\[a\\\\]\\\\+\\\\(b\\\\)\\\\|c\\\\?x\\\\=y$\""
+        },
+        {
+            "host": "example.test",
+            "targetPath": "/encoded/%22quoted%22/%CE%B1/",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "exact-ban",
+            "cliExpression": "req.http.host == \"example.test\" && req.url ~ \"^\\\\/encoded\\\\/%22quoted%22\\\\/%CE%B1\\\\/$\"",
+            "portableExpression": "req.http.host == example.test && req.url ~ ^\\/encoded\\/%22quoted%22\\/%CE%B1\\/$",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.X-Cache-Object-URL ~ \"^\\\\/encoded\\\\/%22quoted%22\\\\/%CE%B1\\\\/$\""
+        },
+        {
+            "host": "example.test",
+            "targetPath": "",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "batch-ban",
+            "cliExpression": "req.http.host == \"example.test\" && req.url ~ \"^(?:\\\\/item\\\\/\\\\?q\\\\=1&next\\\\=%2Ffoo|\\\\/item\\\\/\\\\[a\\\\]\\\\+\\\\(b\\\\)\\\\|c\\\\?x\\\\=y|\\\\/encoded\\\\/%22quoted%22\\\\/%CE%B1\\\\/)$\"",
+            "portableExpression": "req.http.host == example.test && req.url ~ ^(?:\\/item\\/\\?q\\=1&next\\=%2Ffoo|\\/item\\/\\[a\\]\\+\\(b\\)\\|c\\?x\\=y|\\/encoded\\/%22quoted%22\\/%CE%B1\\/)$",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.X-Cache-Object-URL ~ \"^(?:\\\\/item\\\\/\\\\?q\\\\=1&next\\\\=%2Ffoo|\\\\/item\\\\/\\\\[a\\\\]\\\\+\\\\(b\\\\)\\\\|c\\\\?x\\\\=y|\\\\/encoded\\\\/%22quoted%22\\\\/%CE%B1\\\\/)$\""
+        },
+        {
+            "host": "example.test",
+            "targetPath": "",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "html-ban",
+            "cliExpression": "req.http.host == \"example.test\" && obj.http.Content-Type ~ \"^text/html\"",
+            "portableExpression": "req.http.host == example.test && obj.http.Content-Type ~ ^text/html",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.Content-Type ~ \"^text/html\""
+        },
+        {
+            "host": "example.test",
+            "targetPath": "",
+            "contractPath": "/__ultracache-vcl-contract-v2",
+            "operation": "host-ban",
+            "cliExpression": "req.http.host == \"example.test\" && req.url ~ \".*\"",
+            "portableExpression": "req.http.host == example.test && req.url ~ .*",
+            "objectExpression": "obj.http.X-Cache-Object-Host == \"example.test\" && obj.http.X-Cache-Object-URL ~ \".*\""
+        }
+    ]
+}

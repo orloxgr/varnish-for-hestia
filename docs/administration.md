@@ -254,11 +254,32 @@ is discovered and its original template is saved before cache routing is selecte
 Restoring addon settings uses the current Hestia domain inventory; it does not
 recreate deleted domains or change an independently removed proxy into a new one.
 
+## HTTP cache control
+
+Use the site's displayed purge token and public Host header with the local
+Varnish listener. `PURGE /path?query` invalidates that exact URL across its Vary
+representations. `BAN` accepts the generated UltraCache host plus anchored URL
+expression, a batch of anchored URLs, HTML-only selector, or explicit whole-host
+selector. Every operation is also constrained to the authenticated site's
+immutable identity. Malformed expressions are rejected rather than broadened.
+
+UltraCache HTTP contract **v2** is advertised as **ultracache-hestia-v2**. Its
+authenticated capabilities are `exact-purge`, `exact-ban`, `batch-ban`, `html-ban`
+and `host-ban`. It does not advertise soft purge or stale revalidation. ESI is an
+independent HTTP behavior enabled by the UltraCache profile's response handshake.
+Older UltraCache clients can continue using portable HTTP PURGE and BAN.
+
+Updating preserves tokens, profiles, VCL sections and the configured memory
+budget. Existing UltraCache cache keys are retained. Other profiles start a new
+cache namespace once because their older objects lack URL metadata for scoped
+invalidation. No WordPress settings, TTL or grace policy are changed.
+
 ## Development checks
 
 ```sh
 python3 tests/test_registry.py
 python3 tests/test_fragments.py
+python3 -m unittest discover -s tests -p 'test_http_control.py' -v
 ```
 
 The registry and fragment-parser suites run without a live hosting installation.

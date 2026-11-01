@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Fix HTTP BAN clearing a whole site when only selected URLs were requested.
+- Support exact and batch URL bans, HTML-only invalidation and explicit host invalidation, with immutable site and host boundaries.
+- Add authenticated UltraCache HTTP contract v2 with the `ultracache-hestia-v2` adapter and accurate control capabilities.
+- Reject malformed or unauthorized invalidation requests without clearing unrelated objects.
+- Preserve existing UltraCache cache keys; start a fresh namespace for older profiles missing URL metadata.
+- Verify generated product VCL with native Varnish, including unrelated objects, aliases, tenants, Vary variants and private ESI visitors.
+
 ## 0.6.2
 
 - Fix dropdown links closing before pointer clicks can navigate.
