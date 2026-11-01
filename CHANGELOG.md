@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- Fix dropdown links closing before pointer clicks can navigate.
+- Preserve internal keyboard focus and navigation when another installed addon still has an older menu script.
+
 ## 0.6.1
 
 - Keep the original Accept header in the UltraCache profile for ordinary PHP APIs and content negotiation.

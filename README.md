@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.6.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.6.2** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -54,6 +54,7 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
+Refresh Hestia with **Ctrl+F5** after updating to load the new menu script.
 
 For VCL details, backup, restore, removal or importing an existing Varnish,
 see the [administration reference](docs/administration.md).

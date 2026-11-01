@@ -26,6 +26,7 @@
       document.head.append(style);
       menu = document.createElement('div');
       menu.id = 'hestia-addons-menu';
+      menu.dataset.hestiaAddonsFocusSafe = '1';
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'top-bar-menu-link';
@@ -77,9 +78,18 @@
           close(true);
         }
       });
-      menu.addEventListener('focusout', () => {
-        queueMicrotask(() => { if (!menu.contains(document.activeElement)) close(); });
+      menu.addEventListener('focusout', (event) => {
+        if (event.relatedTarget && !menu.contains(event.relatedTarget)) close();
       });
+    } else if (!menu.dataset.hestiaAddonsFocusSafe) {
+      // Another addon may have created an older shared menu. Keep its focusout
+      // listener from hiding a link between pointer-down and click.
+      menu.addEventListener('focusout', (event) => {
+        if (event.relatedTarget && menu.contains(event.relatedTarget)) {
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      menu.dataset.hestiaAddonsFocusSafe = '1';
     }
     const list = menu.querySelector('#hestia-addons-list');
     if (!list || list.querySelector(`[data-hestia-addon="${addon.id}"]`)) return;
