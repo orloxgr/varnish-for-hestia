@@ -5,11 +5,31 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.6.2**.
+Version **0.8.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
 For the four-step installation, see [Quick start](../README.md#quick-start).
+
+## Server controls
+
+In **Plugins → Varnish → All accounts**, the administrator can set **Backend
+first-byte timeout (seconds)** for all current and future domains. The permitted
+range is 1–3600 seconds. `300` allows a five-minute wait for the origin's first
+response byte. The setting is stored in the root-private desired/applied state
+and compiled as `.first_byte_timeout` on every generated VCL backend. The native
+global `varnishadm param.show first_byte_timeout` value remains unchanged; the
+backend-specific VCL setting takes precedence. Nginx, Apache and PHP limits are
+independent.
+
+Saving validates and activates a VCL generation using the existing configuration
+transaction. It does not restart the service or invalidate sites solely because
+the timeout changed. Owners cannot modify this server setting.
+
+**Show memory usage** is a read-only action. It runs `varnishstat -1 -j` once,
+returns only `SMA.s0.g_bytes` and `SMA.s0.g_space` plus the configured memory budget,
+and does not run policy synchronization. These are cache storage counters, not
+the total RAM usage of the Varnish processes. Mouse-over text explains controls.
 
 ## Installation details
 

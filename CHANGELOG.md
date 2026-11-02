@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0
+
+- Add an administrator server-wide backend first-byte timeout in the Hestia
+  overview, applied live to all Varnish origins, including cache-bypass requests.
+- Keep the native service default until explicitly configured. Persist the
+  setting through existing desired/applied state, configuration journals,
+  account discovery and backup/restore, without editing service-unit defaults.
+- Add an on-demand native `varnishstat` memory snapshot. No background collector,
+  request-log analysis, automatic polling or policy synchronization on this action.
+- Add mouse-over explanations to administrator and site-owner controls.
+
 ## 0.7.0
 
 - Fix HTTP BAN clearing a whole site when only selected URLs were requested.

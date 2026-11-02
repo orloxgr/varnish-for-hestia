@@ -87,8 +87,9 @@ class Administration(unittest.TestCase):
         for role, suspended in [('user', 'no'), ('admin', 'yes')]:
             with patch.object(addon, 'hestia', return_value={'alice': {'ROLE': role, 'SUSPENDED': suspended}}), \
                  patch.object(administration, 'request') as request:
-                with self.assertRaises(addon.RequestError):
-                    addon.dispatch({'actor': 'alice', 'owner': 'alice', 'action': 'admin-bulk', 'admin': True})
+                for action in ('admin-bulk','admin-server-settings','admin-memory'):
+                    with self.assertRaises(addon.RequestError):
+                        addon.dispatch({'actor': 'alice', 'owner': 'alice', 'action': action, 'admin': True})
                 request.assert_not_called()
         with patch.object(addon, 'hestia', return_value={'alice': {'ROLE': 'admin', 'SUSPENDED': 'no'}}), \
              patch.object(administration, 'request', return_value={'ok': True}) as request:

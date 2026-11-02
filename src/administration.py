@@ -1,4 +1,7 @@
 """Administrator inventory and one-transaction bulk cache changes."""
+import json
+import re
+import server_settings
 
 
 def mutate(state, payload, kind):
@@ -71,16 +74,37 @@ def overview(state, config, kind):
         accounts.append({'owner': name, 'package': owner['package'], 'enabled': owner['enabled'],
                          'suspended': owner['suspended'], 'allowed': allowed, 'sites': sites})
     return {'ok': True, 'admin': True, 'service_installed': True, 'accounts': accounts,
+            'server_settings': server_settings.choices(state), 'memory_budget_mb': config.get('memory_mb'),
             'total_accounts': len(accounts), 'total_sites': sum(len(row['sites']) for row in accounts)}
 
 
 def request(hestia, action, payload, kind):
-    from service import reconcile
+    import service
+    def show_default(result, config):
+        if result['server_settings']['first_byte_timeout_seconds'] is None:
+            native = service.admin(config, 'param.show', 'first_byte_timeout', required=False)
+            match = re.search(rb'Value is:\s*([0-9]+(?:\.[0-9]+)?)', native.stdout)
+            result['service_first_byte_timeout_seconds'] = float(match[1]) if match else None
+        return result
+    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory'):
+        raise ValueError('Invalid administrator action')
+    if action == 'admin-memory':
+        config = service.settings()
+        state = json.loads((service.STORE/'applied.json').read_text())
+        result = overview(state, config, kind)
+        result['memory'] = server_settings.memory(config)
+        return show_default(result, config)
     changed = {}
     def mutation(state, config):
-        changed.update(mutate(state, payload, kind))
-    state, config, _ = reconcile(hestia, mutation if action == 'admin-bulk' else None)
+        if action == 'admin-server-settings':
+            server_settings.change(state, payload)
+        else:
+            changed.update(mutate(state, payload, kind))
+    state, config, _ = service.reconcile(hestia, mutation if action in ('admin-bulk', 'admin-server-settings') else None)
     result = overview(state, config, kind)
+    show_default(result, config)
+    if action == 'admin-server-settings':
+        result['server_settings_saved'] = True
     if changed:
         result['changed'] = changed
     return result

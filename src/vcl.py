@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 
 from fragments import validate
+from server_settings import choices
 
 PROFILES = ('general', 'wordpress', 'woocommerce', 'ultracache')
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,8 @@ def host_name(value):
 
 
 def render(state, config):
+    timeout = choices(state)['first_byte_timeout_seconds']
+    backend_options = ' .first_byte_timeout = '+str(timeout)+'s;' if timeout is not None else ''
     address = str(ipaddress.ip_address(config['origin_ip']))
     port = config.get('origin_port', 8080)
     if not isinstance(port, int) or not 1 <= port <= 65535:
@@ -51,7 +54,7 @@ def render(state, config):
                               hosts=hosts, recv=validate(site['custom_recv'], 'recv'),
                               response=validate(site['custom_backend_response'], 'backend_response')))
     text = ['vcl 4.1;', 'import std;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
-            '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + '; }'
+            '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
     dispatch = []
     # Exact hostnames take priority over wildcard aliases, independently of
