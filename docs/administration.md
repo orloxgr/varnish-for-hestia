@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.8.0**.
+Version **0.9.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -25,6 +25,20 @@ independent.
 Saving validates and activates a VCL generation using the existing configuration
 transaction. It does not restart the service or invalidate sites solely because
 the timeout changed. Owners cannot modify this server setting.
+
+**Varnish cache size (MiB)** controls the shared malloc storage budget for all
+accounts and domains (64–1048576 MiB). **Apply size and restart Varnish** updates
+only the addon's existing native service drop-in and `settings.json`, reloads
+systemd, restarts Varnish and verifies the size in the running native manager's
+startup arguments. A restart clears cached content; VCL, tokens and site settings
+remain.
+Saving the existing size does not restart. Updates and configuration archives
+retain the saved size.
+
+A private `resize.json` undo record restores the previous files and restarts the
+previous size if applying fails. An interrupted resize is recovered by the next
+addon operation/settings read. If recovery also fails, its journal remains for
+a retry and the operation reports failure. No additional service is installed.
 
 **Show memory usage** is a read-only action. It runs `varnishstat -1 -j` once,
 returns only `SMA.s0.g_bytes` and `SMA.s0.g_space` plus the configured memory budget,

@@ -48,6 +48,9 @@ def settings():
         raise ValueError('Finish the pending installation with the README install command')
     if result.get('listen_port') != 6081 or result.get('admin_port') != 6082:
         raise ValueError('This release uses native local ports 6081 and 6082')
+    from cache_size import recover
+    if recover():
+        result = json.loads((CONFIG / 'settings.json').read_text())
     verify_native_unit()
     return result
 
@@ -165,6 +168,8 @@ def transaction_paths():
 
 
 def recover_pending(config_override=None):
+    from cache_size import recover
+    recover()
     record = transaction.read(STORE, transaction_paths())
     if record is None:
         return False

@@ -124,12 +124,16 @@ def check_integration():
         repository.check_paths(record)
 
 
-def integration_files(source, config):
-    DROPIN.parent.mkdir(parents=True, exist_ok=True)
-    write(DROPIN, MARKER + '\n[Service]\nType=exec\nPIDFile=\nExecStart=\n'
+def service_dropin(config):
+    return (MARKER + '\n[Service]\nType=exec\nPIDFile=\nExecStart=\n'
           'ExecStart=/usr/sbin/varnishd -F -a 127.0.0.1:6081 -T 127.0.0.1:6082 -f ' + str(service.ACTIVE) +
           ' -S ' + str(service.CONFIG / 'admin.secret') + ' -p feature=+http2 -s malloc,' + str(config['memory_mb']) + 'm\n'
-          'ExecReload=\nExecReload=/usr/sbin/varnishreload -p hvh_reload -m 2 ' + str(service.ACTIVE) + '\n', 0o644)
+          'ExecReload=\nExecReload=/usr/sbin/varnishreload -p hvh_reload -m 2 ' + str(service.ACTIVE) + '\n')
+
+
+def integration_files(source, config):
+    DROPIN.parent.mkdir(parents=True, exist_ok=True)
+    write(DROPIN, service_dropin(config), 0o644)
     write(CRON, MARKER + '\nSHELL=/bin/sh\nPATH=/usr/sbin:/usr/bin:/sbin:/bin\n'
           '* * * * * root /usr/local/hestia/bin/v-varnish-hestia reconcile >/dev/null 2>&1\n', 0o644)
 

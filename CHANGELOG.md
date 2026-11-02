@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+- Add administrator cache size editing in Hestia, shared across all websites.
+- Apply through the existing native service with an explicit restart button,
+  runtime storage verification and durable rollback after failures/interruption.
+- Retain the saved budget through updates and configuration backup/restore.
+- Explain units, shared scope and restart behavior in mouse-over help.
+
 ## 0.8.0
 
 - Add an administrator server-wide backend first-byte timeout in the Hestia

@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.8.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.9.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -55,6 +55,17 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 
 Updates retain existing tokens, site settings and memory budget.
 Refresh Hestia with **Ctrl+F5** after updating to load the new menu script.
+
+## Change cache size in Hestia
+
+1. Open **Plugins → Varnish → All accounts** as administrator.
+2. Under **Server settings · all websites**, enter the **Varnish cache size (MiB)**,
+   for example **8192** for 8 GiB shared by all sites.
+3. Click **Apply size and restart Varnish**.
+
+Changing size restarts Varnish and clears its cached content. The new size is
+verified against the running Varnish process and retained through updates and backups.
+An unchanged size does not restart the service.
 
 ## Change the server timeout in Hestia
 

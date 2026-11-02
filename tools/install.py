@@ -190,7 +190,7 @@ def install(args):
         native_version()
         existing = service.settings()
         if args.memory_mb is not None and args.memory_mb != existing['memory_mb']:
-            raise ValueError('Existing memory budget is retained; use the service settings for a planned change')
+            raise ValueError('Existing memory budget is retained; change Varnish cache size in Hestia Plugins > Varnish > All accounts')
         before = (service.CONFIG / 'settings.json').read_bytes()
         try:
             run('python3', str(SOURCE / 'tools/install-integration.py'))

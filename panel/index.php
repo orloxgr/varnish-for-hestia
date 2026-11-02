@@ -76,12 +76,15 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'custom_recv' => $_POST['custom_recv'] ?? '',
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
 if (str_starts_with((string)$action, 'admin-')) {
-    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory'], true)) {
+    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'], true)) {
         $respond(403, ['ok' => false, 'error' => 'Administrator access required.']);
     }
     $adminOverview = true;
     if ($action === 'admin-server-settings') {
         $request['first_byte_timeout_seconds'] = filter_var($_POST['first_byte_timeout_seconds'] ?? '', FILTER_VALIDATE_INT);
+    }
+    if ($action === 'admin-memory-size') {
+        $request['memory_mb'] = filter_var($_POST['memory_mb'] ?? '', FILTER_VALIDATE_INT);
     }
     $request['scope'] = $_POST['scope'] ?? null;
     $request['operation'] = $_POST['operation'] ?? null;
@@ -125,6 +128,9 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
         $pageError = $action === 'admin-server-settings' ? 'The server timeout could not be applied. The previous setting remains active.' : ($action === 'admin-memory' ? 'The native memory snapshot is unavailable.' : ($action === 'admin-bulk'
             ? 'The bulk change could not be applied. Check the selection and that the service is running.'
             : 'Could not load accounts. Check that the service is installed and running.'));
+    }
+    if ($action === 'admin-memory-size') {
+        $pageError = 'The cache size could not be applied. Check the current size below and the native Varnish service.';
     }
     [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner, 'action' => $adminOverview ? 'admin-inventory' : 'inventory']);
     $data = $status === 0 && is_array($current) && !empty($current['ok']) ? $current : ['sites' => []];

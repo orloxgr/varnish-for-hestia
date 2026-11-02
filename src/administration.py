@@ -86,13 +86,21 @@ def request(hestia, action, payload, kind):
             match = re.search(rb'Value is:\s*([0-9]+(?:\.[0-9]+)?)', native.stdout)
             result['service_first_byte_timeout_seconds'] = float(match[1]) if match else None
         return result
-    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory'):
+    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'):
         raise ValueError('Invalid administrator action')
-    if action == 'admin-memory':
-        config = service.settings()
+    if action in ('admin-memory', 'admin-memory-size'):
+        restarted = False
+        if action == 'admin-memory-size':
+            from cache_size import resize
+            config, restarted = resize(payload.get('memory_mb'))
+        else:
+            config = service.settings()
         state = json.loads((service.STORE/'applied.json').read_text())
         result = overview(state, config, kind)
-        result['memory'] = server_settings.memory(config)
+        if action == 'admin-memory':
+            result['memory'] = server_settings.memory(config)
+        else:
+            result.update(memory_size_saved=True, service_restarted=restarted)
         return show_default(result, config)
     changed = {}
     def mutation(state, config):
