@@ -57,8 +57,7 @@ cd /usr/local/src/varnish-for-hestia
 sudo python3 tools/install.py --memory-mb 8192
 ```
 
-Use GitHub credentials with repository access when cloning or updating a private
-repository. Keep `/usr/local/src/varnish-for-hestia` for future updates and recovery.
+Keep `/usr/local/src/varnish-for-hestia` for future updates and recovery.
 
 With no existing Varnish, the installer uses the official signed Ubuntu repository
 and pinned package `9.1.0-2~resolute`, with separate addon-owned repository files.
