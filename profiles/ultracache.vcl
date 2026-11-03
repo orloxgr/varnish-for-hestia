@@ -335,8 +335,7 @@ if (beresp.http.Content-Type ~ "(?i)^text/html" && beresp.http.Vary != "*") {
 }
 # Private ESI fragments must execute for every delivery and must never be stored.
 if (bereq.http.X-ESI-Private-Request == "1") {
-    set beresp.ttl = 0s;
-    set beresp.uncacheable = true;
+    call hvh_mark_uncacheable;
     set beresp.http.Cache-Control = "private, no-store";
     set beresp.http.Surrogate-Control = "no-store";
     return (deliver);
@@ -363,8 +362,7 @@ if (bereq.http.X-UltraCache-ESI-Candidate == "1") {
             beresp.http.Vary == "*"
         ) {
             unset beresp.http.X-UltraCache-ESI-Shared-Parent;
-            set beresp.ttl = 0s;
-            set beresp.uncacheable = true;
+            call hvh_mark_uncacheable;
             return (deliver);
         }
 
@@ -384,8 +382,7 @@ if (bereq.http.X-UltraCache-ESI-Candidate == "1") {
         }
 
         unset beresp.http.X-UltraCache-ESI-Shared-Parent;
-        set beresp.ttl = 0s;
-        set beresp.uncacheable = true;
+        call hvh_mark_uncacheable;
         return (deliver);
     }
 }
@@ -397,8 +394,7 @@ if (
     beresp.status == 429 ||
     beresp.status >= 500
 ) {
-    set beresp.ttl = 0s;
-    set beresp.uncacheable = true;
+    call hvh_mark_uncacheable;
     return (deliver);
 }
 
@@ -409,8 +405,7 @@ if (
     beresp.http.Pragma ~ "(?i)no-cache" ||
     beresp.http.Vary == "*"
 ) {
-    set beresp.ttl = 0s;
-    set beresp.uncacheable = true;
+    call hvh_mark_uncacheable;
     return (deliver);
 }
 

@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.9.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.10.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -50,10 +50,17 @@ token with repository access at the password prompt, not your GitHub password.
 
 ```sh
 sudo git -C /usr/local/src/varnish-for-hestia pull --ff-only
+```
+
+After Git finishes:
+
+```sh
 sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
+The first update to **0.10.0** starts fresh site caches to apply the corrected
+privacy policy. Pages refill on demand without restarting Varnish.
 Refresh Hestia with **Ctrl+F5** after updating to load the new menu script.
 
 ## Change cache size in Hestia

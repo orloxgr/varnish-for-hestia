@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0
+
+- Keep a two-minute hit-for-miss decision for uncacheable responses, allowing
+  concurrent origin fetches without storing private response bodies.
+- Respect `Surrogate-Control: no-store` in all profiles, including responses
+  whose ESI processing consumes that header.
+- Strip only known analytics cookies on public WordPress/WooCommerce requests;
+  retain login, cart, language, currency and unrecognized cookies as cache bypasses.
+- Start a fresh cache namespace for all profiles so pre-update objects cannot
+  bypass the corrected privacy policy. Tokens, settings and routing are retained.
+- Verify privacy, ESI, purge variants, cookie boundaries, live VCL upgrades and
+  concurrent uncacheable fetches with native Varnish.
+
 ## 0.9.0
 
 - Add administrator cache size editing in Hestia, shared across all websites.

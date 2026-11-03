@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.9.0**.
+Version **0.10.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -131,7 +131,20 @@ Public proxy requests cannot use either invalidation method.
 
 General respects request cookies/authentication and origin privacy headers.
 WordPress adds private administration/API paths; WooCommerce adds cart, checkout
-and account/action paths. UltraCache uses a WordPress/WooCommerce VCL profile with ESI, approved
+and account/action paths. On public GET/HEAD requests, WordPress and WooCommerce
+remove only known analytics cookies: `__utma/b/c/t/v/z`, `_ga`, `_ga_<STREAM_ID>`
+(uppercase letters/digits), `_gid`, `_gat`/`_gat_<ID>` and `_fbp`. Any remaining cookie still
+bypasses cache. Private URLs, POST requests and requests with Authorization keep
+their cookies. General does not remove analytics cookies; UltraCache retains
+its existing cookie and ESI policy.
+
+All profiles honor `Surrogate-Control: no-store`, even when the UltraCache
+profile processes ESI in the same response. Uncacheable responses keep only a
+two-minute hit-for-miss decision, with no stored response body or grace/keep
+window. Concurrent requests can reach the origin independently. A subsequent
+cacheable origin response can replace that decision immediately.
+
+UltraCache uses a WordPress/WooCommerce VCL profile with ESI, approved
 shared parents, private cookie carriers, native content-negotiation variants,
 grace and keep. ESI can use the same site's aliases and cannot cross site scopes.
 
@@ -303,9 +316,11 @@ independent HTTP behavior enabled by the UltraCache profile's response handshake
 Older UltraCache clients can continue using portable HTTP PURGE and BAN.
 
 Updating preserves tokens, profiles, VCL sections and the configured memory
-budget. Existing UltraCache cache keys are retained. Other profiles start a new
-cache namespace once because their older objects lack URL metadata for scoped
-invalidation. No WordPress settings, TTL or grace policy are changed.
+budget. Version 0.10.0 starts a new cache namespace for every profile, preventing
+reuse of objects stored before the corrected no-store policy. Pages refill on
+demand; the ordinary update does not restart Varnish. Protocol and content
+negotiation remain Vary variants, so exact PURGE still removes them together.
+Application settings and cacheable responses' TTL/grace policies are retained.
 
 ## Development checks
 

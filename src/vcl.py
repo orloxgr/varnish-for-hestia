@@ -126,7 +126,6 @@ def render(state, config):
   if (req.http.Authorization || req.http.Upgrade || (req.method != "GET" && req.method != "HEAD")) {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
-  if (req.http.Cookie) { set req.http.X-Cache-Mode = "PASS"; return (pass); }
   if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
     if (req.url ~ "(?i)^/(wp-admin(?:/|[?]|$)|wp-login[.]php|wp-json(?:/|[?]|$)|xmlrpc[.]php|wp-cron[.]php)" ||
         req.url ~ "(?i)[?&](preview|customize_changeset_uuid|rest_route|nocache)=") {
@@ -138,12 +137,23 @@ def render(state, config):
        req.url ~ "(?i)[?&](add-to-cart|wc-ajax|wc-api)=")) {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
+  # Only these application profiles opt into removing known analytics cookies.
+  # Private paths, non-read methods and authentication already passed above.
+  if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
+    if (req.http.Cookie ~ "(^|;[ ]*)(__utm[abctvz]|_ga(_[A-Z0-9]+)?|_gid|_gat(_[a-zA-Z0-9_]+)?|_fbp)=") {
+      set req.http.Cookie = regsuball(req.http.Cookie,
+        "(^|;[ ]*)(__utm[abctvz]|_ga(_[A-Z0-9]+)?|_gid|_gat(_[a-zA-Z0-9_]+)?|_fbp)=[^;]*", "");
+      set req.http.Cookie = regsuball(req.http.Cookie, "^[; ]+|[; ]+$", "");
+      if (req.http.Cookie == "") { unset req.http.Cookie; }
+    }
+  }
+  if (req.http.Cookie) { set req.http.X-Cache-Mode = "PASS"; return (pass); }
   return (hash);
 }
 sub vcl_hash {
-  # Older non-UltraCache profiles lack the metadata needed for scoped BAN.
-  # UltraCache objects already have it and retain their existing cache keys.
-  if (req.http.X-HVH-Profile != "ultracache") { hash_data("hvh-http-control-v2"); }
+  # Do not reuse objects stored before the no-store policy was corrected.
+  # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
+  hash_data("hvh-cache-policy-v3");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.url);
@@ -154,6 +164,14 @@ sub vcl_hit {
 }
 sub vcl_backend_fetch {
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_fetch; }
+}
+sub hvh_mark_uncacheable {
+  # Keep only a hit-for-miss decision, never the private response body.
+  # A zero-lived marker makes concurrent fetches wait for one another.
+  set beresp.ttl = 120s;
+  set beresp.uncacheable = true;
+  set beresp.grace = 0s;
+  set beresp.keep = 0s;
 }
 sub vcl_backend_response {
   if (bereq.http.X-HVH-Profile == "ultracache") { set beresp.keep = 5m; }
@@ -167,10 +185,14 @@ sub vcl_backend_response {
   set beresp.http.X-HVH-Site = bereq.http.X-HVH-Site;
   set beresp.http.X-Cache-Object-Host = bereq.http.host;
   set beresp.http.X-Cache-Object-URL = bereq.url;
+  # Record this before ESI handling consumes Surrogate-Control. ESI may still
+  # compose this one delivery, but cannot make a no-store response cacheable.
+  std.collect(beresp.http.Surrogate-Control);
+  if (beresp.http.Surrogate-Control ~ "(?i)no-store") { call hvh_mark_uncacheable; }
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_response; }
-  if (beresp.status >= 400 || beresp.http.Set-Cookie || beresp.http.Vary == "*" ||
+  if (beresp.uncacheable || beresp.ttl <= 0s || beresp.status >= 400 || beresp.http.Set-Cookie || beresp.http.Vary == "*" ||
       beresp.http.Cache-Control ~ "(?i)(private|no-cache|no-store)" || beresp.http.Pragma ~ "(?i)no-cache") {
-    set beresp.ttl = 0s; set beresp.uncacheable = true;
+    call hvh_mark_uncacheable;
   }
   return (deliver);
 }
