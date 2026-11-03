@@ -5,6 +5,7 @@ import re
 
 from fragments import validate
 from server_settings import choices
+import cookie_policy
 
 PROFILES = ('general', 'wordpress', 'woocommerce', 'ultracache')
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,7 +53,8 @@ def render(state, config):
                 backends[origin] = 'hvh_origin_' + str(len(backends))
             sites.append(dict(site, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
                               hosts=hosts, recv=validate(site['custom_recv'], 'recv'),
-                              response=validate(site['custom_backend_response'], 'backend_response')))
+                              response=validate(site['custom_backend_response'], 'backend_response'),
+                              bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
     text = ['vcl 4.1;', 'import std;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
@@ -71,7 +73,7 @@ def render(state, config):
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
-    custom_recv, custom_response = [], []
+    custom_recv, custom_response, cookie_bypass = [], [], []
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
         purge.append(condition + ' { if (req.http.X-Hestia-Varnish-Token != ' + quoted(site['token']) +
@@ -82,6 +84,10 @@ def render(state, config):
                                ' unset req.http.X-Cache-Mode; }')
         if site['response']:
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
+        if site['bypass_cookies']:
+            cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
+                quoted(cookie_policy.pattern(site['bypass_cookies'])) +
+                ') { set req.http.X-Cache-Mode = "PASS"; return (pass); } }')
     text.append('''sub vcl_recv {
   unset req.http.X-HVH-ESI-Parent;
   unset req.http.X-HVH-Site;
@@ -92,6 +98,7 @@ def render(state, config):
   unset req.http.X-HVH-Ban-HTML;
   unset req.http.X-HVH-Control;
   unset req.http.X-Cache-Mode;
+  std.collect(req.http.Cookie, "; ");
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
   ''' + '\n'.join(dispatch) + '''
   if (req.esi_level > 0 && req_top.http.X-HVH-Site != req.http.X-HVH-Site) {
@@ -119,6 +126,7 @@ def render(state, config):
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
   ''' + '\n'.join(custom_recv) + '''
+  ''' + '\n'.join(cookie_bypass) + '''
   if (req.url ~ "^/[.]well-known/(acme-challenge|pki-validation)/") {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
@@ -128,32 +136,40 @@ def render(state, config):
   }
   if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
     if (req.url ~ "(?i)^/(wp-admin(?:/|[?]|$)|wp-login[.]php|wp-json(?:/|[?]|$)|xmlrpc[.]php|wp-cron[.]php)" ||
-        req.url ~ "(?i)[?&](preview|customize_changeset_uuid|rest_route|nocache)=") {
+        req.url ~ "(?i)[?&](preview|preview_id|preview_nonce|customize_changeset_uuid|elementor-preview|et_fb|vc_editable|rest_route|s|nocache)=") {
       set req.http.X-Cache-Mode = "PASS"; return (pass);
     }
   }
   if (req.http.X-HVH-Profile == "woocommerce" &&
-      (req.url ~ "(?i)^/(cart|checkout|my-account)(/|[?]|$)" ||
+      (req.url ~ "(?i)^/(cart|checkout|my-account|wc-api)(/|[?]|$)" ||
        req.url ~ "(?i)[?&](add-to-cart|wc-ajax|wc-api)=")) {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
-  # Only these application profiles opt into removing known analytics cookies.
-  # Private paths, non-read methods and authentication already passed above.
   if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
-    if (req.http.Cookie ~ "(^|;[ ]*)(__utm[abctvz]|_ga(_[A-Z0-9]+)?|_gid|_gat(_[a-zA-Z0-9_]+)?|_fbp)=") {
-      set req.http.Cookie = regsuball(req.http.Cookie,
-        "(^|;[ ]*)(__utm[abctvz]|_ga(_[A-Z0-9]+)?|_gid|_gat(_[a-zA-Z0-9_]+)?|_fbp)=[^;]*", "");
-      set req.http.Cookie = regsuball(req.http.Cookie, "^[; ]+|[; ]+$", "");
-      if (req.http.Cookie == "") { unset req.http.Cookie; }
-    }
+    call hvh_private_cookie_recv;
+    call hvh_cart_cookie_recv;
+  } else if (req.http.Cookie) {
+    # General retains Varnish's conservative application-independent policy.
+    set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
-  if (req.http.Cookie) { set req.http.X-Cache-Mode = "PASS"; return (pass); }
   return (hash);
 }
+sub hvh_private_cookie_recv {
+  if (req.http.Cookie ~ ''' + quoted(cookie_policy.pattern(cookie_policy.PRIVATE)) + ''') {
+    set req.http.X-Cache-Mode = "PASS"; return (pass);
+  }
+}
+sub hvh_cart_cookie_recv {
+  if (req.http.Cookie ~ ''' + quoted(cookie_policy.pattern(cookie_policy.CART)) + ''') {
+    if (req.http.X-HVH-Profile == "ultracache" && req.http.X-UltraCache-ESI-Opt-In == "1") {
+      set req.http.X-UltraCache-ESI-Candidate = "1";
+    } else { set req.http.X-Cache-Mode = "PASS"; return (pass); }
+  }
+}
 sub vcl_hash {
-  # Do not reuse objects stored before the no-store policy was corrected.
+  # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
-  hash_data("hvh-cache-policy-v3");
+  hash_data("hvh-cache-policy-v4");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.url);

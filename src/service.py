@@ -143,6 +143,7 @@ def apply(state, previous, inventory, config, changes=None):
                 current_ids.add(site['id'])
                 old = old_sites.get(site['id'])
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
+                            old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active')):
                     purge(config, site); invalidated += 1
         for sid in set(old_sites) - current_ids:
@@ -239,14 +240,19 @@ def request(hestia, owner_name, action, payload):
                 raise ValueError('Invalid Varnish profile')
             site.update(profile=payload['profile'], custom_recv=payload.get('custom_recv', ''),
                         custom_backend_response=payload.get('custom_backend_response', ''))
+        elif action == 'configure-cookies':
+            from cookie_policy import normalize
+            if not isinstance(payload.get('bypass_cookies'), str):
+                raise ValueError('Cookie rules must be text, one per line')
+            owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
         elif action == 'token':
             value = payload.get('password')
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,256}', value):
                 raise ValueError('Purge tokens need 12-256 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'token', 'flush'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'token', 'flush'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'token', 'flush') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'token', 'flush') and not isinstance(domain, str):
         raise ValueError('Select a site')
     state, config, result = reconcile(hestia, mutate)
     owner = state['owners'][owner_name]
@@ -258,6 +264,7 @@ def request(hestia, owner_name, action, payload):
                 'sites': [{'domain': name, 'aliases': site['aliases'], 'suspended': site['suspended'],
                            'enabled': site['enabled'], 'profile': site['profile'],
                            'custom_recv': site['custom_recv'], 'custom_backend_response': site['custom_backend_response'],
+                           'bypass_cookies': site.get('bypass_cookies', []),
                            'routing_active': site['settings'].get('routing_active', False)}
                           for name, site in sorted(owner['sites'].items())]}
     if action == 'credentials':

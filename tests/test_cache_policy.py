@@ -105,28 +105,31 @@ class CachePolicy(unittest.TestCase):
             [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='MISS')
              for visitor in ('A', 'B')], tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
-    def test_known_analytics_cookies_share_anonymous_wordpress_objects(self):
+    def test_analytics_and_unknown_cookies_share_public_objects_without_stripping(self):
         cookies = ['_ga=first', '_ga=first; _gid=second',
                    '__utma=first; _ga_G123ABC=second; _gat_gtag_UA_123_1=third; _fbp=fourth',
                    '_ga=first; _ga=second; _gid=',
-                   '__utmb=b; __utmc=c; __utmt=t; __utmv=v; __utmz=z; _gat=1']
-        for profile in ('wordpress', 'woocommerce'):
+                   '__utmb=b; __utmc=c; __utmt=t; __utmv=v; __utmz=z; _gat=1',
+                   'sbjs_migrations=m; sbjs_current_add=c; sbjs_first_add=f',
+                   'cmplz_banner-status=dismissed; never_seen_before=visitor',
+                   'some_vendor_2026=anything; custom_session=A', 'language=el; currency=EUR']
+        for profile in ('wordpress', 'woocommerce', 'ultracache'):
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for number, cookie in enumerate(cookies):
                     path = '/page-' + str(number)
                     responses.append(compatibility.response(path, 'anonymous',
-                                     expect=['expect req.http.Cookie == <undef>']))
+                                     expect=['expect req.http.Cookie == "'+cookie+'"']))
                     requests.extend([compatibility.request(path, 'anonymous', headers=['Cookie: '+cookie], cache='MISS'),
                                      compatibility.request(path, 'anonymous', headers=['Cookie: _ga=another'], cache='HIT')])
                 self.run_policy(profile, responses, requests)
 
-    def test_personalization_and_unrecognized_cookies_still_pass(self):
-        cookies = ['wordpress_logged_in_abcd=A', 'PHPSESSID=A', 'woocommerce_items_in_cart=1',
+    def test_builtin_private_cookies_pass_without_stripping_any_cookies(self):
+        cookies = ['wordpress_logged_in_abcd=A', 'wordpress_sec_abcd=A', 'wp-postpass_abcd=A',
+                   'comment_author_abcd=A', 'PHPSESSID=A', 'woocommerce_items_in_cart=1',
                    'woocommerce_cart_hash=A', 'wp_woocommerce_session_abcd=A',
-                   'language=el', 'currency=EUR', 'custom_session=A', '_ga_custom_state=A',
-                   'prefix_ga=A', 'wordpress_test_cookie=WP%20Cookie%20check']
-        for profile in ('wordpress', 'woocommerce'):
+                   'woocommerce_recently_viewed=1', 'yith_wcwl_session_abcd=A', 'yith_woocompare_abcd=A']
+        for profile in ('wordpress', 'woocommerce', 'ultracache'):
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for cookie in cookies:
@@ -134,7 +137,7 @@ class CachePolicy(unittest.TestCase):
                                      '_ga=tracking; '+cookie+'; _fbp=tracking'):
                         for visitor in ('A', 'B'):
                             responses.append(compatibility.response('/page', visitor,
-                                             expect=['expect req.http.Cookie == "'+cookie+'"']))
+                                             expect=['expect req.http.Cookie == "'+combined+'"']))
                             requests.append(compatibility.request('/page', visitor,
                                             headers=['Cookie: '+combined], cache='BYPASS'))
                 self.run_policy(profile, responses, requests)
@@ -170,8 +173,7 @@ class CachePolicy(unittest.TestCase):
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 source = compatibility.program(profile)
-                old = source.replace('hash_data("hvh-cache-policy-v3");',
-                    'if (req.http.X-HVH-Profile != "ultracache") { hash_data("hvh-http-control-v2"); }')
+                old = source.replace('hash_data("hvh-cache-policy-v4");', 'hash_data("hvh-cache-policy-v3");')
                 tail = ('varnish v1 -vcl {\n'+source+'\n}\nclient c2 {\n'+
                         compatibility.request('/page', 'new', cache='MISS')+'\n'+
                         compatibility.request('/page', 'new', cache='HIT')+'\n} -run')

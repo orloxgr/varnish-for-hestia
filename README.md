@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.10.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.11.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -59,9 +59,21 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
-The first update to **0.10.0** starts fresh site caches to apply the corrected
-privacy policy. Pages refill on demand without restarting Varnish.
+The first update to **0.11.0** starts fresh site caches to apply the new cookie
+policy. Pages refill on demand without restarting Varnish.
 Refresh Hestia with **Ctrl+F5** after updating to load the new menu script.
+
+## Cookie exclusions per website
+
+Open **Plugins → Varnish → your domain → Cookies that bypass cache**.
+Enter one cookie name per line, such as `custom_currency`, or a prefix such as
+`membership_*`, then click **Save cookie rules**. Empty uses the built-in defaults.
+
+WordPress, WooCommerce and UltraCache profiles bypass known login, session and
+cart cookies; other cookies do not cause bypass by themselves. Add rules for
+plugins that personalize HTML. General retains its conservative cookie policy.
+Rules apply to the selected domain and aliases. Administrators use the same
+controls through **Manage website**. Cookies are not deleted.
 
 ## Change cache size in Hestia
 

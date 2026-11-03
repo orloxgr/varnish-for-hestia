@@ -44,6 +44,15 @@ $panel = top_panel($headerOwner, $TAB);
                         <form method="post"><?php $formFields('flush', $site['domain']); ?><button type="submit" class="button button-secondary" title="Invalidate cached objects belonging to this website. Other websites keep their cache."><i class="fas fa-trash icon-red"></i>Clear site cache</button></form>
                         <form method="post"><?php $formFields('toggle-site', $site['domain']); ?><input type="hidden" name="enabled" value="<?= empty($site['enabled']) ? '1' : '0' ?>"><button type="submit" class="button button-secondary" title="Enable or disable Varnish only for this website and its aliases. Disabling restores its original web routing."><?= empty($site['enabled']) ? 'Enable site' : 'Disable site' ?></button></form>
                     </div>
+                    <form method="post" class="u-mb20">
+                        <?php $formFields('configure-cookies', $site['domain']); ?>
+                        <div class="u-mb10"><label class="form-label" for="cookies-<?= $escape($site['domain']) ?>">Cookies that bypass cache</label>
+                            <textarea title="One case-sensitive cookie name per line. A trailing * matches a name prefix, for example membership_*. If a listed cookie is present, this domain and its aliases bypass shared cache. Cookies are not deleted. Empty uses the profile defaults; built-in private-cookie protections remain active." class="form-control" id="cookies-<?= $escape($site['domain']) ?>" name="bypass_cookies" rows="4" maxlength="8192" spellcheck="false" placeholder="membership_*&#10;custom_currency"><?= $escape(implode("\n", $site['bypass_cookies'] ?? [])) ?></textarea>
+                        </div>
+                        <p class="u-mb10">One name per line; use a trailing <code>*</code> for a prefix. Matching requests go to the application. Built-in login, session and cart exclusions remain active.</p>
+                        <p class="u-mb10"><?php if ($site['profile'] === 'general'): ?>General bypasses all requests with cookies. These additional rules are retained when switching profiles.<?php else: ?>Other cookies do not cause bypass by themselves. Add cookies here when a plugin changes page content, such as language, currency or membership.<?php endif; ?></p>
+                        <button type="submit" class="button" title="Save these additional cookie bypass rules for this website and its aliases. Only this website’s cache is invalidated; profile, VCL and tokens are retained."><i class="fas fa-floppy-disk icon-purple"></i>Save cookie rules</button>
+                    </form>
                     <details class="box-collapse u-mb10">
                         <summary class="box-collapse-header" title="Choose this website’s cache profile and optional supported VCL additions.">Profile and site VCL</summary>
                         <div class="box-collapse-content"><form method="post">

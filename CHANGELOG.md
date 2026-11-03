@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.0
+
+- Use application cookie exclusions in WordPress/WooCommerce/UltraCache instead
+  of bypassing every unrecognized cookie. Preserve cookies on origin misses.
+- Bypass known WordPress private state, PHP sessions, cart state and common Woo
+  personalization cookies. Retain explicit UltraCache shared-parent approval
+  and isolated private ESI cookie transport.
+- Add per-domain exact cookie names and trailing-star prefixes in the Hestia
+  owner panel, also available to administrators managing that website.
+- Store rules through the existing scoped configuration transaction, migration
+  and backup paths. Changes invalidate only that site's cache and aliases.
+- Handle multiple Cookie headers before applying exclusions. Keep General's
+  application-independent bypass policy and all response privacy protections.
+- Start a fresh cache namespace on upgrade; keep profile, tokens, VCL and memory.
+
 ## 0.10.0
 
 - Keep a two-minute hit-for-miss decision for uncacheable responses, allowing

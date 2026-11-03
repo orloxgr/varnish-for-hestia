@@ -74,6 +74,7 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'profile' => $_POST['profile'] ?? null,
             'password' => $_POST['password'] ?? null,
             'custom_recv' => $_POST['custom_recv'] ?? '',
+            'bypass_cookies' => $_POST['bypass_cookies'] ?? '',
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
 if (str_starts_with((string)$action, 'admin-')) {
     if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'], true)) {
@@ -124,6 +125,9 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
     $pageError = $action === 'configure-site'
         ? 'The profile or VCL could not be applied. The previous configuration is still active.'
         : 'The operation could not be completed. Check that the service is running and access is enabled.';
+    if ($action === 'configure-cookies') {
+        $pageError = 'Cookie rules could not be applied. Use one cookie name or a trailing-star prefix per line (maximum 64 rules / 8 KiB). The previous rules remain active.';
+    }
     if ($adminOverview) {
         $pageError = $action === 'admin-server-settings' ? 'The server timeout could not be applied. The previous setting remains active.' : ($action === 'admin-memory' ? 'The native memory snapshot is unavailable.' : ($action === 'admin-bulk'
             ? 'The bulk change could not be applied. Check the selection and that the service is running.'
@@ -158,6 +162,8 @@ if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'The purge token for ' . $selectedDomain . ' was changed.';
     } elseif ($action === 'configure-site') {
         $message = 'The profile and VCL for ' . $selectedDomain . ' were applied.';
+    } elseif ($action === 'configure-cookies') {
+        $message = 'Cookie bypass rules for ' . $selectedDomain . ' were applied.';
     } elseif ($action === 'toggle-site') {
         $message = 'Cache access for ' . $selectedDomain . ' was ' . (!empty($request['enabled']) ? 'enabled.' : 'disabled.');
     } elseif ($action === 'toggle-account') {

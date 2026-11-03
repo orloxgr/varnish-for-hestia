@@ -177,7 +177,7 @@ if (
 # Keep standard WooCommerce private paths safe without any application plugin.
 # Other/localized paths follow the origin's private/no-store cache policy.
 if (
-    req.url ~ "(?i)^/(cart|checkout|my-account)(/|[?]|$)" ||
+    req.url ~ "(?i)^/(cart|checkout|my-account|wc-api)(/|[?]|$)" ||
     req.url ~ "(?i)(\?|&)(add-to-cart|wc-ajax|wc-api)="
 ) {
     set req.http.X-Cache-Mode = "PASS";
@@ -219,6 +219,12 @@ if (req.http.Accept-Encoding) {
     }
 }
 
+# Application exclusions, rather than a list of permitted tracking cookies.
+# Unknown cookies remain available to the origin on a miss. Cart cookies
+# require explicit request opt-in and response approval for an ESI parent.
+call hvh_private_cookie_recv;
+call hvh_cart_cookie_recv;
+
 # Static assets are shared and do not need browser cookies.
 # HTML/HTM are intentionally excluded because they may be dynamic rewrites.
 if (
@@ -226,68 +232,6 @@ if (
 ) {
     unset req.http.Cookie;
     return (hash);
-}
-
-# Remove only cookies known not to personalize rendered HTML.
-if (req.http.Cookie) {
-    set req.http.Cookie = regsuball(
-        req.http.Cookie,
-        "(?i)(^|;[ ]*)(__utm[a-z0-9_]*|_ga(_[a-z0-9]+)?|_gid|_gat(_[a-z0-9]+)?|_fbp|has_js)=[^;]*",
-        ""
-    );
-    set req.http.Cookie = regsuball(
-        req.http.Cookie,
-        "(?i)(^|;[ ]*)(wordpress_test_cookie|wp-settings-[0-9]+|wp-settings-time-[0-9]+)=[^;]*",
-        ""
-    );
-    set req.http.Cookie = regsuball(req.http.Cookie, "^[; ]+|[; ]+$", "");
-    set req.http.Cookie = regsuball(req.http.Cookie, ";[ ]*;", ";");
-
-    if (req.http.Cookie == "") {
-        unset req.http.Cookie;
-    } else if (
-        req.http.Cookie ~ "(?i)(^|;[ ]*)(woocommerce_items_in_cart|woocommerce_cart_hash|wp_woocommerce_session_[^=; ]+)="
-    ) {
-        # WooCommerce requests enter the shared-parent handshake only
-        # when UltraCache has explicitly opted in this browser request.
-        # Without the marker, preserve normal WooCommerce PASS behavior.
-        if (req.http.X-UltraCache-ESI-Opt-In != "1") {
-            set req.http.X-Cache-Mode = "PASS";
-            return (pass);
-        }
-
-        set req.http.X-UltraCache-ESI-Cookie-Check = req.http.Cookie;
-        set req.http.X-UltraCache-ESI-Cookie-Check = regsuball(
-            req.http.X-UltraCache-ESI-Cookie-Check,
-            "(?i)(^|;[ ]*)(woocommerce_items_in_cart|woocommerce_cart_hash|wp_woocommerce_session_[^=; ]+)=[^;]*",
-            ""
-        );
-        set req.http.X-UltraCache-ESI-Cookie-Check = regsuball(
-            req.http.X-UltraCache-ESI-Cookie-Check,
-            "^[; ]+|[; ]+$",
-            ""
-        );
-        set req.http.X-UltraCache-ESI-Cookie-Check = regsuball(
-            req.http.X-UltraCache-ESI-Cookie-Check,
-            ";[ ]*;",
-            ";"
-        );
-
-        if (req.http.X-UltraCache-ESI-Cookie-Check == "") {
-            set req.http.X-UltraCache-ESI-Candidate = "1";
-            unset req.http.X-UltraCache-ESI-Cookie-Check;
-        } else {
-            # Another cookie may represent login, language, currency,
-            # membership or plugin-specific state. Preserve normal PASS.
-            unset req.http.X-UltraCache-ESI-Cookie-Check;
-            set req.http.X-Cache-Mode = "PASS";
-            return (pass);
-        }
-    } else {
-        # Any other remaining cookie may personalize rendered HTML.
-        set req.http.X-Cache-Mode = "PASS";
-        return (pass);
-    }
 }
 
 # Preserve the client's exact content negotiation, including JSON/XML APIs,

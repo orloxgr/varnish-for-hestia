@@ -77,9 +77,11 @@ def desired_state(previous, inventory, kind):
                     entry['prefix'] = row['prefix'] + sid + ':'
                 else:
                     entry.update(token=secrets.token_urlsafe(32), profile='general',
-                                 custom_recv='', custom_backend_response='')
+                                 custom_recv='', custom_backend_response='', bypass_cookies=[])
                 row['sites'][domain] = entry
             entry = row['sites'][domain]
+            if kind == 'varnish':
+                entry.setdefault('bypass_cookies', [])
             entry.update(aliases=sorted(set(site.get('aliases', []))),
                          suspended=site.get('suspended', False))
     if kind == 'dragonfly':

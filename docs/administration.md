@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.10.0**.
+Version **0.11.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -131,12 +131,41 @@ Public proxy requests cannot use either invalidation method.
 
 General respects request cookies/authentication and origin privacy headers.
 WordPress adds private administration/API paths; WooCommerce adds cart, checkout
-and account/action paths. On public GET/HEAD requests, WordPress and WooCommerce
-remove only known analytics cookies: `__utma/b/c/t/v/z`, `_ga`, `_ga_<STREAM_ID>`
-(uppercase letters/digits), `_gid`, `_gat`/`_gat_<ID>` and `_fbp`. Any remaining cookie still
-bypasses cache. Private URLs, POST requests and requests with Authorization keep
-their cookies. General does not remove analytics cookies; UltraCache retains
-its existing cookie and ESI policy.
+and account/action paths. All three application profiles bypass WordPress login,
+protected-post and comment-author cookies, PHPSESSID, WooCommerce cart/session
+cookies, recently-viewed state and common YITH wishlist/compare state. Other
+request cookies do not cause bypass by themselves and are forwarded to the
+origin on a miss. General retains Varnish's conservative all-cookie bypass.
+
+### Additional cookie exclusions
+
+Each domain has a **Cookies that bypass cache** field, also available to an
+administrator through **Manage website**. Save cookie rules independently of
+profile and VCL settings. Rules apply only to that site and its aliases.
+
+Enter one case-sensitive exact cookie name or trailing-star prefix per line:
+
+```text
+membership_*
+custom_currency
+```
+
+A match sends the request to the application. It does not delete the cookie.
+Empty uses the profile defaults; custom rules only add bypasses and cannot remove
+built-in private-cookie protections. General already bypasses every request with
+cookies, but retains these rules for future profile changes. Names may contain
+letters, digits, underscores, dots and hyphens (up to 128 characters), with an
+optional trailing `*`. There are at most 64 rules and 8 KiB of input; arbitrary
+regular expressions and cookie values are not accepted.
+
+Use these exclusions for plugins whose HTML depends on a cookie, including
+language, currency or membership. Automatic cookie-based cache variants are not
+provided. Profile changes, discovery and configuration backups preserve the rules.
+Saving invalidates only the selected site's cache. Invalid input keeps the
+previous policy. The origin's response privacy headers and Set-Cookie remain
+independent cacheability checks. The existing UltraCache ESI opt-in and response
+approval are still required before cart-cookie requests can share a parent;
+custom exclusions take precedence over that opt-in.
 
 All profiles honor `Surrogate-Control: no-store`, even when the UltraCache
 profile processes ESI in the same response. Uncacheable responses keep only a
@@ -316,8 +345,8 @@ independent HTTP behavior enabled by the UltraCache profile's response handshake
 Older UltraCache clients can continue using portable HTTP PURGE and BAN.
 
 Updating preserves tokens, profiles, VCL sections and the configured memory
-budget. Version 0.10.0 starts a new cache namespace for every profile, preventing
-reuse of objects stored before the corrected no-store policy. Pages refill on
+budget. Version 0.11.0 starts a new cache namespace for every profile, preventing
+reuse of objects stored under the previous cookie policy. Pages refill on
 demand; the ordinary update does not restart Varnish. Protocol and content
 negotiation remain Vary variants, so exact PURGE still removes them together.
 Application settings and cacheable responses' TTL/grace policies are retained.
