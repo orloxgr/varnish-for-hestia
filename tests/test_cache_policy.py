@@ -113,7 +113,7 @@ class CachePolicy(unittest.TestCase):
                    'sbjs_migrations=m; sbjs_current_add=c; sbjs_first_add=f',
                    'cmplz_banner-status=dismissed; never_seen_before=visitor',
                    'some_vendor_2026=anything; custom_session=A', 'language=el; currency=EUR']
-        for profile in ('wordpress', 'woocommerce', 'ultracache'):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for number, cookie in enumerate(cookies):
@@ -129,7 +129,7 @@ class CachePolicy(unittest.TestCase):
                    'comment_author_abcd=A', 'PHPSESSID=A', 'woocommerce_items_in_cart=1',
                    'woocommerce_cart_hash=A', 'wp_woocommerce_session_abcd=A',
                    'woocommerce_recently_viewed=1', 'yith_wcwl_session_abcd=A', 'yith_woocompare_abcd=A']
-        for profile in ('wordpress', 'woocommerce', 'ultracache'):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for cookie in cookies:
@@ -142,10 +142,10 @@ class CachePolicy(unittest.TestCase):
                                             headers=['Cookie: '+combined], cache='BYPASS'))
                 self.run_policy(profile, responses, requests)
 
-    def test_general_preserves_analytics_and_private_paths_preserve_original_cookies(self):
-        for profile in ('general', 'wordpress', 'woocommerce'):
+    def test_application_private_paths_preserve_original_cookies(self):
+        for profile in ('wordpress', 'woocommerce'):
             with self.subTest(profile=profile):
-                paths = ['/page'] if profile == 'general' else ['/wp-admin/', '/wp-login.php', '/wp-json/', '/?preview=1']
+                paths = ['/wp-admin/', '/wp-login.php', '/wp-json/', '/?preview=1']
                 if profile == 'woocommerce':
                     paths += ['/cart/', '/checkout/', '/my-account/', '/?add-to-cart=1']
                 responses, requests = [], []
@@ -157,8 +157,8 @@ class CachePolicy(unittest.TestCase):
                                         headers=['Cookie: _ga=tracking'], cache='BYPASS'))
                 self.run_policy(profile, responses, requests)
 
-    def test_post_and_authorization_pass_before_analytics_normalization(self):
-        for profile in ('wordpress', 'woocommerce'):
+    def test_post_and_authorization_pass_with_original_cookies(self):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for method, extra in [('POST', []), ('GET', ['Authorization: Bearer fixture'])]:

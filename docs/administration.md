@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.11.0**.
+Version **0.12.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -129,13 +129,16 @@ Exact PURGE invalidates both protocol variants; BAN is composed by the server fo
 the authenticated site and its aliases. Caller-supplied BAN expressions are ignored.
 Public proxy requests cannot use either invalidation method.
 
-General respects request cookies/authentication and origin privacy headers.
+General caches public HTTP content with common login/session/cart exclusions
+and origin privacy protections. Unknown cookies do not cause bypass by themselves.
 WordPress adds private administration/API paths; WooCommerce adds cart, checkout
-and account/action paths. All three application profiles bypass WordPress login,
+and account/action paths. All profiles bypass WordPress login,
 protected-post and comment-author cookies, PHPSESSID, WooCommerce cart/session
 cookies, recently-viewed state and common YITH wishlist/compare state. Other
 request cookies do not cause bypass by themselves and are forwarded to the
-origin on a miss. General retains Varnish's conservative all-cookie bypass.
+origin on a miss. General does not add application-specific URL exclusions.
+Static files served directly by Nginx retain their existing routing; public HTML,
+CSS and other assets that reach Varnish use the selected profile's cache policy.
 
 ### Additional cookie exclusions
 
@@ -152,8 +155,8 @@ custom_currency
 
 A match sends the request to the application. It does not delete the cookie.
 Empty uses the profile defaults; custom rules only add bypasses and cannot remove
-built-in private-cookie protections. General already bypasses every request with
-cookies, but retains these rules for future profile changes. Names may contain
+built-in private-cookie protections. These rules apply to every profile, including
+General, and are retained when changing profiles. Names may contain
 letters, digits, underscores, dots and hyphens (up to 128 characters), with an
 optional trailing `*`. There are at most 64 rules and 8 KiB of input; arbitrary
 regular expressions and cookie values are not accepted.
@@ -345,9 +348,10 @@ independent HTTP behavior enabled by the UltraCache profile's response handshake
 Older UltraCache clients can continue using portable HTTP PURGE and BAN.
 
 Updating preserves tokens, profiles, VCL sections and the configured memory
-budget. Version 0.11.0 starts a new cache namespace for every profile, preventing
-reuse of objects stored under the previous cookie policy. Pages refill on
-demand; the ordinary update does not restart Varnish. Protocol and content
+budget. Version 0.11.0 introduced a new cache namespace for every profile.
+Version 0.12.0 adds a new namespace only for General; other profiles keep their
+warm objects when upgrading from 0.11.0. Pages refill on demand; the ordinary
+update does not restart Varnish. Protocol and content
 negotiation remain Vary variants, so exact PURGE still removes them together.
 Application settings and cacheable responses' TTL/grace policies are retained.
 

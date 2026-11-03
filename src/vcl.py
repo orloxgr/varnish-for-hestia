@@ -145,13 +145,10 @@ def render(state, config):
        req.url ~ "(?i)[?&](add-to-cart|wc-ajax|wc-api)=")) {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
-  if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
-    call hvh_private_cookie_recv;
-    call hvh_cart_cookie_recv;
-  } else if (req.http.Cookie) {
-    # General retains Varnish's conservative application-independent policy.
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
-  }
+  # Shared cookie protection also applies to General. Unknown cookies alone
+  # do not bypass public content; the origin keeps them on a cache miss.
+  call hvh_private_cookie_recv;
+  call hvh_cart_cookie_recv;
   return (hash);
 }
 sub hvh_private_cookie_recv {
@@ -170,6 +167,8 @@ sub vcl_hash {
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   hash_data("hvh-cache-policy-v4");
+  # Only General changes policy here; retain other profiles' warm objects.
+  if (req.http.X-HVH-Profile == "general") { hash_data("hvh-general-cookie-v1"); }
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.url);

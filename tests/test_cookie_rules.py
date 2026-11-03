@@ -140,18 +140,17 @@ class NativeRules(unittest.TestCase):
                         responses.append(compatibility.response('/page',visitor,
                             expect=['expect req.http.Cookie == "'+cookie+'"']))
                         requests.append(compatibility.request('/page',visitor,headers=['Cookie: '+cookie],cache='BYPASS'))
-                if profile != 'general':
-                    for number, cookie in enumerate(['prefixcurrency=EUR', 'Currency=EUR', 'membership=1',
-                                                     'pluginXcookie-name=1', 'plugin.cookieXname=1']):
-                        path = '/public-'+str(number)
-                        responses.append(compatibility.response(path,'public',
-                            expect=['expect req.http.Cookie == "'+cookie+'"']))
-                        requests.extend([compatibility.request(path,'public',headers=['Cookie: '+cookie],cache='MISS'),
-                                         compatibility.request(path,'public',headers=['Cookie: '+cookie],cache='HIT')])
+                for number, cookie in enumerate(['prefixcurrency=EUR', 'Currency=EUR', 'membership=1',
+                                                 'pluginXcookie-name=1', 'plugin.cookieXname=1']):
+                    path = '/public-'+str(number)
+                    responses.append(compatibility.response(path,'public',
+                        expect=['expect req.http.Cookie == "'+cookie+'"']))
+                    requests.extend([compatibility.request(path,'public',headers=['Cookie: '+cookie],cache='MISS'),
+                                     compatibility.request(path,'public',headers=['Cookie: '+cookie],cache='HIT')])
                 self.run_policy(profile,responses,requests,program=source)
 
     def test_custom_rule_cannot_be_hidden_in_second_cookie_header(self):
-        for profile in ('wordpress','woocommerce','ultracache'):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 self.run_policy(profile,
                     [compatibility.response('/page',visitor) for visitor in ('A','B')],
@@ -161,7 +160,7 @@ class NativeRules(unittest.TestCase):
                     program=compatibility.program(profile,bypass_cookies=['membership_*']))
 
     def test_private_cookie_cannot_be_hidden_in_second_cookie_header(self):
-        for profile in ('wordpress','woocommerce','ultracache'):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 self.run_policy(profile,
                     [compatibility.response('/page',visitor) for visitor in ('A','B')],

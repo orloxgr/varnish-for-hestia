@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.0
+
+- Apply the common cookie policy to General: tracking and unknown request cookies
+  no longer bypass public HTML, CSS or other cacheable HTTP content by themselves.
+- Retain known login/session/cart exclusions, per-domain cookie rules, original
+  cookies on origin misses, and response privacy/Set-Cookie protections.
+- Refresh only General's cache namespace when upgrading from 0.11.0. Keep the
+  warm caches of WordPress/WooCommerce/UltraCache and the existing static routing.
+- Update panel help and verify generic HTML/CSS, private sessions, response-cookie
+  handoff and live upgrades with native Varnish.
+
 ## 0.11.0
 
 - Use application cookie exclusions in WordPress/WooCommerce/UltraCache instead
