@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.12.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.13.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -134,3 +134,5 @@ background statistics collector, request-log analysis or automatic polling.
 
 For VCL details, backup, restore, removal or importing an existing Varnish,
 see the [administration reference](docs/administration.md).
+
+See the 0.13.0 [changelog](CHANGELOG.md) for completion, native controls and compatibility changes. Existing service budgets and credentials are preserved on update.

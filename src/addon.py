@@ -20,7 +20,7 @@ class RequestError(Exception):
 
 def hestia(command, *args):
     result = subprocess.run([str(HESTIA / 'bin' / command), *args],
-                            capture_output=True, text=True, timeout=30, env=ENV)
+                            capture_output=True, text=True, timeout=None, env=ENV)
     if result.returncode:
         raise RequestError('The account or domain is unavailable in Hestia.')
     return json.loads(result.stdout)
@@ -103,9 +103,7 @@ def locked_main():
             return 0
         if sys.argv[1:]:
             raise RequestError('Unsupported command.')
-        raw = sys.stdin.buffer.read(65537)
-        if len(raw) > 65536:
-            raise RequestError('Request too large.')
+        raw = sys.stdin.buffer.read()
         request = json.loads(raw)
         if not isinstance(request, dict):
             raise RequestError('Expected a JSON object.')

@@ -2,7 +2,14 @@
 # and assigns the immutable site identity before entering this subroutine.
 sub hvh_http_control {
     if (req.http.X-UltraCache-Soft-Purge || req.http.X-Purge == "soft") {
-        return (synth(501, "Soft purge is not provided by this listener"));
+        if (req.method != "PURGE" ||
+            (req.http.X-UltraCache-Contract &&
+             (req.http.X-UltraCache-Contract != "2" || req.http.X-UltraCache-Operation != "soft-purge"))) {
+            return (synth(400, "Invalid soft-purge operation"));
+        }
+        if (req.http.X-UltraCache-Contract) { set req.http.X-HVH-Control = "2"; }
+        set req.http.X-HVH-Soft-Purge = "1";
+        return (hash);
     }
     if (req.http.X-UltraCache-Contract) {
         if (req.http.X-UltraCache-Contract != "2" || req.method != "PURGE") {
@@ -18,8 +25,11 @@ sub hvh_http_control {
         if (req.http.X-UltraCache-Operation == "exact-purge") {
             return (purge);
         }
-        if (req.url != "/__ultracache-vcl-contract-v2" ||
-            req.http.X-UltraCache-Object-Expression ~ {"^.{3001}"}) {
+        if (req.http.X-UltraCache-Operation == "soft-purge") {
+            set req.http.X-HVH-Soft-Purge = "1";
+            return (hash);
+        }
+        if (req.url != "/__ultracache-vcl-contract-v2") {
             return (synth(400, "Invalid cache control request"));
         }
         # The versioned protocol uses VCL-quoted operands. Extract only the
@@ -56,10 +66,7 @@ sub hvh_http_control {
     # arbitrary ban expression. In particular an invalid expression cannot turn
     # a targeted operation into a whole-site invalidation.
     if (!req.http.X-HVH-Control) {
-    if (req.http.X-Ban-Expression ~ {"^.{3001}"}) {
-        return (synth(400, "Cache invalidation expression is too long"));
-    }
-    if (req.http.X-Ban-Expression ~ {"^req[.]http[.]host == [a-z0-9.-]+(:[0-9]+)? && req[.]url ~ [^[:space:]"']{1,3000}$"}) {
+    if (req.http.X-Ban-Expression ~ {"^req[.]http[.]host == [a-z0-9.-]+(:[0-9]+)? && req[.]url ~ [^[:space:]"']+$"}) {
         set req.http.X-HVH-Ban-Host = regsub(req.http.X-Ban-Expression,
             {"^req[.]http[.]host == ([a-z0-9.-]+(:[0-9]+)?) &&.*$"}, "\1");
         set req.http.X-HVH-Ban-Pattern = regsub(req.http.X-Ban-Expression,
@@ -106,7 +113,7 @@ sub vcl_synth {
         set resp.http.X-UltraCache-VCL-Adapter = "ultracache-hestia-v2";
         set resp.http.X-UltraCache-VCL-Auth = "token";
         set resp.http.X-UltraCache-VCL-Operation = req.http.X-UltraCache-Operation;
-        set resp.http.X-UltraCache-VCL-Capabilities = "exact-purge,exact-ban,batch-ban,html-ban,host-ban";
+        set resp.http.X-UltraCache-VCL-Capabilities = "exact-purge,exact-ban,batch-ban,html-ban,host-ban,soft-purge";
         set resp.http.Cache-Control = "no-store";
         if (resp.status >= 200 && resp.status < 300) {
             set resp.http.X-UltraCache-VCL-Result = "ok";

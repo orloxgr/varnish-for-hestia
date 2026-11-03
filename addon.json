@@ -2,7 +2,7 @@
   "id": "varnish-for-hestia",
   "slug": "varnish",
   "title": "Varnish for Hestia",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "command": "v-varnish-hestia",
   "service": "varnish"
 }

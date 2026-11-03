@@ -103,7 +103,7 @@ class HTTPControl(unittest.TestCase):
     def test_contract_capabilities_does_not_invalidate(self):
         self.run_vcl([origin('/control', 'control')],
                      [get('/control', 'control'), contract('capabilities'),
-                      'expect resp.http.X-UltraCache-VCL-Capabilities == "exact-purge,exact-ban,batch-ban,html-ban,host-ban"',
+                      'expect resp.http.X-UltraCache-VCL-Capabilities == "exact-purge,exact-ban,batch-ban,html-ban,host-ban,soft-purge"',
                       get('/control', 'control', cache='HIT')])
 
     def test_contract_exact_and_batch_decode_generated_quoted_operands(self):
@@ -171,6 +171,29 @@ class HTTPControl(unittest.TestCase):
                               get('/control', 'control'), operation, get('/control', 'control', cache='HIT'),
                               get('/target', 'new-html', headers=['Accept: text/html'], cache='MISS'),
                               get('/target', 'new-json', headers=['Accept: application/json'], cache='MISS')])
+
+    def test_soft_purge_expires_only_selected_url_and_preserves_other_hosts(self):
+        for versioned in (False, True):
+            with self.subTest(versioned=versioned):
+                operation = contract('soft-purge', path='/target') if versioned else control('/target', method='PURGE', headers=['X-Purge: soft'])
+                self.run_vcl([origin('/target','old'), origin('/control','control'),
+                              origin('/target','foreign','foreign.test'), origin('/target','new')],
+                             [get('/target','old'),get('/control','control'),get('/target','foreign','foreign.test'),
+                              control('/target',method='PURGE',headers=['X-Purge: soft'],token='wrong',status=403),
+                              get('/target','old',cache='HIT'),operation,
+                              get('/control','control',cache='HIT'),get('/target','foreign','foreign.test',cache='HIT'),
+                              get('/target','old',cache='HIT'), 'delay 0.2', get('/target','new',cache='HIT'),
+                              control('/missing',method='PURGE',headers=['X-Purge: soft'])])
+
+    def test_ban_expression_longer_than_old_limit_removes_every_selected_url(self):
+        selected = ['/target-one', '/target-two']
+        pattern = '^(' + '|'.join([*selected, *('/absent-' + str(i) for i in range(300))]) + ')$'
+        self.assertGreater(len(pattern), 3000)
+        self.run_vcl([origin(selected[0],'old1'),origin(selected[1],'old2'),origin('/control','control'),
+                      origin(selected[0],'new1'),origin(selected[1],'new2')],
+                     [get(selected[0],'old1'),get(selected[1],'old2'),get('/control','control'),
+                      control(expression='req.http.host == example.test && req.url ~ ' + pattern),
+                      get('/control','control',cache='HIT'),get(selected[0],'new1',cache='MISS'),get(selected[1],'new2',cache='MISS')])
 
     def test_scoped_ban_works_without_wordpress_or_ultracache_for_every_profile(self):
         for profile in ('general', 'wordpress', 'woocommerce', 'ultracache'):

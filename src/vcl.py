@@ -1,5 +1,6 @@
 """Render shared Varnish policy with immutable site/host/backend boundaries."""
 import ipaddress
+from decimal import Decimal
 from pathlib import Path
 import re
 
@@ -26,7 +27,7 @@ def host_name(value):
 
 def render(state, config):
     timeout = choices(state)['first_byte_timeout_seconds']
-    backend_options = ' .first_byte_timeout = '+str(timeout)+'s;' if timeout is not None else ''
+    backend_options = ' .first_byte_timeout = '+format(Decimal(str(timeout)), 'f')+'s;' if timeout is not None else ''
     address = str(ipaddress.ip_address(config['origin_ip']))
     port = config.get('origin_port', 8080)
     if not isinstance(port, int) or not 1 <= port <= 65535:
@@ -42,7 +43,7 @@ def render(state, config):
             if not re.fullmatch(r'[0-9a-f]{32}', sid) or sid in identities:
                 raise ValueError('Invalid or duplicate site scope')
             identities.add(sid)
-            if site['profile'] not in PROFILES or not re.fullmatch(r'[A-Za-z0-9_-]{12,256}', site['token']):
+            if site['profile'] not in PROFILES or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', site['token']):
                 raise ValueError('Invalid Varnish profile or purge token')
             hosts = [host_name(domain), *(host_name(a) for a in site['aliases'])]
             if names.intersection(hosts) or len(hosts) != len(set(hosts)):
@@ -55,7 +56,7 @@ def render(state, config):
                               hosts=hosts, recv=validate(site['custom_recv'], 'recv'),
                               response=validate(site['custom_backend_response'], 'backend_response'),
                               bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
-    text = ['vcl 4.1;', 'import std;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
+    text = ['vcl 4.1;', 'import std; import purge;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
     dispatch = []
@@ -86,7 +87,7 @@ def render(state, config):
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
         if site['bypass_cookies']:
             cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
-                quoted(cookie_policy.pattern(site['bypass_cookies'])) +
+                cookie_policy.vcl_pattern(site['bypass_cookies']) +
                 ') { set req.http.X-Cache-Mode = "PASS"; return (pass); } }')
     text.append('''sub vcl_recv {
   unset req.http.X-HVH-ESI-Parent;
@@ -97,6 +98,7 @@ def render(state, config):
   unset req.http.X-HVH-Ban-Pattern;
   unset req.http.X-HVH-Ban-HTML;
   unset req.http.X-HVH-Control;
+  unset req.http.X-HVH-Soft-Purge;
   unset req.http.X-Cache-Mode;
   std.collect(req.http.Cookie, "; ");
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
@@ -152,12 +154,12 @@ def render(state, config):
   return (hash);
 }
 sub hvh_private_cookie_recv {
-  if (req.http.Cookie ~ ''' + quoted(cookie_policy.pattern(cookie_policy.PRIVATE)) + ''') {
+  if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.PRIVATE) + ''') {
     set req.http.X-Cache-Mode = "PASS"; return (pass);
   }
 }
 sub hvh_cart_cookie_recv {
-  if (req.http.Cookie ~ ''' + quoted(cookie_policy.pattern(cookie_policy.CART)) + ''') {
+  if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.CART) + ''') {
     if (req.http.X-HVH-Profile == "ultracache" && req.http.X-UltraCache-ESI-Opt-In == "1") {
       set req.http.X-UltraCache-ESI-Candidate = "1";
     } else { set req.http.X-Cache-Mode = "PASS"; return (pass); }
@@ -175,7 +177,15 @@ sub vcl_hash {
   return (lookup);
 }
 sub vcl_hit {
+  if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
   if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_hit; }
+}
+sub vcl_miss {
+  if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
+}
+sub hvh_soft_purge {
+  set req.http.X-HVH-Soft-Purge = purge.soft();
+  return (synth(200, "Soft purge completed"));
 }
 sub vcl_backend_fetch {
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_fetch; }

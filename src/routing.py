@@ -15,7 +15,7 @@ MARKER = '# Managed by varnish-for-hestia'
 
 
 def run(*args):
-    result = subprocess.run(args, capture_output=True, timeout=90)
+    result = subprocess.run(args, capture_output=True, timeout=None)
     if result.returncode:
         raise RuntimeError('Native web configuration operation failed')
 
@@ -42,13 +42,13 @@ def reload_nginx():
     master = subprocess.check_output(['systemctl', 'show', 'nginx', '-p', 'MainPID', '--value'], text=True).strip()
     before = nginx_workers(master)
     run('systemctl', 'reload', 'nginx')
-    deadline = time.monotonic() + 10
     while True:
         current = nginx_workers(master)
         if current and not current.intersection(before):
             return
-        if time.monotonic() >= deadline:
-            raise RuntimeError('Nginx did not finish its native configuration reload')
+        state = subprocess.check_output(['systemctl', 'is-active', 'nginx'], text=True).strip()
+        if state not in ('active', 'reloading', 'activating'):
+            raise RuntimeError('Nginx stopped during configuration reload')
         time.sleep(.025)
 
 
@@ -103,7 +103,7 @@ update_object_value web DOMAIN "$domain" '$PROXY_EXT' "$extensions"
 check_result $? 'Proxy template update failed'
 '''
     result = subprocess.run(['/bin/bash', '-c', script, 'hvh-template', owner, domain, template, extensions],
-                            capture_output=True, timeout=90)
+                            capture_output=True, timeout=None)
     if result.returncode:
         raise RuntimeError('Native web configuration operation failed')
 
@@ -150,8 +150,12 @@ def apache_config(inventory, port):
             '<IfModule proxy_fcgi_module>\n    ProxyFCGISetEnvIf "' + expression + '" HTTPS on\n</IfModule>\n')
 
 
-def install_templates(source):
+def install_templates(source, config=None):
     data = {ext: (source / 'templates' / (NAME + '.' + ext)).read_bytes() for ext in ('tpl', 'stpl')}
+    listen = (config or {}).get('listen_port', 6081)
+    if type(listen) is not int or not 1 <= listen <= 65535:
+        raise ValueError('Invalid native Varnish TCP port')
+    data = {ext: text.replace(b'127.0.0.1:6081', ('127.0.0.1:' + str(listen)).encode()) for ext, text in data.items()}
     selected = NAME + '-' + hashlib.sha256(b''.join(data.values())).hexdigest()[:12]
     for extension in ('tpl', 'stpl'):
         destination = TEMPLATES / (selected + '.' + extension)
@@ -194,7 +198,7 @@ def apply(changes, apache_text):
 
 def rollback(changes, apache_before):
     for owner, domain, previous, target, extensions in reversed(changes):
-        available = subprocess.run(['/usr/local/hestia/bin/v-list-web-domain', owner, domain, 'json'], capture_output=True, timeout=30)
+        available = subprocess.run(['/usr/local/hestia/bin/v-list-web-domain', owner, domain, 'json'], capture_output=True, timeout=None)
         if available.returncode:
             # Native concurrent deletion is authoritative; never recreate it.
             continue

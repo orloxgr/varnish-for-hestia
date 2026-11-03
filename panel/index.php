@@ -2,16 +2,7 @@
 // This is an additional route. Existing Hestia files are only read/included.
 declare(strict_types=1);
 $meta = json_decode(file_get_contents('__INSTALL_ROOT__/addon.json'), true, 16, JSON_THROW_ON_ERROR);
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($_SERVER['HTTP_REFERER'])) {
-    // A public landing link supplies a real same-origin navigation for Hestia's
-    // strict GET CSRF policy. No account data is accessed on this landing page.
-    header('Cache-Control: no-store');
-    header('Content-Type: text/html; charset=utf-8');
-    $title = htmlspecialchars($meta['title'], ENT_QUOTES, 'UTF-8');
-    echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>' . $title .
-         '</title><main><h1>' . $title . '</h1><p><a href="./">Open ' . $title . '</a></p></main></html>';
-    exit;
-}
+
 $root = '/usr/local/hestia';
 chdir($root . '/web');
 $TAB = 'WEB';
@@ -82,7 +73,7 @@ if (str_starts_with((string)$action, 'admin-')) {
     }
     $adminOverview = true;
     if ($action === 'admin-server-settings') {
-        $request['first_byte_timeout_seconds'] = filter_var($_POST['first_byte_timeout_seconds'] ?? '', FILTER_VALIDATE_INT);
+        $request['first_byte_timeout_seconds'] = filter_var($_POST['first_byte_timeout_seconds'] ?? '', FILTER_VALIDATE_FLOAT);
     }
     if ($action === 'admin-memory-size') {
         $request['memory_mb'] = filter_var($_POST['memory_mb'] ?? '', FILTER_VALIDATE_INT);
@@ -106,12 +97,28 @@ $bridge = static function (array $payload) use ($root, $meta): array {
     if (!is_resource($process)) {
         return [1, null];
     }
-    fwrite($pipes[0], json_encode($payload, JSON_THROW_ON_ERROR));
+    $input = json_encode($payload, JSON_THROW_ON_ERROR);
+    for ($offset = 0, $length = strlen($input); $offset < $length;) {
+        $written = @fwrite($pipes[0], substr($input, $offset, 65536));
+        if ($written === false || $written === 0) break;
+        $offset += $written;
+    }
     fclose($pipes[0]);
-    $output = stream_get_contents($pipes[1], 1048576);
-    fclose($pipes[1]);
-    stream_get_contents($pipes[2], 4096);
-    fclose($pipes[2]);
+    // Drain both pipes together so a complete diagnostic cannot deadlock stdout.
+    $output = ''; $error = ''; $open = [1 => $pipes[1], 2 => $pipes[2]];
+    foreach ($open as $pipe) stream_set_blocking($pipe, false);
+    while ($open) {
+        $ready = array_values($open); $write = null; $except = null;
+        if (stream_select($ready, $write, $except, null) === false) continue;
+        foreach ($open as $index => $pipe) {
+            if (!in_array($pipe, $ready, true)) continue;
+            $chunk = fread($pipe, 8192);
+            if ($chunk !== false) {
+                if ($index === 1) $output .= $chunk; else $error .= $chunk;
+            }
+            if (feof($pipe)) { fclose($pipe); unset($open[$index]); }
+        }
+    }
     return [proc_close($process), json_decode($output, true)];
 };
 [$code, $data] = $bridge($request);

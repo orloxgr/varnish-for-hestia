@@ -37,7 +37,7 @@ class CacheSize(unittest.TestCase):
                 yield root, config, dropin, run
 
     def test_size_validation_rejects_untrusted_values_before_commands(self):
-        for value in [None, True, '8192', 63, 1048577, 128.5, '64m; reboot']:
+        for value in [None, True, '8192', 0, -1, 128.5, '64m; reboot']:
             with patch.object(service, 'recover_pending') as recover:
                 with self.assertRaises(ValueError): cache_size.resize(value)
                 recover.assert_not_called()

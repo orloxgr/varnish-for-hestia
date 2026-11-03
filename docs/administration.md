@@ -5,7 +5,7 @@ four profiles, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.12.0**.
+Version **0.13.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -27,7 +27,7 @@ transaction. It does not restart the service or invalidate sites solely because
 the timeout changed. Owners cannot modify this server setting.
 
 **Varnish cache size (MiB)** controls the shared malloc storage budget for all
-accounts and domains (64–1048576 MiB). **Apply size and restart Varnish** updates
+accounts and domains (a positive number of MiB, validated by the native service). **Apply size and restart Varnish** updates
 only the addon's existing native service drop-in and `settings.json`, reloads
 systemd, restarts Varnish and verifies the size in the running native manager's
 startup arguments. A restart clears cached content; VCL, tokens and site settings
@@ -157,9 +157,7 @@ A match sends the request to the application. It does not delete the cookie.
 Empty uses the profile defaults; custom rules only add bypasses and cannot remove
 built-in private-cookie protections. These rules apply to every profile, including
 General, and are retained when changing profiles. Names may contain
-letters, digits, underscores, dots and hyphens (up to 128 characters), with an
-optional trailing `*`. There are at most 64 rules and 8 KiB of input; arbitrary
-regular expressions and cookie values are not accepted.
+valid HTTP cookie-name characters, with an optional trailing `*` prefix wildcard. Names are interpreted literally, including regex punctuation. There is no addon rule-count, input-size or name-length quota; arbitrary regular expressions and cookie values are not accepted.
 
 Use these exclusions for plugins whose HTML depends on a cookie, including
 language, currency or membership. Automatic cookie-based cache variants are not
@@ -200,11 +198,10 @@ if (req.url ~ "^/uncached/") { return (pass); }
 if (bereq.url ~ "[.]css$") { set beresp.ttl = 2d; }
 ```
 
-Input is parsed into this bounded language and compiled by native Varnish before
+Input is parsed into this site-local language and compiled by native Varnish before
 activation. Host/backend assignment, cookies/authentication fields, internal
 scopes, global subroutines, imports/includes, inline C, purge logic and private
-response controls stay outside the editing scope. Sections are limited to 16 KiB
-and bounded expression/condition nesting. Invalid input keeps the working VCL,
+response controls stay outside the editing scope. Sections have no addon byte/token/nesting quota; native compilation validates the actual syntax and types. Invalid input keeps the working VCL,
 state and routes. Routine changes use native `vcl.load`/`vcl.use`, without restarting
 the shared service, and invalidate only affected site scopes.
 
@@ -384,3 +381,24 @@ header layout is unfamiliar, the script leaves the page alone; the direct
 `/plugins/varnish/` URL remains available.
 
 See [Hestia’s custom-script extension point](https://github.com/hestiacp/hestiacp/blob/1.10.5/web/js/custom_scripts/README.txt).
+
+## Administrative completion and native compatibility (0.13.0)
+
+Addon transport, managed files and configuration backups are not truncated by
+addon byte ceilings. Commands, authenticated CLI operations, downloads and health
+checks have no separate addon elapsed-work deadline. Native failure, invalid
+configuration, authentication failure and cancellation remain real stop conditions.
+
+Initial installation supports `--listen-port` and `--admin-port` for distinct
+loopback TCP listeners. Existing configured ports are retained on update, and
+owned Nginx templates use the configured listener. Restore checks schema,
+checksums, ownership and native VCL compilation instead of an exact service-version
+string. Fresh installs still use the signed repository and selected package.
+
+Authenticated `PURGE` with `X-Purge: soft`, or contract-v2 `soft-purge`, expires
+only the selected URL's variants, retaining native grace/keep. An eligible stale
+object can be delivered while it refreshes; soft purge is not hard deletion.
+Missing objects return success without an origin fetch. Invalid tokens and
+cross-host operations remain denied.
+
+First-byte timeout accepts finite nonnegative seconds, including fractions. On the tested native release, zero means immediate timeout; it does not mean unlimited waiting. Existing values are retained on update.

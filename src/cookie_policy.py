@@ -6,18 +6,14 @@ import re
 PRIVATE = ('wordpress_logged_in_*', 'wordpress_sec_*', 'wp-postpass_*', 'comment_author_*',
            'PHPSESSID', 'woocommerce_recently_viewed', 'yith_wcwl_session_*', 'yith_woocompare_*')
 CART = ('woocommerce_items_in_cart', 'woocommerce_cart_hash', 'wp_woocommerce_session_*')
-MAX_RULES = 64
-MAX_BYTES = 8192
-RULE = re.compile(r'[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\*?')
+RULE = re.compile(r"[!#$%&'+.^_`|~0-9A-Za-z-]+\*?")
 
 
 def normalize(value):
     if isinstance(value, str):
-        if len(value.encode()) > MAX_BYTES:
-            raise ValueError('Cookie rules may contain at most 8 KiB')
         value = value.splitlines()
     if not isinstance(value, list):
-        raise ValueError('Use at most 64 cookie names or trailing-star prefixes')
+        raise ValueError('Use cookie names or trailing-star prefixes')
     result = []
     for item in value:
         if not isinstance(item, str):
@@ -26,23 +22,25 @@ def normalize(value):
         if not item:
             continue
         if not RULE.fullmatch(item):
-            raise ValueError('Use cookie names with letters, digits, underscore, dot or hyphen; only a trailing * is allowed')
+            raise ValueError('Use valid HTTP cookie names; only a trailing * is interpreted as a prefix wildcard')
         if item not in result:
             result.append(item)
-    if len(result) > MAX_RULES:
-        raise ValueError('Use at most 64 cookie names or trailing-star prefixes')
-    if len('\n'.join(result).encode()) > MAX_BYTES:
-        raise ValueError('Cookie rules may contain at most 8 KiB')
     return result
 
 
 def pattern(rules):
     names = []
     for rule in normalize(list(rules)):
-        name = rule.rstrip('*').replace('.', '[.]').replace('-', '[-]')
+        name = re.escape(rule.removesuffix('*'))
         if rule.endswith('*'):
             name += '[^=;[:blank:]]*'
         names.append(name)
     if not names:
         raise ValueError('An empty cookie rule list has no match pattern')
     return '(^|;[[:blank:]]*)(' + '|'.join(names) + ')='
+
+
+def vcl_pattern(rules):
+    # Native long strings preserve PCRE escapes. Cookie names cannot contain
+    # quotes/braces, so they cannot terminate this generated VCL literal.
+    return '{"' + pattern(rules) + '"}'

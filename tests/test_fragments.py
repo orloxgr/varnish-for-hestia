@@ -49,13 +49,10 @@ class FragmentTests(unittest.TestCase):
         with self.assertRaises(FragmentError):
             validate('set req.http.X-User-Note = "ok"; include "evil.vcl";', 'recv')
 
-    def test_complexity_is_bounded(self):
-        with self.assertRaises(FragmentError):
-            validate('#' + 'x' * 16384, 'recv')
-        with self.assertRaises(FragmentError):
-            validate('if (' + '!' * 2000 + 'req.url) { return(pass); }', 'recv')
-        with self.assertRaises(FragmentError):
-            validate('if(req.url){' * 30 + 'return(pass);' + '}' * 30, 'recv')
+    def test_valid_complexity_is_not_cut_off(self):
+        self.assertEqual(validate('#' + 'x' * 20000, 'recv'), '')
+        self.assertIn('return', validate('if (' + '!' * 2000 + 'req.url) { return(pass); }', 'recv'))
+        self.assertIn('return', validate('if(req.url){' * 60 + 'return(pass);' + '}' * 60, 'recv'))
 
     def test_all_profiles_selectable_with_no_application_inventory(self):
         for profile in ('general', 'wordpress', 'woocommerce', 'ultracache'):

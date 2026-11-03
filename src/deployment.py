@@ -59,7 +59,7 @@ def switch(release):
 
 def check_panel(path):
     result = subprocess.run([str(HESTIA/'php/bin/php'), '-l', str(path)],
-                            capture_output=True, timeout=20)
+                            capture_output=True, timeout=None)
     if result.returncode:
         details = b'\n'.join(output for output in (result.stdout, result.stderr) if output).decode(errors='replace').strip()
         raise RuntimeError('Panel PHP syntax check failed (exit ' + str(result.returncode) + '): ' +

@@ -17,8 +17,8 @@ class Parser:
     def __init__(self, source, stage):
         if stage not in ('recv', 'backend_response'):
             raise FragmentError('Unknown VCL editing section')
-        if not isinstance(source, str) or len(source.encode()) > 16384:
-            raise FragmentError('A VCL section may contain at most 16 KiB')
+        if not isinstance(source, str):
+            raise FragmentError('A VCL section must be text')
         self.tokens = []
         self.stage = stage
         position = 0
@@ -29,8 +29,6 @@ class Parser:
             if match.lastgroup not in ('space', 'comment'):
                 self.tokens.append((match.lastgroup, match.group()))
             position = match.end()
-        if len(self.tokens) > 4096:
-            raise FragmentError('Too many VCL tokens')
         self.index = 0
 
     def peek(self):
@@ -44,49 +42,41 @@ class Parser:
         return token
 
     def block(self, depth=0, nested=False):
-        if depth > 16:
-            raise FragmentError('VCL condition nesting is too deep')
-        while self.peek() is not None and self.peek() != '}':
+        # An explicit parser stack avoids Python recursion limits. The native
+        # compiler still validates VCL types, regexes and complete grammar.
+        braces = 0
+        while self.peek() is not None:
             word = self.take()[1]
             if word == 'if':
-                self.take('('); self.expression(); self.take(')')
-                self.take('{'); self.block(depth + 1, True); self.take('}')
-                if self.peek() == 'else':
-                    self.take('else')
-                    if self.peek() == 'if':
-                        # Parse else-if through the same statement grammar.
-                        self.block_one_if(depth)
-                    else:
-                        self.take('{'); self.block(depth + 1, True); self.take('}')
+                self.take('('); self.expression(')'); self.take(')')
+                self.take('{'); braces += 1
+            elif word == 'else':
+                if self.peek() == 'if':
+                    continue
+                self.take('{'); braces += 1
+            elif word == '}':
+                if not braces:
+                    raise FragmentError('A VCL section cannot close its containing scope')
+                braces -= 1
             elif word in ('set', 'unset'):
                 target = self.take()[1]
                 if not self.writable(target):
                     raise FragmentError('This field is outside the site-local editing scope')
                 if word == 'set':
-                    self.take('='); self.expression()
-                elif not '.http.' in target:
+                    self.take('='); self.expression(';')
+                elif '.http.' not in target:
                     raise FragmentError('Only custom headers can be unset')
                 self.take(';')
             elif word == 'return' and self.stage == 'recv':
                 self.take('('); self.take('pass'); self.take(')'); self.take(';')
             else:
                 raise FragmentError('Unsupported VCL statement')
-        if not nested and self.peek() is not None:
-            raise FragmentError('A VCL section cannot close its containing scope')
-
-    def block_one_if(self, depth):
-        self.take('if'); self.take('('); self.expression(); self.take(')')
-        self.take('{'); self.block(depth + 1, True); self.take('}')
-        if self.peek() == 'else':
-            self.take('else')
-            if self.peek() == 'if':
-                self.block_one_if(depth + 1)
-            else:
-                self.take('{'); self.block(depth + 1, True); self.take('}')
+        if braces:
+            raise FragmentError('Unclosed VCL block')
 
     def writable(self, name):
         prefix = 'req' if self.stage == 'recv' else 'beresp'
-        if re.fullmatch(prefix + r'\.http\.X-User-[A-Za-z0-9_-]{1,80}', name, re.I):
+        if re.fullmatch(prefix + r'\.http\.X-User-[A-Za-z0-9_-]+', name, re.I):
             return True
         return self.stage == 'backend_response' and name in ('beresp.ttl', 'beresp.grace', 'beresp.keep')
 
@@ -94,7 +84,7 @@ class Parser:
         request = 'req' if self.stage == 'recv' else 'bereq'
         if name in (request + '.url', request + '.method'):
             return True
-        match = re.fullmatch(request + r'\.http\.([A-Za-z0-9_-]{1,100})', name)
+        match = re.fullmatch(request + r'\.http\.([A-Za-z0-9_-]+)', name)
         if match and not match[1].lower().startswith(('x-hvh-', 'x-esi-', 'x-ultracache-')):
             return True
         if self.stage == 'backend_response':
@@ -102,29 +92,32 @@ class Parser:
                             'beresp.http.Content-Type', 'beresp.http.Cache-Control')
         return False
 
-    def expression(self, level=0):
-        if level > 24:
-            raise FragmentError('VCL expression nesting is too deep')
-        self.atom(level)
-        while self.peek() in ('==', '!=', '~', '!~', '<', '>', '<=', '>=', '&&', '||', '+'):
-            self.take(); self.atom(level)
-
-    def atom(self, level):
-        if level > 24:
-            raise FragmentError('VCL expression nesting is too deep')
-        kind, value = self.take()
-        if value == '!':
-            self.atom(level + 1)
-        elif value == '(':
-            self.expression(level + 1); self.take(')')
-        elif kind in ('string', 'duration', 'number') or value in ('true', 'false'):
-            pass
-        elif value in ('regsub', 'regsuball'):
-            self.take('('); self.expression(level + 1)
-            self.take(','); self.expression(level + 1)
-            self.take(','); self.expression(level + 1); self.take(')')
-        elif not self.readable(value):
-            raise FragmentError('Unsupported VCL expression or field')
+    def expression(self, terminator):
+        parentheses = 0
+        consumed = False
+        while self.peek() is not None:
+            value = self.peek()
+            if value == terminator and not parentheses:
+                if not consumed:
+                    raise FragmentError('Empty VCL expression')
+                return
+            kind, value = self.take()
+            consumed = True
+            if value == '(':
+                parentheses += 1
+            elif value == ')':
+                if not parentheses:
+                    raise FragmentError('Unbalanced VCL expression')
+                parentheses -= 1
+            elif value in ('regsub', 'regsuball'):
+                self.take('('); parentheses += 1
+            elif kind in ('string', 'duration', 'number') or value in ('true', 'false'):
+                pass
+            elif value in ('==', '!=', '~', '!~', '<', '>', '<=', '>=', '&&', '||', '+', '!', ','):
+                pass
+            elif not self.readable(value):
+                raise FragmentError('Unsupported VCL expression or field')
+        raise FragmentError('Unterminated VCL expression')
 
 
 def validate(source, stage):

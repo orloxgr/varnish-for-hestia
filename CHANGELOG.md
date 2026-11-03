@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0 · 2026-11-04
+
+- Remove addon request/file/output ceilings, subprocess/download deadlines and the Referer interstitial; preserve authentication, CSRF, tenant scopes, native compilation and rollback.
+- Remove forced 1-second upstream connect, failure-count/failure-window and two-try overrides from generated proxy templates. Existing server-selected first-byte timeout and cache budget are retained.
+- Accept positive cache sizes and nonnegative native timeout values (including fractional seconds) and complete cookie/VCL rule lists without arbitrary addon size/count/nesting quotas. Cookie rules remain literal names/trailing-star prefixes; generated regular expressions escape literal characters safely.
+- Remove the 3,000-character BAN expression restriction while retaining authenticated, anchored site/host scoping.
+- Support authenticated exact soft purge using the native purge VMOD, preserving grace/keep and unrelated URLs/hosts. Advertise soft-purge in the VCL contract.
+- Use the authenticated native CLI protocol without a separate client work deadline. Health checks distinguish actual stopped/failed services from startup still in progress.
+- Allow native loopback ports at initial installation/adoption and validate restore/configuration against the installed native service instead of exact release pins. Signed/checksummed fresh-install packages are unchanged.
+
 ## 0.12.0
 
 - Apply the common cookie policy to General: tracking and unknown request cookies

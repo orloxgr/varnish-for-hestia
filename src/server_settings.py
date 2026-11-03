@@ -1,5 +1,6 @@
 """Administrator-only server choices and an on-demand native memory snapshot."""
 import json
+import math
 import subprocess
 
 
@@ -8,8 +9,8 @@ def choices(state):
     if not isinstance(result, dict) or set(result) - {'first_byte_timeout_seconds'}:
         raise ValueError('Invalid server settings')
     value = result.get('first_byte_timeout_seconds')
-    if value is not None and (type(value) is not int or not 1 <= value <= 3600):
-        raise ValueError('First-byte timeout must be 1–3600 seconds')
+    if value is not None and (type(value) not in (int, float) or not math.isfinite(value) or value < 0):
+        raise ValueError('First-byte timeout must be finite nonnegative seconds')
     return {'first_byte_timeout_seconds': value}
 
 
@@ -20,7 +21,7 @@ def change(state, payload):
 
 
 def memory(config):
-    result = subprocess.run(['varnishstat', '-1', '-j'], capture_output=True, text=True, timeout=5)
+    result = subprocess.run(['varnishstat', '-1', '-j'], capture_output=True, text=True, timeout=None)
     if result.returncode:
         raise RuntimeError('Native Varnish memory snapshot is unavailable')
     data = json.loads(result.stdout)

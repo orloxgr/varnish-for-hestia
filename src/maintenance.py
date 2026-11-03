@@ -55,12 +55,13 @@ def digest(payload):
 
 def validate(payload):
     config, state = payload['settings'], payload['desired']
-    if (config.get('schema') != 1 or config.get('listen_port') != 6081 or config.get('admin_port') != 6082 or
-            not isinstance(config.get('memory_mb'), int) or not 64 <= config['memory_mb'] <= 1048576 or
+    if (config.get('schema') != 1 or any(type(config.get(key)) is not int or not 1 <= config[key] <= 65535 for key in ('listen_port', 'admin_port')) or
+            config['listen_port'] == config['admin_port'] or
+            not isinstance(config.get('memory_mb'), int) or config['memory_mb'] <= 0 or
             state.get('schema') != 1 or state.get('kind') != 'varnish'):
         raise ValueError('Unsupported addon configuration')
     secret = base64.b64decode(payload['admin_secret'], validate=True)
-    if not secret or len(secret) > 4096 or b'\0' in secret:
+    if not secret or b'\0' in secret:
         raise ValueError('Invalid administrator secret in archive')
     render(state, config)
     if payload.get('repository') is not None:
@@ -70,7 +71,7 @@ def validate(payload):
             raise ValueError('Invalid archived owner')
         for site in row['sites'].values():
             original = site['settings'].get('original_template', 'default')
-            if original and (not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}', original) or original.startswith(routing.NAME)):
+            if original and (not re.fullmatch(r'[A-Za-z0-9_.-]+', original) or original.startswith(routing.NAME)):
                 raise ValueError('Archive must contain an independent original proxy template')
     return secret
 
@@ -85,7 +86,7 @@ def backup(value):
                    'admin_secret': base64.b64encode((service.CONFIG / 'admin.secret').read_bytes()).decode(),
                    'repository': repository.current()}
         validate(payload)
-        archive = {'schema': 1, 'addon': ID, 'service_version': '9.1.0',
+        archive = {'schema': 1, 'addon': ID, 'service_version': subprocess.check_output(['dpkg-query','-W','-f=${Version}','varnish'],text=True).strip(),
                    'created_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
                    'cache_data_included': False, 'payload': payload, 'sha256': digest(payload)}
         fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
@@ -98,10 +99,10 @@ def backup(value):
 def read_backup(value):
     path = private_path(value)
     info = path.stat()
-    if path.is_symlink() or not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077 or info.st_size > 64 * 1024 * 1024:
-        raise ValueError('Archive must be a private root-owned regular file, at most 64 MiB')
+    if path.is_symlink() or not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
+        raise ValueError('Archive must be a private root-owned regular file')
     archive = json.loads(path.read_text())
-    if (archive.get('schema') != 1 or archive.get('addon') != ID or archive.get('service_version') != '9.1.0' or
+    if (archive.get('schema') != 1 or archive.get('addon') != ID or
             archive.get('sha256') != digest(archive['payload'])):
         raise ValueError('Unsupported or damaged archive')
     validate(archive['payload'])
@@ -126,7 +127,7 @@ def check_integration():
 
 def service_dropin(config):
     return (MARKER + '\n[Service]\nType=exec\nPIDFile=\nExecStart=\n'
-          'ExecStart=/usr/sbin/varnishd -F -a 127.0.0.1:6081 -T 127.0.0.1:6082 -f ' + str(service.ACTIVE) +
+          'ExecStart=/usr/sbin/varnishd -F -a 127.0.0.1:' + str(config['listen_port']) + ' -T 127.0.0.1:' + str(config['admin_port']) + ' -f ' + str(service.ACTIVE) +
           ' -S ' + str(service.CONFIG / 'admin.secret') + ' -p feature=+http2 -s malloc,' + str(config['memory_mb']) + 'm\n'
           'ExecReload=\nExecReload=/usr/sbin/varnishreload -p hvh_reload -m 2 ' + str(service.ACTIVE) + '\n')
 
@@ -155,7 +156,7 @@ def recover_restore():
     routing.rollback(extra['routes'],before)
     routing.run('systemctl','daemon-reload')
     if extra['installed']:
-        subprocess.run(['systemctl','reset-failed','varnish'],capture_output=True,timeout=20)
+        subprocess.run(['systemctl','reset-failed','varnish'],capture_output=True,timeout=None)
         routing.run('systemctl','start','varnish');service.wait_healthy(extra['config'])
         deployment.rollback()
     else:
@@ -173,9 +174,9 @@ def restore(value, hestia, source):
     recover_restore()
     service.recover_pending()
     check_integration()
-    version = subprocess.run(['dpkg-query', '-W', '-f=${Version}', 'varnish'], capture_output=True, text=True, timeout=20)
-    if version.returncode or not version.stdout.startswith('9.1.0-'):
-        raise ValueError('Install the supported Varnish 9.1.0 package before restore')
+    version = subprocess.run(['dpkg-query', '-W', '-f=${Version}', 'varnish'], capture_output=True, text=True, timeout=None)
+    if version.returncode or not version.stdout.strip():
+        raise ValueError('Install the native Varnish package before restore')
     installed = (service.CONFIG / 'settings.json').is_file() and json.loads((service.CONFIG / 'settings.json').read_text()).get('installed')
     if installed:
         service.settings()
@@ -194,7 +195,7 @@ def restore(value, hestia, source):
     state = desired_state(archived, inventory, 'varnish')
     config = copy.deepcopy(payload['settings'])
     config['installed'] = True
-    config['template_name'] = routing.install_templates(source)
+    config['template_name'] = routing.install_templates(source, config)
     changes = routing.plan(state, inventory, config)
     for change in changes:
         if not (routing.TEMPLATES / (change[3] + '.tpl')).is_file():
@@ -207,7 +208,7 @@ def restore(value, hestia, source):
         os.chown(directory, 0, gid); os.chmod(directory, 0o750)
         candidate = Path(directory) / 'candidate.vcl'
         write(candidate, program, 0o640, gid)
-        compiled = subprocess.run(['/usr/sbin/varnishd', '-C', '-f', str(candidate)], capture_output=True, timeout=180)
+        compiled = subprocess.run(['/usr/sbin/varnishd', '-C', '-f', str(candidate)], capture_output=True, timeout=None)
         if compiled.returncode:
             raise ValueError('Archived VCL did not compile; current service was retained')
     ensure_owned_directory(service.CONFIG, ID)
@@ -238,10 +239,10 @@ def restore(value, hestia, source):
             repository.restore(payload.get('repository'))
             integration_files(source, config)
             routing.run('systemctl', 'daemon-reload'); service.verify_native_unit()
-            subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=20)
+            subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=None)
             routing.run('systemctl', 'start', 'varnish'); service.wait_healthy(config)
             _, undo = routing.apply(changes, routing.apache_config(inventory, config['origin_port']))
-            subprocess.run(['python3', str(source / 'tools/install-integration.py')], check=True, capture_output=True, timeout=60)
+            subprocess.run(['python3', str(source / 'tools/install-integration.py')], check=True, capture_output=True, timeout=None)
             write_json(service.STORE / 'desired.json', state); write_json(service.STORE / 'applied.json', state)
             routing.run('systemctl', 'enable', 'varnish')
         except Exception:
@@ -257,7 +258,7 @@ def restore(value, hestia, source):
                           gid if path == service.ACTIVE else 0)
             routing.run('systemctl', 'daemon-reload')
             if installed:
-                subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=20)
+                subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=None)
                 routing.run('systemctl', 'start', 'varnish'); service.wait_healthy(previous_config)
             else:
                 for path in (ROUTE, service.CONFIG):

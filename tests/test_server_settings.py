@@ -34,8 +34,14 @@ class ServerSettings(unittest.TestCase):
         state['owners']['alice']['sites']['second.test']=site
         text=render(state,{'origin_ip':'127.0.0.1'})
         self.assertEqual(text.count('.first_byte_timeout = 300s;'),2)
-        for value in [True,0,-1,3601,'300',1.5,'300; return (pass);']:
+        for value in [True,-1,'300',float('nan'),float('inf'),'300; return (pass);']:
             with self.assertRaises(ValueError):server_settings.change(state,{'first_byte_timeout_seconds':value})
+
+    def test_zero_and_fractional_native_timeouts_have_no_addon_minimum(self):
+        state,_=fixture()
+        for value,spelling in [(0,'0'),(0.125,'0.125'),(7200,'7200')]:
+            server_settings.change(state,{'first_byte_timeout_seconds':value})
+            self.assertIn('.first_byte_timeout = '+spelling+'s;',render(state,{'origin_ip':'127.0.0.1'}))
 
     def test_lifecycle_keeps_choice_and_change_preserves_all_site_settings(self):
         state,inventory=fixture();before=copy.deepcopy(state['owners'])
@@ -69,7 +75,7 @@ class ServerSettings(unittest.TestCase):
                                     'SMA.Transient.g_bytes':{'value':999}}})
         with patch.object(server_settings.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=raw)) as run:
             self.assertEqual(server_settings.memory({'memory_mb':8192}),dict(used_bytes=2048,free_bytes=4096,budget_mb=8192))
-            run.assert_called_once_with(['varnishstat','-1','-j'],capture_output=True,text=True,timeout=5)
+            run.assert_called_once_with(['varnishstat','-1','-j'],capture_output=True,text=True,timeout=None)
 
     def test_memory_action_does_not_reconcile_or_apply_policy(self):
         state,_=fixture()
@@ -80,6 +86,17 @@ class ServerSettings(unittest.TestCase):
                  patch.object(server_settings,'memory',return_value={'used_bytes':1,'free_bytes':2}):
                 result=administration.request(None,'admin-memory',{},'varnish')
                 self.assertIn('memory',result);reconcile.assert_not_called()
+
+    @unittest.skipUnless(shutil.which('varnishtest'), 'Native Varnish required')
+    def test_native_compiler_accepts_zero_and_fractional_timeout_values(self):
+        for value in (0, 0.125):
+            with self.subTest(seconds=value), tempfile.TemporaryDirectory() as folder:
+                state,_=fixture();server_settings.change(state,{'first_byte_timeout_seconds':value})
+                source=render(state,{'origin_ip':'127.0.0.1','origin_port':1})
+                path=Path(folder)/'native.vtc'
+                path.write_text('varnishtest "native numeric timeout format"\nvarnish v1 -vcl {\n'+source+'\n} -start\n')
+                result=subprocess.run(['varnishtest','-t','10',str(path)],capture_output=True,text=True,timeout=15)
+                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
 
     @unittest.skipUnless(shutil.which('varnishtest'),'Native Varnish required')
     def test_backend_override_allows_slow_post_despite_lower_service_default(self):

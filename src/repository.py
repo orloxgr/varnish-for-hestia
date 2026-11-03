@@ -21,7 +21,7 @@ def validate(record):
     if record.get('schema') != 1 or record.get('source') != SOURCE_TEXT or record.get('key_source_sha256') != KEY_SHA256:
         raise ValueError('Unsupported addon repository record')
     key = base64.b64decode(record['key'], validate=True)
-    if not key or len(key) > 1024 * 1024 or hashlib.sha256(key).hexdigest() != record['key_sha256']:
+    if not key or hashlib.sha256(key).hexdigest() != record['key_sha256']:
         raise ValueError('Damaged addon repository key')
     return key
 
@@ -48,8 +48,8 @@ def setup():
     if record is None:
         if KEY.exists() or KEY.is_symlink() or SOURCE.exists() or SOURCE.is_symlink():
             raise ValueError('Refusing unmanaged addon repository paths')
-        with urllib.request.urlopen(KEY_URL, timeout=60) as response:
-            data = response.read(1024 * 1024)
+        with urllib.request.urlopen(KEY_URL, timeout=None) as response:
+            data = response.read()
         if hashlib.sha256(data).hexdigest() != KEY_SHA256:
             raise ValueError('Official signing key differs from the verified release')
         key = subprocess.run(['gpg', '--dearmor'], input=data, capture_output=True, check=True).stdout

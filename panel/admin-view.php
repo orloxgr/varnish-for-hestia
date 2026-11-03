@@ -17,14 +17,14 @@ $profiles = ['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' =
         <form method="post" class="u-mb20">
             <?php $formFields('admin-server-settings'); $timeout = $data['server_settings']['first_byte_timeout_seconds'] ?? $data['service_first_byte_timeout_seconds'] ?? ''; ?>
             <label class="form-label u-block u-mb10" for="first-byte-timeout">Backend first-byte timeout (seconds) <span title="How long Varnish waits for Apache to start responding. Applies to every domain, including cache-bypass requests. It does not change Nginx, Apache or PHP time limits." aria-label="Help: backend first-byte timeout">ⓘ</span></label>
-            <input class="form-control u-mb10" id="first-byte-timeout" type="number" name="first_byte_timeout_seconds" min="1" max="3600" step="1" value="<?= $escape($timeout) ?>" placeholder="300" title="Maximum wait for the first response byte from Apache, in seconds. Use 300 for a five-minute limit. Applies to all accounts and domains." required>
+            <input class="form-control u-mb10" id="first-byte-timeout" type="number" name="first_byte_timeout_seconds" min="0" step="any" value="<?= $escape($timeout) ?>" placeholder="300" title="Maximum wait for the first response byte from Apache, in seconds. Use 300 for a five-minute limit. Fractional seconds are accepted; zero selects native immediate timeout. Applies to all accounts and domains." required>
             <?php if (!isset($data['server_settings']['first_byte_timeout_seconds'])): ?><p class="u-mb10">Currently using the Varnish service default<?= $timeout !== '' ? ': ' . $escape($timeout) . ' seconds' : '' ?>.</p><?php endif; ?>
             <button class="button" type="submit" title="Save the timeout for all websites and apply it without restarting Varnish or clearing the cache.">Apply server timeout</button>
         </form>
         <form method="post" class="u-mb20">
             <?php $formFields('admin-memory-size'); ?>
             <label class="form-label u-block u-mb10" for="cache-size">Varnish cache size (MiB) <span title="One shared cache budget for all accounts and websites. 1024 MiB = 1 GiB. Varnish also uses RAM outside this cache budget." aria-label="Help: shared cache size">ⓘ</span></label>
-            <input class="form-control u-mb10" id="cache-size" type="number" name="memory_mb" min="64" max="1048576" step="1" value="<?= $escape($data['memory_budget_mb'] ?? '') ?>" title="Total cache storage for the whole server, not per account. For example, 8192 MiB is 8 GiB. The saved size is retained during addon updates." required>
+            <input class="form-control u-mb10" id="cache-size" type="number" name="memory_mb" min="1" step="1" value="<?= $escape($data['memory_budget_mb'] ?? '') ?>" title="Total cache storage for the whole server, not per account. For example, 8192 MiB is 8 GiB. The saved size is retained during addon updates." required>
             <p class="u-mb10">Changing the size restarts Varnish for all websites and clears its cached content.</p>
             <button class="button" type="submit" title="Save the shared cache size and restart the native Varnish service. Cached content is cleared. An unchanged size does not trigger a restart.">Apply size and restart Varnish</button>
         </form>

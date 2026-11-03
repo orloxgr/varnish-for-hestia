@@ -40,7 +40,7 @@ PACKAGE = '9.1.0-2~resolute'
 
 
 def run(*args, **kwargs):
-    result = subprocess.run(args, capture_output=True, timeout=600, **kwargs)
+    result = subprocess.run(args, capture_output=True, timeout=None, **kwargs)
     if result.returncode:
         for label, output in (('stdout', result.stdout), ('stderr', result.stderr)):
             if output:
@@ -52,11 +52,17 @@ def run(*args, **kwargs):
 
 def native_version():
     result = run('dpkg-query', '-W', '-f=${Version} ${db:Status-Status}', 'varnish').stdout.decode().strip().split()
-    if len(result) != 2 or not result[0].startswith('9.1.0-') or result[1] != 'installed':
-        raise ValueError('This addon release supports configured Varnish 9.1.0')
+    if len(result) != 2 or result[1] != 'installed':
+        raise ValueError('Install a configured native Varnish package first')
+    return result[0]
 
 
 def install_package():
+    # This signed package/repository is built for this distro. Existing native
+    # services are upgraded/adopted without downloading or replacing their package.
+    release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
+    if release.get('VERSION_CODENAME', '').strip('"') != 'resolute':
+        raise ValueError('The selected official fresh-install package requires the matching Ubuntu resolute repository')
     repository.setup()
     env = dict(os.environ, DEBIAN_FRONTEND='noninteractive')
     run('apt-get', 'update', '-o', 'APT::Update::Error-Mode=any', env=env)
@@ -76,8 +82,8 @@ def install_package():
 def private_manifest(path):
     path = Path(path)
     info = path.stat()
-    if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o077 or info.st_size > 64 * 1024 * 1024:
-        raise ValueError('Use a private root-owned JSON file, at most 64 MiB')
+    if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o077:
+        raise ValueError('Use a private root-owned JSON file')
     return json.loads(path.read_text())
 
 
@@ -85,10 +91,9 @@ def platform():
     if os.geteuid() != 0 or os.environ.get('SUDO_USER') == 'hestiaweb':
         raise ValueError('Run the installer from an administrator shell')
     release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
-    if release.get('ID', '').strip('"') != 'ubuntu' or release.get('VERSION_ID', '').strip('"') != '26.04' or os.uname().machine != 'x86_64':
-        raise ValueError('Supported platform: Ubuntu 26.04 amd64')
-    if run('dpkg-query', '-W', '-f=${Version}', 'hestia').stdout.decode().strip().split('-')[0] != '1.10.5':
-        raise ValueError('This release is verified with Hestia 1.10.5')
+    if release.get('ID', '').strip('"') != 'ubuntu' or os.uname().machine != 'x86_64':
+        raise ValueError('Supported platform: Ubuntu amd64')
+    run('dpkg-query', '-W', '-f=${Version}', 'hestia')
     conf = Path('/usr/local/hestia/conf/hestia.conf').read_text()
     if "PROXY_SYSTEM='nginx'" not in conf or "WEB_SYSTEM='apache2'" not in conf:
         raise ValueError('Required topology: Nginx proxy and Apache/PHP-FPM')
@@ -127,6 +132,10 @@ def initialize(args, inventory, port):
     maintenance.check_integration()
     if DROPIN.exists() or CRON.exists() or GUARD.exists():
         raise ValueError('Unexpected existing initial-install integration')
+    listen_port = getattr(args, 'listen_port', None) or (manifest or {}).get('listen_port', 6081)
+    admin_port = getattr(args, 'admin_port', None) or (manifest or {}).get('admin_port', 6082)
+    if not all(type(value) is int and 1 <= value <= 65535 for value in (listen_port, admin_port)) or listen_port == admin_port:
+        raise ValueError('Use distinct valid native TCP ports')
     addresses = [site['origin_ip'] for row in inventory.values() for site in row['sites'].values()]
     if not addresses:
         addresses = list(hestia('v-list-sys-ips', 'json'))
@@ -144,21 +153,21 @@ def initialize(args, inventory, port):
         if not path.is_absolute() or path.is_symlink() or path.stat().st_mode & 0o007:
             raise ValueError('Use the existing private native administrator secret file')
         secret = path.read_bytes()
-        run('varnishadm', '-T', '127.0.0.1:6082', '-S', str(path), 'status')
+        run('varnishadm', '-T', '127.0.0.1:' + str(admin_port), '-S', str(path), 'status')
         for owner, sites in manifest['sites'].items():
             for domain, imported in sites.items():
                 site = state['owners'][owner]['sites'][domain]
                 site.update(profile=imported['profile'], token=imported['token'])
                 site['settings']['original_template'] = imported.get('original_template', inventory[owner]['sites'][domain]['proxy_template'])
     else:
-        for number in (6081, 6082):
+        for number in (listen_port, admin_port):
             with socket.socket() as probe:
                 try:
                     probe.bind(('127.0.0.1', number))
                 except OSError:
                     raise ValueError('A required local Varnish port is already occupied') from None
     config = {'schema': 1, 'installed': False, 'origin_ip': origin, 'origin_port': port,
-              'listen_port': 6081, 'admin_port': 6082, 'memory_mb': args.memory_mb or 256,
+              'listen_port': listen_port, 'admin_port': admin_port, 'memory_mb': args.memory_mb or 256,
               'allowed_packages': None, 'denied_packages': [], 'adopted': bool(manifest)}
     for owner, row in state['owners'].items():
         for domain, site in row['sites'].items():
@@ -194,7 +203,7 @@ def install(args):
         before = (service.CONFIG / 'settings.json').read_bytes()
         try:
             run('python3', str(SOURCE / 'tools/install-integration.py'))
-            existing['template_name'] = routing.install_templates(SOURCE)
+            existing['template_name'] = routing.install_templates(SOURCE, existing)
             write_json(service.CONFIG / 'settings.json', existing)
             _, _, result = service.reconcile(hestia)
         except Exception:
@@ -242,9 +251,9 @@ def install(args):
         os.chown(service.ACTIVE, 0, gid); service.ACTIVE.chmod(0o640)
         release_guard(); service.verify_native_unit()
         save_pending(record, 'starting', state, config)
-        subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=20)
+        subprocess.run(['systemctl', 'reset-failed', 'varnish'], capture_output=True, timeout=None)
         run('systemctl', 'restart', 'varnish'); service.wait_healthy(config)
-        config['template_name'] = routing.install_templates(SOURCE)
+        config['template_name'] = routing.install_templates(SOURCE, config)
         run('python3', str(SOURCE / 'tools/install-integration.py'))
         save_pending(record, 'routing', state, config)
         # The registry must start from the transaction's persisted identities,
@@ -280,7 +289,7 @@ def install(args):
                     write(path, base64.b64decode(encoded))
             if record['mode'] == 'fresh':
                 prepare_guard()
-                subprocess.run(['systemctl', 'disable', '--now', 'varnish'], capture_output=True, timeout=60)
+                subprocess.run(['systemctl', 'disable', '--now', 'varnish'], capture_output=True, timeout=None)
             else:
                 DROPIN.unlink(missing_ok=True); release_guard()
                 run('systemctl', 'restart', 'varnish')
@@ -291,9 +300,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adopt', metavar='PRIVATE_MANIFEST')
     parser.add_argument('--memory-mb', type=int)
+    parser.add_argument('--listen-port', type=int, help='Initial loopback HTTP listener port (default 6081)')
+    parser.add_argument('--admin-port', type=int, help='Initial loopback administrative port (default 6082)')
     args = parser.parse_args()
     try:
-        if args.memory_mb is not None and not 64 <= args.memory_mb <= 1048576:
+        if args.memory_mb is not None and args.memory_mb <= 0:
             raise ValueError('Choose a cache budget of at least 64 MiB')
         with exclusive():
             install(args)

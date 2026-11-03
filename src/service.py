@@ -25,7 +25,7 @@ ACTIVE = CONFIG / 'active.vcl'
 
 def verify_native_unit():
     result = subprocess.run(['systemctl', 'show', 'varnish', '-p', 'ExecStart', '-p', 'ExecReload', '-p', 'Type'],
-                            capture_output=True, text=True, timeout=20)
+                            capture_output=True, text=True, timeout=None)
     values = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
     if (result.returncode or values.get('Type') != 'exec' or
             str(ACTIVE) not in values.get('ExecStart', '') or
@@ -46,8 +46,9 @@ def settings():
         raise ValueError('Finish the pending restore with the README restore command')
     if (STORE / 'install.json').exists():
         raise ValueError('Finish the pending installation with the README install command')
-    if result.get('listen_port') != 6081 or result.get('admin_port') != 6082:
-        raise ValueError('This release uses native local ports 6081 and 6082')
+    ports = [result.get('listen_port'), result.get('admin_port')]
+    if any(type(port) is not int or not 1 <= port <= 65535 for port in ports) or ports[0] == ports[1]:
+        raise ValueError('Use distinct valid native TCP ports')
     from cache_size import recover
     if recover():
         result = json.loads((CONFIG / 'settings.json').read_text())
@@ -56,8 +57,8 @@ def settings():
 
 
 def admin(config, *args, required=True):
-    result = subprocess.run(['varnishadm', '-t', '180', '-T', '127.0.0.1:' + str(config['admin_port']),
-                             '-S', str(CONFIG / 'admin.secret'), *args], capture_output=True, timeout=190)
+    from cli import command
+    result = command(config['admin_port'], CONFIG / 'admin.secret', args)
     if result.returncode and required:
         # Compiler messages can quote source containing other tenants' tokens.
         # They must never be echoed to a panel owner or a shared log.
@@ -70,15 +71,22 @@ def vcls(config):
     return [row for row in rows if isinstance(row, dict) and 'name' in row]
 
 
-def wait_healthy(config, timeout=30):
-    deadline = time.monotonic() + timeout
+def wait_healthy(config, timeout=None):
+    from cli import AuthenticationError
     while True:
+        body = None
         try:
-            if b'running' in admin(config, 'status').stdout:
-                return
+            body = admin(config, 'status').stdout
+        except AuthenticationError:
+            raise RuntimeError('The native Varnish administrator credential is not active') from None
         except (OSError, RuntimeError, subprocess.SubprocessError):
             pass
-        if time.monotonic() >= deadline:
+        if body and b'running' in body:
+            return
+        if body and b'stopped' in body:
+            raise RuntimeError('The native Varnish child is stopped')
+        state = subprocess.run(['systemctl', 'is-active', 'varnish'], capture_output=True, text=True)
+        if state.stdout.strip() in ('failed', 'inactive', 'deactivating', 'unknown'):
             raise RuntimeError('Varnish did not become healthy') from None
         time.sleep(.2)
 
@@ -247,8 +255,8 @@ def request(hestia, owner_name, action, payload):
             owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
         elif action == 'token':
             value = payload.get('password')
-            if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,256}', value):
-                raise ValueError('Purge tokens need 12-256 letters, digits, underscore or hyphen')
+            if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
+                raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
     if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'token', 'flush'):
         raise ValueError('Unsupported Varnish action')

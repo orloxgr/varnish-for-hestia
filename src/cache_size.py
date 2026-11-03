@@ -11,8 +11,8 @@ JOURNAL = 'resize.json'
 
 
 def validate(value):
-    if type(value) is not int or not 64 <= value <= 1048576:
-        raise ValueError('Cache size must be 64–1048576 MiB')
+    if type(value) is not int or not value > 0:
+        raise ValueError('Cache size must be a positive number of MiB')
     return value
 
 
@@ -23,7 +23,7 @@ def paths():
 
 def check_budget(config):
     result = subprocess.run(['systemctl', 'show', 'varnish', '-p', 'MainPID', '--value'],
-                            capture_output=True, text=True, timeout=20)
+                            capture_output=True, text=True, timeout=None)
     pid = result.stdout.strip()
     if result.returncode or not pid.isdecimal() or int(pid) < 1:
         raise RuntimeError('The native Varnish manager is unavailable')
