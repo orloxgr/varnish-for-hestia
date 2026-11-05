@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1 · 2026-11-05
+
+- Fix HTTP 503 "VCL failed" during authenticated contract exact/batch BAN of long URL expressions. Parse quoted operands in non-capturing, possessive chunks instead of retaining regex backtracking state per character, preserving the accepted grammar without changing native server limits.
+- Keep token authentication, site/host isolation, operation checks and malformed-expression rejection. Add native regression coverage for 2,400/3,400-byte queries, long escape-heavy batches, malformed operands and unaffected cached objects.
+- Existing installations apply the corrected generated VCL through the normal pull-and-installer update, retaining site settings, credentials and memory budget.
+
 ## 0.13.0 · 2026-11-04
 
 - Remove addon request/file/output ceilings, subprocess/download deadlines and the Referer interstitial; preserve authentication, CSRF, tenant scopes, native compilation and rollback.

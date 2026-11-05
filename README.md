@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.13.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.13.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -81,6 +81,9 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
+Version **0.13.1** fixes HTTP contract BAN failures for long URL expressions.
+The installer regenerates and activates the corrected VCL automatically;
+an UltraCache plugin update alone does not apply this provider fix.
 Updating from **0.11.0 to 0.12.0** refreshes General caches for the new cookie
 policy. Other profiles retain their warm caches. Pages refill on demand without
 restarting Varnish; upgrading from an older release also applies its cache changes.

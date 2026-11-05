@@ -34,7 +34,9 @@ sub hvh_http_control {
         }
         # The versioned protocol uses VCL-quoted operands. Extract only the
         # generated host and selector; the expression itself is never executed.
-        if (req.http.X-UltraCache-Object-Expression ~ {"^obj[.]http[.]X-Cache-Object-Host == "[a-z0-9.-]+(:[0-9]+)?" && obj[.]http[.]X-Cache-Object-URL ~ "([^"\\]|\\.)+"$"}) {
+        # Consume plain runs without per-byte captures or backtracking state:
+        # long valid operands must not exhaust the regex JIT stack.
+        if (req.http.X-UltraCache-Object-Expression ~ {"^obj[.]http[.]X-Cache-Object-Host == "[a-z0-9.-]+(:[0-9]+)?" && obj[.]http[.]X-Cache-Object-URL ~ "(?:[^"\\]++|\\.)++"$"}) {
             set req.http.X-HVH-Ban-Host = regsub(req.http.X-UltraCache-Object-Expression,
                 {"^obj[.]http[.]X-Cache-Object-Host == "([a-z0-9.-]+(:[0-9]+)?)" &&.*$"}, "\1");
             set req.http.X-HVH-Ban-Pattern = regsub(req.http.X-UltraCache-Object-Expression,

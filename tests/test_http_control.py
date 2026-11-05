@@ -2,6 +2,7 @@
 import copy
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -9,7 +10,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from vcl import render
+from vcl import quoted, render
 
 
 TOKEN = 'A' * 32
@@ -116,6 +117,59 @@ class HTTPControl(unittest.TestCase):
                       contract('batch-ban', r'obj.http.X-Cache-Object-Host == "example.test" && obj.http.X-Cache-Object-URL ~ "^(?:\\/one\\?x\\=1|\\/two)$"'),
                       get('/control', 'control', cache='HIT'),
                       get('/one?x=1', 'newer-one', cache='MISS'), get('/two', 'new-two', cache='MISS')])
+
+    def test_long_contract_exact_ban_invalidates_only_selected_object(self):
+        for query_bytes in (2400, 3400):
+            with self.subTest(query_bytes=query_bytes):
+                path = '/target?q=' + 'x' * query_bytes
+                expression = ('obj.http.X-Cache-Object-Host == "example.test" && '
+                              'obj.http.X-Cache-Object-URL ~ ' + quoted('^' + re.escape(path) + '$'))
+                objects = [(path, 'old'), ('/control', 'control'),
+                           (path, 'alias', 'www.example.test'),
+                           (path, 'foreign', 'foreign.test')]
+                self.run_vcl([*(origin(*item) for item in objects), origin(path, 'new')],
+                             [*(get(*item, cache='MISS') for item in objects),
+                              *(get(*item, cache='HIT') for item in objects),
+                              contract('exact-ban', expression),
+                              *(get(*item, cache='HIT') for item in objects[1:]),
+                              get(path, 'new', cache='MISS'), get(path, 'new', cache='HIT')])
+
+    def test_long_escaped_contract_batch_ban_preserves_scope(self):
+        paths = ['/one?q=' + 'a.b+c-' * 140, '/two?q=' + 'd.e+f-' * 140]
+        pattern = '^(?:' + '|'.join(re.escape(path) for path in paths) + ')$'
+        expression = ('obj.http.X-Cache-Object-Host == "example.test" && '
+                      'obj.http.X-Cache-Object-URL ~ ' + quoted(pattern))
+        self.assertGreater(len(expression), 3000)
+        objects = [(paths[0], 'one'), (paths[1], 'two'), ('/control', 'control'),
+                   (paths[0], 'foreign', 'foreign.test')]
+        self.run_vcl([*(origin(*item) for item in objects),
+                      origin(paths[0], 'one-new'), origin(paths[1], 'two-new')],
+                     [*(get(*item, cache='MISS') for item in objects),
+                      *(get(*item, cache='HIT') for item in objects),
+                      contract('batch-ban', expression),
+                      *(get(*item, cache='HIT') for item in objects[2:]),
+                      get(paths[0], 'one-new', cache='MISS'),
+                      get(paths[0], 'one-new', cache='HIT'),
+                      get(paths[1], 'two-new', cache='MISS'),
+                      get(paths[1], 'two-new', cache='HIT')])
+
+    def test_long_contract_rejects_malformed_operands_and_wrong_token(self):
+        prefix = ('obj.http.X-Cache-Object-Host == "example.test" && '
+                  'obj.http.X-Cache-Object-URL ~ ')
+        operand = '^/target' + 'x' * 3400 + '$'
+        malformed = [prefix + '"' + operand + '"tail"',
+                     prefix + '"' + operand + '\\"',
+                     prefix + quoted(operand) + ' && obj.status > 0']
+        valid = prefix + quoted(operand)
+        self.run_vcl([origin('/control', 'control')],
+                     [get('/control', 'control', cache='MISS'),
+                      *(contract('exact-ban', value, status=400) for value in malformed),
+                      control('/__ultracache-vcl-contract-v2', method='PURGE',
+                              token='wrong', status=403,
+                              headers=['X-UltraCache-Contract: 2',
+                                       'X-UltraCache-Operation: exact-ban',
+                                       'X-UltraCache-Object-Expression: ' + valid]),
+                      get('/control', 'control', cache='HIT')])
 
     def test_html_flush_preserves_static_objects_and_foreign_hosts(self):
         for versioned in (False, True):
