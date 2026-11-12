@@ -27,6 +27,7 @@ import repository
 import routing
 import service
 import deployment
+import progress
 from vcl import render
 
 ID = 'varnish-for-hestia'
@@ -40,6 +41,7 @@ PACKAGE = '9.1.0-2~resolute'
 
 
 def run(*args, **kwargs):
+    progress.stage('Command: ' + shlex.join(args))
     result = subprocess.run(args, capture_output=True, timeout=None, **kwargs)
     if result.returncode:
         for label, output in (('stdout', result.stdout), ('stderr', result.stderr)):
@@ -184,6 +186,7 @@ def initialize(args, inventory, port):
 
 
 def install(args):
+    progress.stage('Checking platform and native Hestia topology')
     port = platform()
     if PENDING.exists():
         record = private_manifest(PENDING)
@@ -196,13 +199,16 @@ def install(args):
             raise ValueError('An interrupted installation retains its original memory budget')
         resumed = True
     elif (service.CONFIG / 'settings.json').exists() and json.loads((service.CONFIG / 'settings.json').read_text()).get('installed'):
+        progress.stage('Existing installation found; retaining credentials, site choices and cache size')
         native_version()
         existing = service.settings()
         if args.memory_mb is not None and args.memory_mb != existing['memory_mb']:
             raise ValueError('Existing memory budget is retained; change Varnish cache size in Hestia Plugins > Varnish > All accounts')
         before = (service.CONFIG / 'settings.json').read_bytes()
         try:
+            progress.stage('Publishing addon code and Hestia panel integration')
             run('python3', str(SOURCE / 'tools/install-integration.py'))
+            progress.stage('Installing managed proxy template definitions')
             existing['template_name'] = routing.install_templates(SOURCE, existing)
             write_json(service.CONFIG / 'settings.json', existing)
             _, _, result = service.reconcile(hestia)
@@ -211,9 +217,11 @@ def install(args):
             deployment.rollback()
             raise
         deployment.commit()
+        progress.stage('Upgrade complete; native Varnish and web configuration applied')
         print(json.dumps({'ok': True, 'mode': 'upgrade-or-reinstall', 'credentials_preserved': True, **result}))
         return
     else:
+        progress.stage('Preparing initial installation/adoption and complete account inventory')
         record = initialize(args, collect(hestia), port)
         resumed = False
     inventory = collect(hestia)
@@ -272,6 +280,7 @@ def install(args):
         finally:
             os.close(directory)
         deployment.commit()
+        progress.stage('Installation complete; service enabled and configuration committed')
         print(json.dumps({'ok': True, 'mode': record['mode'], 'resumed': resumed, 'accounts': len(state['owners']), **result}))
     except Exception:
         try:
@@ -305,9 +314,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         if args.memory_mb is not None and args.memory_mb <= 0:
-            raise ValueError('Choose a cache budget of at least 64 MiB')
-        with exclusive():
-            install(args)
+            raise ValueError('Choose a positive cache budget in MiB')
+        with progress.reporting():
+            progress.stage('Waiting for the addon operation lock (another reconcile or panel operation may be active)')
+            with exclusive():
+                progress.stage('Operation lock acquired')
+                install(args)
     except Exception as error:
         # This is the administrator's installer, not a hosting-user response.
         traceback.print_exc(file=sys.stderr)

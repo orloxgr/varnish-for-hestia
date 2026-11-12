@@ -7,6 +7,7 @@ import subprocess
 import time
 import browser_cache
 import hosting_timeouts
+import progress
 
 from files import write
 
@@ -43,6 +44,7 @@ def reload_nginx():
     # on native worker turnover, without making any application HTTP requests.
     master = subprocess.check_output(['systemctl', 'show', 'nginx', '-p', 'MainPID', '--value'], text=True).strip()
     before = nginx_workers(master)
+    progress.stage('Reloading Nginx and waiting for its new workers')
     run('systemctl', 'reload', 'nginx')
     while True:
         current = nginx_workers(master)
@@ -192,18 +194,23 @@ def apply(changes, apache_text):
         if changed_apache:
             APACHE.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
             write(APACHE, apache_text, 0o644)
-        for owner, domain, previous, target, extensions in changes:
+        progress.stage('Applying ' + str(len(changes)) + ' domain route changes')
+        for number, (owner, domain, previous, target, extensions) in enumerate(changes, 1):
+            progress.stage('Domain ' + str(number) + '/' + str(len(changes)) + ': ' + domain + ' (' + owner + ') — regenerating native proxy configuration')
             # Include the current entry before the native operation: it can
             # partially regenerate config before reporting a failure.
             done.append((owner, domain, previous, target, extensions))
             set_template(owner, domain, target, extensions)
         if changed_apache or changes:
+            progress.stage('Validating Apache and Nginx configuration')
             run('apache2ctl', 'configtest'); run('nginx', '-t')
             if changed_apache:
+                progress.stage('Reloading the changed Apache configuration')
                 run('systemctl', 'reload', 'apache2')
             if changes:
                 reload_nginx()
     except Exception:
+        progress.stage('Restoring previous proxy routes after an apply failure')
         rollback(done, before)
         raise
     return {'route_updates': len(changes), 'apache_updated': changed_apache}, (done, before)

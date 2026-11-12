@@ -12,6 +12,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 import deployment
+import progress
 
 
 def installer_runner():
@@ -20,7 +21,7 @@ def installer_runner():
     source = ROOT / 'tools/install.py'
     tree = ast.parse(source.read_text())
     function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'run')
-    namespace = {'subprocess': subprocess, 'sys': sys, 'shlex': shlex}
+    namespace = {'subprocess': subprocess, 'sys': sys, 'shlex': shlex, 'progress': progress}
     exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
     return namespace['run']
 

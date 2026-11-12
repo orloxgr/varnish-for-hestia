@@ -1,3 +1,17 @@
+# 0.14.1 installer progress verification
+
+All **124 tests passed** in 204.480 seconds.
+
+The normal installer was exercised on the disposable Hestia 1.10.6 VM. It emitted
+immediate timestamped stages on stderr and one intact JSON result on stdout.
+Six actual domain proxy regenerations displayed `Domain 1/6` through `Domain 6/6`,
+then configuration validation and Nginx worker reload. A separately held native
+operation lock produced the wait message and a ten-second heartbeat; installation
+completed after the lock was released. Varnish PID and active VCL bytes were
+unchanged, with zero site invalidations. Closed diagnostic streams and quiet
+panel/API behavior have dedicated regression coverage. No production deployment
+was performed during verification.
+
 # 0.14.0 verification
 
 Verified on the disposable Ubuntu 26.04 / Hestia 1.10.6 lab with native

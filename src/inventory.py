@@ -2,9 +2,11 @@
 import pwd
 from pathlib import Path
 import subprocess
+import progress
 
 
 def collect(hestia):
+    progress.stage('Reading native Hestia accounts and IP addresses')
     users = hestia('v-list-users', 'json')
     addresses = hestia('v-list-sys-ips', 'json')
     def local_ip(value):
@@ -15,7 +17,8 @@ def collect(hestia):
             raise ValueError('The domain has no unambiguous native origin address')
         return matched[0]
     result = {}
-    for owner, row in sorted(users.items()):
+    for number, (owner, row) in enumerate(sorted(users.items()), 1):
+        progress.stage('Account ' + str(number) + '/' + str(len(users)) + ': ' + owner + ' — reading domains')
         # Directory birth time survives password/package changes but differs for
         # replacement accounts, even if name/UID/creation-second are recycled.
         directory = Path('/usr/local/hestia/data/users') / owner
@@ -33,4 +36,5 @@ def collect(hestia):
                              'proxy_extensions':web.get('PROXY_EXT','')}
                      for domain, web in domains.items()},
         }
+    progress.stage('Inventory complete: ' + str(len(result)) + ' accounts, ' + str(sum(len(row['sites']) for row in result.values())) + ' domains')
     return result

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.1 · 2026-11-12
+
+- Show immediate timestamped installer progress: operation-lock wait/acquisition, account inventory, code publication, managed routes, native VCL compilation/activation, each changed domain, web configuration validation/reload and final commit.
+- Report the current stage every ten seconds while a native operation is still running. This is visibility only; no new timeout, cancellation or work limit is introduced.
+- Keep progress on stderr and final JSON on stdout. Panel/API and cron operations remain silent unless explicitly run in an administrator reporting context. A closed progress console never converts successful work into failure.
+- Preserve the 0.14.0 VCL, cookies/query policy, credentials, cache budget and warm objects; add regression coverage for reporting, domain counts and output separation.
+
 ## 0.14.0 · 2026-11-12
 
 - Let explicitly opted-in UltraCache cart/session visitors HIT a warmed public parent marked `X-UltraCache-Woo-Async-Parent: 1`. Keep private cart endpoints, login exclusions, response privacy, Vary isolation and the ESI-only private cold-miss approval unchanged.

@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.14.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.14.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -81,6 +81,18 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
+The installer prints timestamped stages and actual account/domain counts to
+stderr as it works. During a slow native command or lock wait it reports the
+current stage every ten seconds; this does not set an execution deadline.
+The final machine-readable JSON stays on stdout. Panel/API and cron operations
+remain quiet. To keep both progress and the result in a local terminal log:
+
+```sh
+set -o pipefail
+sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py 2>&1 | tee varnish-install.log
+```
+
+Version **0.14.1** adds this installer visibility without changing the cache policy.
 Version **0.14.0** adds UltraCache async-cart parent HITs, hosting timeout
 inheritance, browser-cache controls and central profile additions. The installer
 regenerates the VCL and affected managed domain templates automatically. No

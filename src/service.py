@@ -19,6 +19,7 @@ import routing
 import browser_cache
 import hosting_timeouts
 import profile_settings
+import progress
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -118,7 +119,9 @@ def prune(config, keep_names):
 
 def apply(state, previous, inventory, config, changes=None):
     if changes is None:
+        progress.stage('Preparing managed proxy routes')
         changes = routing.plan(state, inventory, config)
+    progress.stage('Rendering the Varnish policy')
     program = render(state, config)
     digest = hashlib.sha256(program.encode()).hexdigest()
     base_name = 'hvh_gen_' + digest[:32]
@@ -137,6 +140,7 @@ def apply(state, previous, inventory, config, changes=None):
     if needs_activation and name not in {row['name'] for row in rows}:
         write(candidate, program, 0o640, grp.getgrnam('varnish').gr_gid)
         try:
+            progress.stage('Compiling candidate VCL with native Varnish')
             admin(config, 'vcl.load', name, str(candidate))
         except Exception:
             candidate.unlink(missing_ok=True)
@@ -144,11 +148,13 @@ def apply(state, previous, inventory, config, changes=None):
     routing_undo = None
     try:
         if needs_activation:
+            progress.stage('Activating the compiled VCL')
             admin(config, 'vcl.use', name)
         route_result, routing_undo = routing.apply(changes, routing.apache_config(inventory, config['origin_port']))
         old_sites = {site['id']: site for owner in (previous or {}).get('owners', {}).values() for site in owner['sites'].values()}
         old_rules = profile_settings.choices(previous or {})['rules']
         new_rules = profile_settings.choices(state)['rules']
+        progress.stage('Checking which site caches need invalidation')
         current_ids = set()
         invalidated = 0
         for owner in state['owners'].values():
@@ -174,6 +180,7 @@ def apply(state, previous, inventory, config, changes=None):
                 admin(config, 'vcl.discard', name, required=False)
             write(ACTIVE, active_bytes, 0o640, grp.getgrnam('varnish').gr_gid)
         raise ApplyRolledBack('Apply failed; previous Varnish and web settings were restored') from None
+    progress.stage('Removing unused addon VCL generations')
     prune(config, [name, old_name])
     return dict(route_result, vcl_activated=needs_activation, invalidated_sites=invalidated, generation=digest)
 
@@ -209,12 +216,14 @@ def reconcile(hestia, mutation=None, config_override=None):
     with locked_store(STORE) as desired_path:
         old = json.loads(desired_path.read_text()) if desired_path.exists() else None
         state = desired_state(old, inventory, 'varnish')
+        progress.stage('Reading native Nginx timeout settings')
         hosting_timeouts.refresh(state)
         browser_cache.defaults(state)
         if mutation:
             mutation(state, config)
         applied_path = STORE / 'applied.json'
         previous = json.loads(applied_path.read_text()) if applied_path.exists() else None
+        progress.stage('Preparing managed proxy routes')
         changes = routing.plan(state, inventory, config)
         render(state, config)
         apache = routing.APACHE.read_bytes() if routing.APACHE.exists() else None
@@ -222,6 +231,7 @@ def reconcile(hestia, mutation=None, config_override=None):
                           'apache': base64.b64encode(apache).decode() if apache is not None else None})
         try:
             result = apply(state, previous, inventory, config, changes=changes)
+            progress.stage('Committing desired and applied configuration')
             if old != state:
                 write_json(desired_path, state)
             if previous != state:
