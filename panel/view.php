@@ -54,6 +54,12 @@ $panel = top_panel($headerOwner, $TAB);
                         <button type="submit" class="button" title="Save these additional cookie bypass rules for this website and its aliases. Only this website’s cache is invalidated; profile, VCL and tokens are retained."><i class="fas fa-floppy-disk icon-purple"></i>Save cookie rules</button>
                     </form>
                     <details class="box-collapse u-mb10">
+                        <summary class="box-collapse-header" title="Browser caching for existing files served directly by Nginx. Dynamic responses retain their application policy.">Browser cache</summary>
+                        <div class="box-collapse-content"><form method="post">
+                            <?php $formFields('configure-browser-cache', $site['domain']); $browserChoice = $site['browser_cache']; $browserId = $site['domain']; $browserSite = true; require __DIR__ . '/browser-cache.php'; ?>
+                        </form></div>
+                    </details>
+                    <details class="box-collapse u-mb10">
                         <summary class="box-collapse-header" title="Choose this website’s cache profile and optional supported VCL additions.">Profile and site VCL</summary>
                         <div class="box-collapse-content"><form method="post">
                             <?php $formFields('configure-site', $site['domain']); ?>
@@ -72,7 +78,7 @@ $panel = top_panel($headerOwner, $TAB);
                         <summary class="box-collapse-header" title="Change the secret used by applications to invalidate this website’s Varnish cache.">Change site purge token</summary>
                         <div class="box-collapse-content"><form method="post">
                             <?php $formFields('token', $site['domain']); ?>
-                            <div class="u-mb20"><label class="form-label" for="token-<?= $escape($site['domain']) ?>">New purge token</label><input title="New site-specific purge secret: 12–256 letters, digits, underscores or hyphens. Update it manually in applications that use the old secret." class="form-control" id="token-<?= $escape($site['domain']) ?>" type="password" name="password" minlength="12" pattern="[A-Za-z0-9_-]+" autocomplete="new-password" required></div>
+                            <div class="u-mb20"><label class="form-label" for="token-<?= $escape($site['domain']) ?>">New purge token</label><input title="New site-specific purge secret: At least 12 letters, digits, underscores or hyphens. Update it manually in applications that use the old secret." class="form-control" id="token-<?= $escape($site['domain']) ?>" type="password" name="password" minlength="12" pattern="[A-Za-z0-9_-]+" autocomplete="new-password" required></div>
                             <button type="submit" class="button" title="Replace only this website’s purge token. Application settings are independent and are not updated automatically."><i class="fas fa-floppy-disk icon-purple"></i>Change token</button>
                         </form></div>
                     </details>

@@ -10,15 +10,16 @@ $profiles = ['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' =
     <p class="u-mb20">All accounts · <?= $escape($data['total_accounts'] ?? 0) ?> accounts · <?= $escape($data['total_sites'] ?? 0) ?> websites</p>
     <?php if ($pageError !== ''): ?><div class="alert alert-danger u-mb20" role="alert"><p><?= $escape($pageError) ?></p></div>
     <?php elseif (!empty($data['memory_size_saved'])): ?><div class="alert alert-success u-mb20" role="status"><p>Cache size: <?= $escape($data['memory_budget_mb']) ?> MiB. <?= !empty($data['service_restarted']) ? 'Varnish was restarted; the cache will refill as websites are visited.' : 'The size was unchanged; no restart was needed.' ?></p></div>
+    <?php elseif (!empty($data['policy_settings_saved'])): ?><div class="alert alert-success u-mb20" role="status"><p>The cache policy settings were applied.</p></div>
     <?php elseif (!empty($data['server_settings_saved'])): ?><div class="alert alert-success u-mb20" role="status"><p>The server timeout was applied to all websites.</p></div>
     <?php elseif (isset($data['changed'])): ?><div class="alert alert-success u-mb20" role="status"><p>Applied to <?= $escape($data['changed']['accounts']) ?> accounts and <?= $escape($data['changed']['sites']) ?> websites.</p></div><?php endif; ?>
     <section class="u-mb20">
         <h2 class="u-mb20">Server settings · all websites</h2>
         <form method="post" class="u-mb20">
-            <?php $formFields('admin-server-settings'); $timeout = $data['server_settings']['first_byte_timeout_seconds'] ?? $data['service_first_byte_timeout_seconds'] ?? ''; ?>
-            <label class="form-label u-block u-mb10" for="first-byte-timeout">Backend first-byte timeout (seconds) <span title="How long Varnish waits for Apache to start responding. Applies to every domain, including cache-bypass requests. It does not change Nginx, Apache or PHP time limits." aria-label="Help: backend first-byte timeout">ⓘ</span></label>
-            <input class="form-control u-mb10" id="first-byte-timeout" type="number" name="first_byte_timeout_seconds" min="0" step="any" value="<?= $escape($timeout) ?>" placeholder="300" title="Maximum wait for the first response byte from Apache, in seconds. Use 300 for a five-minute limit. Fractional seconds are accepted; zero selects native immediate timeout. Applies to all accounts and domains." required>
-            <?php if (!isset($data['server_settings']['first_byte_timeout_seconds'])): ?><p class="u-mb10">Currently using the Varnish service default<?= $timeout !== '' ? ': ' . $escape($timeout) . ' seconds' : '' ?>.</p><?php endif; ?>
+            <?php $formFields('admin-server-settings'); $timeout = $data['server_settings']['first_byte_timeout_seconds'] ?? '';  ?>
+            <label class="form-label u-block u-mb10" for="first-byte-timeout">Backend first-byte timeout (seconds) <span title="How long Varnish waits for Apache to start responding. Applies to every domain, including cache-bypass requests. The managed Nginx proxy allows this wait to complete. Apache and PHP keep their own limits. Leave blank to follow the native Nginx hosting read timeout." aria-label="Help: backend first-byte timeout">ⓘ</span></label>
+            <input class="form-control u-mb10" id="first-byte-timeout" type="number" name="first_byte_timeout_seconds" min="0" step="any" value="<?= $escape($timeout) ?>" placeholder="Follow hosting" title="Maximum wait for the first response byte from Apache, in seconds. Use 300 for a five-minute limit. Fractional seconds are accepted; zero selects native immediate timeout. Applies to all accounts and domains. Leave blank to follow hosting.">
+            <?php if (!isset($data['server_settings']['first_byte_timeout_seconds'])): ?><p class="u-mb10">Following the native hosting read allowance<?= isset($data['hosting_timeouts']['read']) ? ': ' . $escape($data['hosting_timeouts']['read'] / 1000) . ' seconds' : '' ?>.</p><?php endif; ?>
             <button class="button" type="submit" title="Save the timeout for all websites and apply it without restarting Varnish or clearing the cache.">Apply server timeout</button>
         </form>
         <form method="post" class="u-mb20">
@@ -33,6 +34,24 @@ $profiles = ['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' =
             $mib = static fn($bytes) => number_format((float)$bytes / 1048576, 1); ?>
             <p class="u-mb10" title="Native malloc cache storage counters. These values describe cache storage, rather than the total RAM used by the Varnish process.">Cache used: <strong><?= $escape($mib($data['memory']['used_bytes'])) ?> MiB</strong> · Free cache space: <strong><?= $escape($mib($data['memory']['free_bytes'])) ?> MiB</strong> · Budget: <strong><?= $escape($data['memory']['budget_mb']) ?> MiB</strong></p>
         <?php endif; ?>
+    </section>
+    <section class="u-mb20">
+        <h2 class="u-mb20">Browser cache · central defaults</h2>
+        <form method="post">
+            <?php $formFields('admin-browser-cache'); $browserChoice = $data['browser_cache'] ?? []; $browserId = 'central'; $browserSite = false; require __DIR__ . '/browser-cache.php'; ?>
+        </form>
+    </section>
+    <section class="u-mb20">
+        <h2 class="u-mb20">Central profile rules</h2>
+        <p class="u-mb10">Additional rules for every website using the selected profile. Site rules run afterwards. Existing website profile selections are retained.</p>
+        <?php foreach ($profiles as $profileKey => $profileLabel): $rules = $data['profile_settings']['rules'][$profileKey] ?? []; ?>
+        <details class="box-collapse u-mb10"><summary class="box-collapse-header" title="Edit central additions for this profile."><?= $escape($profileLabel) ?></summary><div class="box-collapse-content"><form method="post">
+            <?php $formFields('admin-profile-settings'); ?><input type="hidden" name="profile" value="<?= $escape($profileKey) ?>">
+            <label class="form-label">Default profile for new domains<select class="form-select u-mb10" name="default_profile" title="Only newly discovered domains receive this profile. Existing profiles and enable settings are retained."><?php foreach ($profiles as $key => $label): ?><option value="<?= $escape($key) ?>" <?= ($data['profile_settings']['default_profile'] ?? 'general') === $key ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
+            <label class="form-label">Request VCL<textarea class="form-control u-mb10" name="custom_recv" rows="5" spellcheck="false" title="Supported request rules added to this profile. Empty adds no rules. Authentication and tenant boundaries remain enforced."><?= $escape($rules['custom_recv'] ?? '') ?></textarea></label>
+            <label class="form-label">Backend response VCL<textarea class="form-control u-mb10" name="custom_backend_response" rows="5" spellcheck="false" title="Supported response additions for this profile. Site additions run afterwards; response privacy remains enforced."><?= $escape($rules['custom_backend_response'] ?? '') ?></textarea></label>
+            <button class="button" type="submit" title="Compile and apply these additions. Only sites whose profile rules changed are invalidated; other profiles retain their warm cache.">Apply profile rules</button>
+        </form></div></details><?php endforeach; ?>
     </section>
     <form method="post">
         <?php $formFields('admin-bulk'); ?>

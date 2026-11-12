@@ -1,12 +1,12 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.13.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.14.0** · GPL-3.0-or-later.
 
 ## Quick start
 
-Requires **Ubuntu 26.04 amd64 with Hestia 1.10.5 already installed**, using
-**Nginx -> Apache/PHP-FPM**. Run commands over SSH as an administrator. The
+Requires **Ubuntu 26.04 amd64 with Hestia 1.10.5 or 1.10.6 already installed**, using
+**Nginx -> Apache/PHP-FPM** (Nginx 1.29.3+ for native response-header inheritance). Run commands over SSH as an administrator. The
 installer also installs Varnish **9.1.0**; do not install the service separately.
 
 1. **Get the code. Choose one command:**
@@ -81,9 +81,14 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
-Version **0.13.1** fixes HTTP contract BAN failures for long URL expressions.
-The installer regenerates and activates the corrected VCL automatically;
-an UltraCache plugin update alone does not apply this provider fix.
+Version **0.14.0** adds UltraCache async-cart parent HITs, hosting timeout
+inheritance, browser-cache controls and central profile additions. The installer
+regenerates the VCL and affected managed domain templates automatically. No
+manual domain rebuild or Varnish restart is required. Existing tokens, profiles,
+local VCL, saved timeout and memory budget are retained. Existing static browser
+headers change from `expires max` to the central 30-day default unless overridden.
+Browser-policy changes do not purge the Varnish HTML cache. The earlier long-BAN
+parser fix remains included; updating UltraCache alone does not update this provider.
 Updating from **0.11.0 to 0.12.0** refreshes General caches for the new cookie
 policy. Other profiles retain their warm caches. Pages refill on demand without
 restarting Varnish; upgrading from an older release also applies its cache changes.
@@ -123,12 +128,56 @@ An unchanged size does not restart the service.
    **Backend first-byte timeout (seconds)**.
 3. Click **Apply server timeout**.
 
-This is the time Varnish allows Apache to start responding, including requests
-that bypass cache. It applies to every domain and origin, survives updates and
-is applied live without a Varnish restart or cache flush. Existing installations
-keep the native service default until an administrator saves a value. Nginx,
-Apache and PHP retain their separate time limits; configure those through Hestia
-when a matching overall request limit is needed.
+This is the time Varnish allows Apache to start responding, including cache
+bypasses. Leave the field blank to follow the loaded native Nginx hosting read
+allowance. Saved explicit values, including zero and fractions, remain overrides.
+The addon also inherits native connect/send/read allowances and gives its front
+Nginx proxy and Varnish delivery enough time to complete the exchange. It does
+not change Apache/PHP execution limits. Native changes are picked up at the next
+reconciliation, including the existing discovery cron; no statistics collector
+or application requests are needed. Managed timeout directives are excluded
+from discovery, preventing cumulative growth on subsequent reconciliations.
+
+## Static browser caching
+
+Administrators: **All accounts → Browser cache · central defaults**. Owners:
+**your domain → Browser cache**. Each domain can inherit central defaults or save
+an override; aliases share its policy. Every control has mouse-over help.
+
+Ordinary existing static files default to 30 days. Only declared content-hashed
+paths receive the one-year `immutable` policy. Enter one path per line, for
+example `/assets/app-{hash}.js`; `*` matches within a path segment. The UltraCache
+profile automatically includes its CSS-bundle path without replacing custom
+paths. A query such as `?ver=1` alone does not declare content immutable.
+
+Zero seconds sends `no-cache` so browsers revalidate with ETag/Last-Modified.
+Disabling headers removes the addon's static Cache-Control policy. Existing
+files stay directly on Nginx, missing files retain the existing origin fallback,
+and dynamic application responses keep their own headers. Native parent headers
+are retained using `add_header_inherit merge`; an explicit custom parent
+`add_header Cache-Control` remains a separate native policy and should not be
+combined with an overlapping addon policy. These settings cannot
+clear a copy already stored by a visitor: use a new/versioned URL when replacing
+an asset that must update immediately.
+
+## Central profile additions
+
+Administrators can add supported request and backend-response VCL per profile.
+These run before the corresponding site additions and retain tenant and response
+privacy checks. Applying rules invalidates only sites whose effective profile
+rules changed; other profiles keep their warm cache. The default-profile selector
+only affects newly discovered domains, retaining existing assignments and the
+existing Hestia enable/disable policy.
+
+## UltraCache async cart
+
+The UltraCache profile recognizes an origin-approved warmed public parent marked
+`X-UltraCache-Woo-Async-Parent: 1`. With the existing explicit request opt-in,
+cart/session visitors can HIT that parent and fetch their personal cart
+asynchronously. A private cold miss still requires the established ESI handshake;
+login, private cart endpoints, `private/no-store`, Set-Cookie and Vary separation
+remain enforced. Ordinary unknown cookies and query strings do not create a
+general cache bypass; functional query values remain separate cache keys.
 
 Hover over controls to see their purpose and scope. **Show memory usage** reads
 one native `varnishstat` snapshot only when clicked. It shows malloc cache storage
@@ -138,4 +187,4 @@ background statistics collector, request-log analysis or automatic polling.
 For VCL details, backup, restore, removal or importing an existing Varnish,
 see the [administration reference](docs/administration.md).
 
-See the 0.13.0 [changelog](CHANGELOG.md) for completion, native controls and compatibility changes. Existing service budgets and credentials are preserved on update.
+See the [changelog](CHANGELOG.md) for completion, native controls and compatibility changes. Existing service budgets and credentials are preserved on update.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 · 2026-11-12
+
+- Let explicitly opted-in UltraCache cart/session visitors HIT a warmed public parent marked `X-UltraCache-Woo-Async-Parent: 1`. Keep private cart endpoints, login exclusions, response privacy, Vary isolation and the ESI-only private cold-miss approval unchanged.
+- Derive Varnish connect/first-byte/between-byte allowances from the loaded native Nginx hosting configuration and give the outer proxy time to complete those phases. Preserve saved administrator first-byte overrides. Apply live without restarting Varnish; Apache and PHP retain their native limits.
+- Preserve parent response-header inheritance, including HSTS, when adding static browser headers using native Nginx 1.29.3+ header merging.
+- Add central and per-domain browser cache controls for existing Nginx static-file routes: ordinary lifetime, declared content-hashed immutable paths, revalidation with zero lifetime, and inheritance. Default ordinary assets to 30 days and declared versioned assets to one year. Add the UltraCache CSS-bundle preset by profile, retaining custom paths.
+- Add centrally editable request/response additions per profile and a default profile for newly discovered domains. Retain existing site profiles and local additions; invalidate only sites whose effective profile rules change.
+- Report uncacheable deliveries as BYPASS instead of MISS. Public misses and cache hits keep their normal meanings.
+- Retain generic public HTML/CSS/HTTP caching, functional query keys, unknown-cookie handling, origin TTLs, tenant tokens, cache size and native security boundaries. No new request-size, output, rule-count or execution-time quotas.
+- Add native Varnish and Nginx regression coverage for async cart isolation, query variants, non-HTML objects, timeout inheritance, static response headers and scoped policy changes.
+
 ## 0.13.1 · 2026-11-05
 
 - Fix HTTP 503 "VCL failed" during authenticated contract exact/batch BAN of long URL expressions. Parse quoted operands in non-capturing, possessive chunks instead of retaining regex backtracking state per character, preserving the accepted grammar without changing native server limits.

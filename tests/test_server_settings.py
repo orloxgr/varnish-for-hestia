@@ -58,7 +58,7 @@ class ServerSettings(unittest.TestCase):
             (root/'desired.json').write_text(json.dumps(state))
             (root/'applied.json').write_text(json.dumps(state))
             with patch.object(service,'STORE',root),patch.object(service,'ACTIVE',active), \
-                 patch.object(service,'recover_pending'),patch.object(service,'settings',return_value={'origin_ip':'127.0.0.1'}), \
+                 patch.object(service,'recover_pending'),patch.object(service.hosting_timeouts,'refresh'),patch.object(service,'settings',return_value={'origin_ip':'127.0.0.1'}), \
                  patch.object(service,'collect',return_value=inventory),patch.object(service.routing,'plan',return_value=[]), \
                  patch.object(service.routing,'APACHE',root/'apache.inc'),patch.object(service,'apply',return_value={}) as apply:
                 service.reconcile(None,lambda state,config:server_settings.change(state,{'first_byte_timeout_seconds':300}))

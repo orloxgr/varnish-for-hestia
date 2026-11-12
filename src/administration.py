@@ -2,6 +2,8 @@
 import json
 import re
 import server_settings
+import browser_cache
+import profile_settings
 
 
 def mutate(state, payload, kind):
@@ -74,19 +76,21 @@ def overview(state, config, kind):
         accounts.append({'owner': name, 'package': owner['package'], 'enabled': owner['enabled'],
                          'suspended': owner['suspended'], 'allowed': allowed, 'sites': sites})
     return {'ok': True, 'admin': True, 'service_installed': True, 'accounts': accounts,
-            'server_settings': server_settings.choices(state), 'memory_budget_mb': config.get('memory_mb'),
+            'server_settings': server_settings.choices(state),
+            'hosting_timeouts': state.get('hosting_timeouts'),
+            'browser_cache': browser_cache.defaults(state), 'profile_settings': profile_settings.choices(state), 'memory_budget_mb': config.get('memory_mb'),
             'total_accounts': len(accounts), 'total_sites': sum(len(row['sites']) for row in accounts)}
 
 
 def request(hestia, action, payload, kind):
     import service
     def show_default(result, config):
-        if result['server_settings']['first_byte_timeout_seconds'] is None:
+        if result['server_settings']['first_byte_timeout_seconds'] is None and not result.get('hosting_timeouts'):
             native = service.admin(config, 'param.show', 'first_byte_timeout', required=False)
             match = re.search(rb'Value is:\s*([0-9]+(?:\.[0-9]+)?)', native.stdout)
             result['service_first_byte_timeout_seconds'] = float(match[1]) if match else None
         return result
-    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'):
+    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings'):
         raise ValueError('Invalid administrator action')
     if action in ('admin-memory', 'admin-memory-size'):
         restarted = False
@@ -106,13 +110,19 @@ def request(hestia, action, payload, kind):
     def mutation(state, config):
         if action == 'admin-server-settings':
             server_settings.change(state, payload)
+        elif action == 'admin-browser-cache':
+            browser_cache.change(state, payload)
+        elif action == 'admin-profile-settings':
+            profile_settings.change(state, payload)
         else:
             changed.update(mutate(state, payload, kind))
-    state, config, _ = service.reconcile(hestia, mutation if action in ('admin-bulk', 'admin-server-settings') else None)
+    state, config, _ = service.reconcile(hestia, mutation if action in ('admin-bulk', 'admin-server-settings', 'admin-browser-cache', 'admin-profile-settings') else None)
     result = overview(state, config, kind)
     show_default(result, config)
     if action == 'admin-server-settings':
         result['server_settings_saved'] = True
+    if action in ('admin-browser-cache', 'admin-profile-settings'):
+        result['policy_settings_saved'] = True
     if changed:
         result['changed'] = changed
     return result

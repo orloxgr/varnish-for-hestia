@@ -1,12 +1,14 @@
 """Render shared Varnish policy with immutable site/host/backend boundaries."""
 import ipaddress
-from decimal import Decimal
 from pathlib import Path
 import re
 
 from fragments import validate
 from server_settings import choices
 import cookie_policy
+import browser_cache
+import hosting_timeouts
+import profile_settings
 
 PROFILES = ('general', 'wordpress', 'woocommerce', 'ultracache')
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +29,8 @@ def host_name(value):
 
 def render(state, config):
     timeout = choices(state)['first_byte_timeout_seconds']
-    backend_options = ' .first_byte_timeout = '+format(Decimal(str(timeout)), 'f')+'s;' if timeout is not None else ''
+    backend_options = hosting_timeouts.backend(state, timeout)
+    profile_rules = profile_settings.choices(state)['rules']
     address = str(ipaddress.ip_address(config['origin_ip']))
     port = config.get('origin_port', 8080)
     if not isinstance(port, int) or not 1 <= port <= 65535:
@@ -52,9 +55,10 @@ def render(state, config):
             origin = str(ipaddress.ip_address(site.get('origin_ip', address)))
             if origin not in backends:
                 backends[origin] = 'hvh_origin_' + str(len(backends))
+            browser_cache.selected(site, state)
             sites.append(dict(site, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
-                              hosts=hosts, recv=validate(site['custom_recv'], 'recv'),
-                              response=validate(site['custom_backend_response'], 'backend_response'),
+                              hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
+                              response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
                               bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
     text = ['vcl 4.1;', 'import std; import purge;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
@@ -89,7 +93,7 @@ def render(state, config):
             cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
                 cookie_policy.vcl_pattern(site['bypass_cookies']) +
                 ') { set req.http.X-Cache-Mode = "PASS"; return (pass); } }')
-    text.append('''sub vcl_recv {
+    text.append('''sub vcl_recv {''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
   unset req.http.X-HVH-Site;
   unset req.http.X-HVH-Profile;
@@ -223,7 +227,7 @@ sub vcl_backend_response {
 }
 sub vcl_deliver {
   if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_deliver; }
-  if (req.http.X-Cache-Mode == "PASS") { set resp.http.X-Hestia-Varnish = "BYPASS"; }
+  if (req.http.X-Cache-Mode == "PASS" || obj.uncacheable) { set resp.http.X-Hestia-Varnish = "BYPASS"; }
   else if (obj.hits > 0) { set resp.http.X-Hestia-Varnish = "HIT"; }
   else { set resp.http.X-Hestia-Varnish = "MISS"; }
   set resp.http.X-Hestia-Varnish-Profile = req.http.X-HVH-Profile;

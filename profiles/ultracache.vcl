@@ -241,13 +241,17 @@ if (
 return (hash);
 }
 
+# An explicitly opted-in cart/session visitor may reuse a warmed public async
+# parent approved by the origin. Its private cart is fetched separately. A
+# private cold miss still requires the existing ESI backend handshake.
 sub hvh_ultracache_hit {
 # WooCommerce ESI candidates may reuse only objects explicitly approved
 # by UltraCache. Anonymous/non-approved objects are bypassed so a normal
 # WooCommerce site can never receive an empty shared cart parent.
 if (
     req.http.X-UltraCache-ESI-Candidate == "1" &&
-    obj.http.X-UltraCache-ESI-Shared-Parent != "1"
+    obj.http.X-UltraCache-ESI-Shared-Parent != "1" &&
+    obj.http.X-UltraCache-Woo-Async-Parent != "1"
 ) {
     set req.http.X-Cache-Mode = "PASS";
     return (pass);

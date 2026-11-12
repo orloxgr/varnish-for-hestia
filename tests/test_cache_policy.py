@@ -91,8 +91,8 @@ class CachePolicy(unittest.TestCase):
                      compatibility.response('/fragment', 'fragment'),
                      compatibility.response('/parent', '<html>B<esi:include src="/fragment"/></html>',
                          headers=['Content-Type: text/html', *surrogate_headers])],
-                    [compatibility.request('/parent', '<html>Afragment</html>', cache='MISS'),
-                     compatibility.request('/parent', '<html>Bfragment</html>', cache='MISS')],
+                    [compatibility.request('/parent', '<html>Afragment</html>', cache='BYPASS'),
+                     compatibility.request('/parent', '<html>Bfragment</html>', cache='BYPASS')],
                     tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
     def test_shared_parent_approval_cannot_override_surrogate_no_store(self):
@@ -102,7 +102,7 @@ class CachePolicy(unittest.TestCase):
                 'Surrogate-Control: ESI/1.0, no-store', 'X-UltraCache-ESI-Shared-Parent: 1'],
                 expect=['expect req.http.Cookie == "woocommerce_items_in_cart=1"'])
              for visitor in ('A', 'B')],
-            [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='MISS')
+            [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='BYPASS')
              for visitor in ('A', 'B')], tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
     def test_analytics_and_unknown_cookies_share_public_objects_without_stripping(self):

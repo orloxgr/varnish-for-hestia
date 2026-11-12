@@ -16,6 +16,9 @@ import base64
 from inventory import collect
 from registry import desired_state, locked_store
 import routing
+import browser_cache
+import hosting_timeouts
+import profile_settings
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -144,6 +147,8 @@ def apply(state, previous, inventory, config, changes=None):
             admin(config, 'vcl.use', name)
         route_result, routing_undo = routing.apply(changes, routing.apache_config(inventory, config['origin_port']))
         old_sites = {site['id']: site for owner in (previous or {}).get('owners', {}).values() for site in owner['sites'].values()}
+        old_rules = profile_settings.choices(previous or {})['rules']
+        new_rules = profile_settings.choices(state)['rules']
         current_ids = set()
         invalidated = 0
         for owner in state['owners'].values():
@@ -152,7 +157,8 @@ def apply(state, previous, inventory, config, changes=None):
                 old = old_sites.get(site['id'])
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
-                            old['settings'].get('routing_active') != site['settings'].get('routing_active')):
+                            old['settings'].get('routing_active') != site['settings'].get('routing_active') or
+                            old_rules[old['profile']] != new_rules[site['profile']]):
                     purge(config, site); invalidated += 1
         for sid in set(old_sites) - current_ids:
             purge(config, old_sites[sid]); invalidated += 1
@@ -203,6 +209,8 @@ def reconcile(hestia, mutation=None, config_override=None):
     with locked_store(STORE) as desired_path:
         old = json.loads(desired_path.read_text()) if desired_path.exists() else None
         state = desired_state(old, inventory, 'varnish')
+        hosting_timeouts.refresh(state)
+        browser_cache.defaults(state)
         if mutation:
             mutation(state, config)
         applied_path = STORE / 'applied.json'
@@ -253,14 +261,16 @@ def request(hestia, owner_name, action, payload):
             if not isinstance(payload.get('bypass_cookies'), str):
                 raise ValueError('Cookie rules must be text, one per line')
             owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
+        elif action == 'configure-browser-cache':
+            browser_cache.change(state, payload, owner['sites'][domain])
         elif action == 'token':
             value = payload.get('password')
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
                 raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'token', 'flush'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'token', 'flush') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush') and not isinstance(domain, str):
         raise ValueError('Select a site')
     state, config, result = reconcile(hestia, mutate)
     owner = state['owners'][owner_name]
@@ -273,6 +283,8 @@ def request(hestia, owner_name, action, payload):
                            'enabled': site['enabled'], 'profile': site['profile'],
                            'custom_recv': site['custom_recv'], 'custom_backend_response': site['custom_backend_response'],
                            'bypass_cookies': site.get('bypass_cookies', []),
+                           'browser_cache': browser_cache.selected(site, state),
+                           'browser_cache_override': site.get('browser_cache'),
                            'routing_active': site['settings'].get('routing_active', False)}
                           for name, site in sorted(owner['sites'].items())]}
     if action == 'credentials':

@@ -38,7 +38,7 @@ def dispatch(request):
     actor_data = hestia('v-list-user', actor, 'json').get(actor)
     action = request.get('action', 'inventory')
     is_admin = bool(actor_data and actor_data.get('ROLE') == 'admin' and actor_data.get('SUSPENDED') != 'yes')
-    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'):
+    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings'):
         if not is_admin:
             raise RequestError('Administrator access required.')
         from administration import request as admin_request

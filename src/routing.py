@@ -5,6 +5,8 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import browser_cache
+import hosting_timeouts
 
 from files import write
 
@@ -113,7 +115,6 @@ def plan(state, inventory, config):
     selected = config.get('template_name', NAME)
     if not owned_template(selected):
         raise ValueError('The configured addon template version is unavailable')
-    revision = hashlib.sha256(b''.join((TEMPLATES / (selected + '.' + ext)).read_bytes() for ext in ('tpl', 'stpl'))).hexdigest()
     for owner_name, owner in state['owners'].items():
         for domain, site in owner['sites'].items():
             observed = inventory[owner_name]['sites'][domain]
@@ -132,12 +133,20 @@ def plan(state, inventory, config):
                 # Native no-proxy domains stay in their original web topology.
                 saved['routing_active'] = False
                 continue
-            target = selected if enabled(owner, site, config) else saved['original_template']
+            site_template = selected
+            if 'hosting_timeouts' in state:
+                data = {}
+                for ext in ('tpl', 'stpl'):
+                    source = (TEMPLATES / (selected + '.' + ext)).read_text()
+                    data[ext] = browser_cache.template(hosting_timeouts.template(source, state), site, state, ext).encode()
+                site_template = publish_templates(data)
+            site_revision = hashlib.sha256(b''.join((TEMPLATES / (site_template + '.' + ext)).read_bytes() for ext in ('tpl', 'stpl'))).hexdigest()
+            target = site_template if enabled(owner, site, config) else saved['original_template']
             if not owner['suspended'] and not site['suspended'] and (current != target or
-                    (target == selected and saved.get('template_revision') != revision)):
+                    (target == site_template and saved.get('template_revision') != site_revision)):
                 changes.append((owner_name, domain, current, target, observed['proxy_extensions']))
-            saved['routing_active'] = target == selected
-            saved['template_revision'] = revision
+            saved['routing_active'] = target == site_template
+            saved['template_revision'] = site_revision
     return changes
 
 
@@ -156,6 +165,10 @@ def install_templates(source, config=None):
     if type(listen) is not int or not 1 <= listen <= 65535:
         raise ValueError('Invalid native Varnish TCP port')
     data = {ext: text.replace(b'127.0.0.1:6081', ('127.0.0.1:' + str(listen)).encode()) for ext, text in data.items()}
+    return publish_templates(data)
+
+
+def publish_templates(data):
     selected = NAME + '-' + hashlib.sha256(b''.join(data.values())).hexdigest()[:12]
     for extension in ('tpl', 'stpl'):
         destination = TEMPLATES / (selected + '.' + extension)

@@ -39,7 +39,7 @@ class GeneralProfile(unittest.TestCase):
         self.run_policy('general',
             [compatibility.response('/page', 'first', headers=['Set-Cookie: _fbp=fixture; Path=/']),
              compatibility.response('/page', 'public', expect=['expect req.http.Cookie == "_fbp=fixture"'])],
-            [compatibility.request('/page', 'first', cache='MISS'),
+            [compatibility.request('/page', 'first', cache='BYPASS'),
              'expect resp.http.Set-Cookie == "_fbp=fixture; Path=/"',
              compatibility.request('/page', 'public', headers=['Cookie: _fbp=fixture'], cache='MISS'),
              'expect resp.http.Set-Cookie == <undef>',

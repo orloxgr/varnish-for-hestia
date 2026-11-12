@@ -68,16 +68,17 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'bypass_cookies' => $_POST['bypass_cookies'] ?? '',
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
 if (str_starts_with((string)$action, 'admin-')) {
-    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size'], true)) {
+    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings'], true)) {
         $respond(403, ['ok' => false, 'error' => 'Administrator access required.']);
     }
     $adminOverview = true;
     if ($action === 'admin-server-settings') {
-        $request['first_byte_timeout_seconds'] = filter_var($_POST['first_byte_timeout_seconds'] ?? '', FILTER_VALIDATE_FLOAT);
+        $request['first_byte_timeout_seconds'] = ($_POST['first_byte_timeout_seconds'] ?? '') === '' ? null : filter_var($_POST['first_byte_timeout_seconds'], FILTER_VALIDATE_FLOAT);
     }
     if ($action === 'admin-memory-size') {
         $request['memory_mb'] = filter_var($_POST['memory_mb'] ?? '', FILTER_VALIDATE_INT);
     }
+    $request['default_profile'] = $_POST['default_profile'] ?? null;
     $request['scope'] = $_POST['scope'] ?? null;
     $request['operation'] = $_POST['operation'] ?? null;
     $request['profile'] = $_POST['profile'] ?? null;
@@ -87,6 +88,13 @@ if (str_starts_with((string)$action, 'admin-')) {
         $respond(400, ['ok' => false, 'error' => 'Invalid website selection.']);
     }
     $request['targets'] = array_map(static fn($value) => is_string($value) ? json_decode($value, true) : null, $targets);
+}
+if (in_array($action, ['admin-browser-cache', 'configure-browser-cache'], true)) {
+    $request['browser_enabled'] = ($_POST['browser_enabled'] ?? '') === '1';
+    $request['inherit_browser_cache'] = ($_POST['inherit_browser_cache'] ?? '') === '1';
+    $request['static_seconds'] = filter_var($_POST['static_seconds'] ?? '', FILTER_VALIDATE_INT);
+    $request['versioned_seconds'] = filter_var($_POST['versioned_seconds'] ?? '', FILTER_VALIDATE_INT);
+    $request['versioned_paths'] = $_POST['versioned_paths'] ?? '';
 }
 $jsonResponse = ($_GET['format'] ?? '') === 'json' ||
     ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html');
@@ -133,7 +141,7 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
         ? 'The profile or VCL could not be applied. The previous configuration is still active.'
         : 'The operation could not be completed. Check that the service is running and access is enabled.';
     if ($action === 'configure-cookies') {
-        $pageError = 'Cookie rules could not be applied. Use one cookie name or a trailing-star prefix per line (maximum 64 rules / 8 KiB). The previous rules remain active.';
+        $pageError = 'Cookie rules could not be applied. Use one cookie name or a trailing-star prefix per line. The previous rules remain active.';
     }
     if ($adminOverview) {
         $pageError = $action === 'admin-server-settings' ? 'The server timeout could not be applied. The previous setting remains active.' : ($action === 'admin-memory' ? 'The native memory snapshot is unavailable.' : ($action === 'admin-bulk'
@@ -169,6 +177,8 @@ if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'The purge token for ' . $selectedDomain . ' was changed.';
     } elseif ($action === 'configure-site') {
         $message = 'The profile and VCL for ' . $selectedDomain . ' were applied.';
+    } elseif ($action === 'configure-browser-cache') {
+        $message = 'Browser cache headers for ' . $selectedDomain . ' were applied.';
     } elseif ($action === 'configure-cookies') {
         $message = 'Cookie bypass rules for ' . $selectedDomain . ' were applied.';
     } elseif ($action === 'toggle-site') {
