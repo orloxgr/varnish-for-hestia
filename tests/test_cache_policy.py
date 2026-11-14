@@ -91,8 +91,8 @@ class CachePolicy(unittest.TestCase):
                      compatibility.response('/fragment', 'fragment'),
                      compatibility.response('/parent', '<html>B<esi:include src="/fragment"/></html>',
                          headers=['Content-Type: text/html', *surrogate_headers])],
-                    [compatibility.request('/parent', '<html>Afragment</html>', cache='BYPASS'),
-                     compatibility.request('/parent', '<html>Bfragment</html>', cache='BYPASS')],
+                    [compatibility.request('/parent', '<html>Afragment</html>', cache='PASS'),
+                     compatibility.request('/parent', '<html>Bfragment</html>', cache='PASS')],
                     tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
     def test_shared_parent_approval_cannot_override_surrogate_no_store(self):
@@ -102,7 +102,7 @@ class CachePolicy(unittest.TestCase):
                 'Surrogate-Control: ESI/1.0, no-store', 'X-UltraCache-ESI-Shared-Parent: 1'],
                 expect=['expect req.http.Cookie == "woocommerce_items_in_cart=1"'])
              for visitor in ('A', 'B')],
-            [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='BYPASS')
+            [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='PASS')
              for visitor in ('A', 'B')], tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
     def test_analytics_and_unknown_cookies_share_public_objects_without_stripping(self):
@@ -139,14 +139,14 @@ class CachePolicy(unittest.TestCase):
                             responses.append(compatibility.response('/page', visitor,
                                              expect=['expect req.http.Cookie == "'+combined+'"']))
                             requests.append(compatibility.request('/page', visitor,
-                                            headers=['Cookie: '+combined], cache='BYPASS'))
+                                            headers=['Cookie: '+combined], cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
     def test_application_private_paths_preserve_original_cookies(self):
-        for profile in ('wordpress', 'woocommerce'):
+        for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
-                paths = ['/wp-admin/', '/wp-login.php', '/wp-json/', '/?preview=1']
-                if profile == 'woocommerce':
+                paths = ['/wp-admin/', '/wp-login.php', '/?preview=1']
+                if profile == 'basic':
                     paths += ['/cart/', '/checkout/', '/my-account/', '/?add-to-cart=1']
                 responses, requests = [], []
                 for path in paths:
@@ -154,7 +154,7 @@ class CachePolicy(unittest.TestCase):
                         responses.append(compatibility.response(path, visitor,
                                          expect=['expect req.http.Cookie == "_ga=tracking"']))
                         requests.append(compatibility.request(path, visitor,
-                                        headers=['Cookie: _ga=tracking'], cache='BYPASS'))
+                                        headers=['Cookie: _ga=tracking'], cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
     def test_post_and_authorization_pass_with_original_cookies(self):
@@ -166,14 +166,14 @@ class CachePolicy(unittest.TestCase):
                         responses.append(compatibility.response('/page', visitor,
                                          expect=['expect req.http.Cookie == "_ga=tracking"']))
                         requests.append(compatibility.request('/page', visitor, method=method,
-                                        headers=['Cookie: _ga=tracking', *extra], cache='BYPASS'))
+                                        headers=['Cookie: _ga=tracking', *extra], cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
     def test_upgrade_does_not_reuse_previous_policy_namespace(self):
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 source = compatibility.program(profile)
-                old = source.replace('hash_data("hvh-cache-policy-v4");', 'hash_data("hvh-cache-policy-v3");')
+                old = source.replace('hash_data("hvh-cache-policy-v5");', 'hash_data("hvh-cache-policy-v4");')
                 tail = ('varnish v1 -vcl {\n'+source+'\n}\nclient c2 {\n'+
                         compatibility.request('/page', 'new', cache='MISS')+'\n'+
                         compatibility.request('/page', 'new', cache='HIT')+'\n} -run')
@@ -214,7 +214,7 @@ class CachePolicy(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory(prefix='hvh-concurrent-') as directory:
                 root = Path(directory)
-                source = compatibility.program('general').replace('"${s1_port}"', '"'+str(server.server_port)+'"')
+                source = compatibility.program('basic').replace('"${s1_port}"', '"'+str(server.server_port)+'"')
                 (root/'policy.vcl').write_text(source)
                 with socket.socket() as sock:
                     sock.bind(('127.0.0.1', 0))

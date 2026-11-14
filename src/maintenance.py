@@ -63,6 +63,8 @@ def validate(payload):
     secret = base64.b64decode(payload['admin_secret'], validate=True)
     if not secret or b'\0' in secret:
         raise ValueError('Invalid administrator secret in archive')
+    import profile_settings
+    profile_settings.consolidate(state)
     render(state, config)
     if payload.get('repository') is not None:
         repository.validate(payload['repository'])

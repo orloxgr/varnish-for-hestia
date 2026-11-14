@@ -82,13 +82,13 @@ proxy_read_timeout 300s;
             custom_backend_response='set beresp.http.X-User-Central = "yes";'))
         inventory['alice']['sites']['new.test'] = dict(aliases=[], suspended=False)
         after = desired_state(state, inventory, 'varnish')
-        self.assertEqual(after['owners']['alice']['sites']['example.test']['profile'], 'general')
+        self.assertEqual(after['owners']['alice']['sites']['example.test']['profile'], 'basic')
         self.assertEqual(after['owners']['alice']['sites']['new.test']['profile'], 'ultracache')
         self.assertEqual(after['owners']['alice']['sites']['new.test']['enabled'], True)
         text = render(after, {'origin_ip': '127.0.0.1'})
         self.assertEqual(text.count('X-User-Central'), 1)
         with self.assertRaises(ValueError):
-            profile_settings.change(after, dict(profile='general', custom_recv='set req.backend_hint = foreign;', custom_backend_response=''))
+            profile_settings.change(after, dict(profile='basic', custom_recv='set req.backend_hint = foreign;', custom_backend_response=''))
 
     def test_profile_change_invalidates_only_its_sites_and_browser_changes_keep_html(self):
         import hashlib
@@ -215,7 +215,7 @@ client c1 { txreq -req POST -url /wp-json/action -hdr "Host: example.test"
  rxresp
  expect resp.status == 200
  expect resp.body == "once"
- expect resp.http.X-Hestia-Varnish == "BYPASS"
+ expect resp.http.X-Hestia-Varnish == "PASS"
 } -run
 server s1 -wait
 '''

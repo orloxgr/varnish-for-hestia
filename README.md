@@ -1,11 +1,11 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.14.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.15.0** · GPL-3.0-or-later.
 
 ## Quick start
 
-Requires **Ubuntu 26.04 amd64 with Hestia 1.10.5 or 1.10.6 already installed**, using
+Requires **Ubuntu 26.04 amd64 with Hestia 1.10.x already installed**, using
 **Nginx -> Apache/PHP-FPM** (Nginx 1.29.3+ for native response-header inheritance). Run commands over SSH as an administrator. The
 installer also installs Varnish **9.1.0**; do not install the service separately.
 
@@ -49,8 +49,9 @@ installer also installs Varnish **9.1.0**; do not install the service separately
 
 4. **Log into Hestia as the site owner. Click Plugins → Varnish in the top bar.**
 
-   Sites start enabled with **General**. Choose **WordPress**, **WooCommerce**
-   or **UltraCache for Hestia** per site and save. Administrators see all accounts
+   Sites start enabled with **Basic**. Choose **Basic** for WordPress/WooCommerce
+   without UltraCache (also best effort for other HTTP sites), or **UltraCache**
+   for the same policy with ESI/async integration, then save. Administrators see all accounts
    and websites, with bulk profile and enable/disable controls.
 
 Done. Existing users and sites are added during installation; new ones are picked
@@ -92,19 +93,46 @@ set -o pipefail
 sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py 2>&1 | tee varnish-install.log
 ```
 
-Version **0.14.1** adds this installer visibility without changing the cache policy.
-Version **0.14.0** adds UltraCache async-cart parent HITs, hosting timeout
-inheritance, browser-cache controls and central profile additions. The installer
-regenerates the VCL and affected managed domain templates automatically. No
-manual domain rebuild or Varnish restart is required. Existing tokens, profiles,
-local VCL, saved timeout and memory budget are retained. Existing static browser
-headers change from `expires max` to the central 30-day default unless overridden.
-Browser-policy changes do not purge the Varnish HTML cache. The earlier long-BAN
-parser fix remains included; updating UltraCache alone does not update this provider.
-Updating from **0.11.0 to 0.12.0** refreshes General caches for the new cookie
-policy. Other profiles retain their warm caches. Pages refill on demand without
-restarting Varnish; upgrading from an older release also applies its cache changes.
-Refresh Hestia with **Ctrl+F5** after updating to load the new menu script.
+Version **0.15.0** provides two presets with one common request/response policy.
+Existing General, WordPress and WooCommerce selections become Basic automatically.
+Site IDs, tokens, enable settings, cookie rules, browser settings and local VCL
+are retained. Former central profile rules are prepended to the corresponding
+sites' local VCL, retaining their original scope and execution order. UltraCache
+selections and their central rules remain UltraCache. The conversion is idempotent.
+
+The installer regenerates the VCL and managed domain routes. It starts a fresh
+cache namespace for the changed policy; pages refill on demand. It does not need
+a Varnish restart or a manual domain rebuild. Refresh Hestia with **Ctrl+F5**.
+
+## Cache behavior
+
+**Basic** supplies public HTTP caching and the common WordPress/WooCommerce
+private-state handling. **UltraCache** adds ESI composition and explicitly approved
+shared parents using exactly that same base policy. No application detection or
+extra protection switches are required.
+
+Public searches (`s=`), REST GETs (`/wp-json/` and `rest_route`), XMLHttpRequest GETs,
+and `ref=` are cache candidates. The original URL, query values and cookies still
+reach the application on a miss. All query parameters, including campaign and
+referral parameters, remain distinct cache keys: attribution is not discarded or
+silently merged into another referral. Set-Cookie and private/no-store responses
+are delivered without sharing their bodies. Account/cart/checkout routes, cart
+mutations, authentication/nonces, login and private session cookies remain private.
+Store API cart/checkout reads are private too; public product REST reads can cache.
+
+Native `Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`.
+Only equivalent unquoted header whitespace is normalized; different media
+preferences are not guessed to be equivalent. With `Vary: Cookie`, a private
+internal variant key omits only the known analytics IDs listed in
+[`cookie_policy.py`](src/cookie_policy.py). Unknown, consent, referral and language
+cookies still select separate variants. Cookies are not stripped from origin
+requests; downstream responses retain `Vary: Cookie`. Without an origin Vary,
+ordinary unknown cookies do not cause a cache bypass.
+
+Both `X-Hestia-Varnish` and `X-Cache` consistently report **HIT**, **MISS** or
+**PASS**. `X-Hestia-Varnish-Reason` reports a concrete request/origin reason,
+such as `cart-session`, `private-rest-route`, `origin-set-cookie` or
+`origin-cache-control`. Public hits/misses report `cache-hit`/`cache-miss`.
 
 ## Cookie exclusions per website
 
@@ -112,15 +140,15 @@ Open **Plugins → Varnish → your domain → Cookies that bypass cache**.
 Enter one cookie name per line, such as `custom_currency`, or a prefix such as
 `membership_*`, then click **Save cookie rules**. Empty uses the built-in defaults.
 
-All profiles, including General, bypass known login, session and cart cookies;
-other cookies do not cause bypass by themselves. Add rules for applications
-that personalize HTML. General handles ordinary public HTML/CSS/HTTP content;
-WordPress/WooCommerce profiles add application-specific URL exclusions.
+Both presets bypass known login, session and cart cookies; other cookies do not
+cause bypass by themselves. Add rules for applications that personalize HTML
+without declaring a suitable Vary or private response policy. Both presets also
+handle ordinary public HTML/CSS/HTTP content.
 Rules apply to the selected domain and aliases. Administrators use the same
 controls through **Manage website**. Cookies are not deleted.
 
 Existing static-file routing is retained: files served directly by Nginx remain
-there. General handles public assets that reach Varnish without changing routing.
+there. Both presets handle public assets that reach Varnish without changing routing.
 
 ## Change cache size in Hestia
 

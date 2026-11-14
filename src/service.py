@@ -1,5 +1,6 @@
 """Manage a single native Varnish instance, scoped VCL and Hestia routing."""
 import datetime
+import copy
 import grp
 import hashlib
 import http.client
@@ -152,7 +153,12 @@ def apply(state, previous, inventory, config, changes=None):
             admin(config, 'vcl.use', name)
         route_result, routing_undo = routing.apply(changes, routing.apache_config(inventory, config['origin_port']))
         old_sites = {site['id']: site for owner in (previous or {}).get('owners', {}).values() for site in owner['sites'].values()}
-        old_rules = profile_settings.choices(previous or {})['rules']
+        old_profiles = copy.deepcopy(previous or {})
+        profile_settings.consolidate(old_profiles)
+        old_rules = profile_settings.choices(old_profiles)['rules']
+        old_site_rules = {site['id']: old_rules[site['profile']]
+                          for owner in old_profiles.get('owners', {}).values()
+                          for site in owner['sites'].values()}
         new_rules = profile_settings.choices(state)['rules']
         progress.stage('Checking which site caches need invalidation')
         current_ids = set()
@@ -164,7 +170,7 @@ def apply(state, previous, inventory, config, changes=None):
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active') or
-                            old_rules[old['profile']] != new_rules[site['profile']]):
+                            old_site_rules[site['id']] != new_rules[site['profile']]):
                     purge(config, site); invalidated += 1
         for sid in set(old_sites) - current_ids:
             purge(config, old_sites[sid]); invalidated += 1

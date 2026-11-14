@@ -1,7 +1,7 @@
 # Administration reference
 
 One native Varnish service for Hestia hosting accounts, with site-scoped tokens,
-four profiles, owner VCL editing and automatic native account/domain discovery.
+two presets, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
@@ -129,16 +129,18 @@ Exact PURGE invalidates both protocol variants; BAN is composed by the server fo
 the authenticated site and its aliases. Caller-supplied BAN expressions are ignored.
 Public proxy requests cannot use either invalidation method.
 
-General caches public HTTP content with common login/session/cart exclusions
-and origin privacy protections. Unknown cookies do not cause bypass by themselves.
-WordPress adds private administration/API paths; WooCommerce adds cart, checkout
-and account/action paths. All profiles bypass WordPress login,
-protected-post and comment-author cookies, PHPSESSID, WooCommerce cart/session
-cookies, recently-viewed state and common YITH wishlist/compare state. Other
-request cookies do not cause bypass by themselves and are forwarded to the
-origin on a miss. General does not add application-specific URL exclusions.
-Static files served directly by Nginx retain their existing routing; public HTML,
-CSS and other assets that reach Varnish use the selected profile's cache policy.
+Basic and UltraCache share one public HTTP/WordPress/WooCommerce policy. Search,
+public REST GET, XMLHttpRequest GET and referral parameters do not cause PASS by
+their names. All query values remain in the request/key, preserving attribution
+and functional distinctions. Login, previews, nonces/authentication, personal
+cookies, account/cart/checkout and cart-changing operations remain private.
+Store API cart/checkout reads also pass. Response Set-Cookie, private/no-store,
+Vary: * and nonpositive TTL are mandatory uncacheable decisions.
+
+Static files served directly by Nginx retain their existing routing. Public HTML,
+CSS and other assets that reach Varnish use the selected preset's cache policy.
+The UltraCache preset adds ESI and explicitly approved async parents to this
+same common base. There is no separate permissive Woo/session implementation.
 
 ### Additional cookie exclusions
 
@@ -155,13 +157,14 @@ custom_currency
 
 A match sends the request to the application. It does not delete the cookie.
 Empty uses the profile defaults; custom rules only add bypasses and cannot remove
-built-in private-cookie protections. These rules apply to every profile, including
-General, and are retained when changing profiles. Names may contain
+built-in private-cookie protections. These rules apply to both presets and are retained when changing presets. Names may contain
 valid HTTP cookie-name characters, with an optional trailing `*` prefix wildcard. Names are interpreted literally, including regex punctuation. There is no addon rule-count, input-size or name-length quota; arbitrary regular expressions and cookie values are not accepted.
 
 Use these exclusions for plugins whose HTML depends on a cookie, including
-language, currency or membership. Automatic cookie-based cache variants are not
-provided. Profile changes, discovery and configuration backups preserve the rules.
+language, currency or membership when their origin does not emit Vary: Cookie
+or an appropriate private policy. An origin Vary: Cookie uses a functional cookie
+key that omits known analytics IDs but retains unknown/consent/referral cookies.
+The origin receives the original cookies; downstream caches retain Vary: Cookie. Profile changes, discovery and configuration backups preserve the rules.
 Saving invalidates only the selected site's cache. Invalid input keeps the
 previous policy. The origin's response privacy headers and Set-Cookie remain
 independent cacheability checks. The existing UltraCache ESI opt-in and response
@@ -181,9 +184,10 @@ grace and keep. ESI can use the same site's aliases and cannot cross site scopes
 All profiles also work with ordinary PHP or WordPress without the named plugins.
 Absent ESI response headers mean normal HTTP delivery and caching; optional shared
 parents without approval are delivered uncached. No application detection occurs.
-The origin receives the original `Accept` header, and native `Vary: Accept` keeps
-JSON, XML, text and image representations separate. WooCommerce and UltraCache
-both bypass the standard cart, checkout and account URLs without requiring a plugin.
+Accept media types, quality values and quoted parameters retain their meaning;
+only unquoted optional whitespace is normalized. Native Vary: Accept keeps JSON,
+XML, text and image representations separate. Both presets bypass the standard
+cart, checkout and account URLs without requiring a plugin.
 
 The site-local language supports `if`/`else`, request-side `return(pass)`, custom
 `X-User-*` headers, and backend-response TTL/grace/keep values. For example:
@@ -340,17 +344,18 @@ immutable identity. Malformed expressions are rejected rather than broadened.
 
 UltraCache HTTP contract **v2** is advertised as **ultracache-hestia-v2**. Its
 authenticated capabilities are `exact-purge`, `exact-ban`, `batch-ban`, `html-ban`
-and `host-ban`. It does not advertise soft purge or stale revalidation. ESI is an
+and `host-ban`, plus native `soft-purge`. ESI is an
 independent HTTP behavior enabled by the UltraCache profile's response handshake.
 Older UltraCache clients can continue using portable HTTP PURGE and BAN.
 
-Updating preserves tokens, profiles, VCL sections and the configured memory
-budget. Version 0.11.0 introduced a new cache namespace for every profile.
-Version 0.12.0 adds a new namespace only for General; other profiles keep their
-warm objects when upgrading from 0.11.0. Pages refill on demand; the ordinary
-update does not restart Varnish. Protocol and content
-negotiation remain Vary variants, so exact PURGE still removes them together.
-Application settings and cacheable responses' TTL/grace policies are retained.
+Updating preserves tokens, VCL sections and the configured memory budget.
+Version 0.15.0 converts the former General/WordPress/WooCommerce selections to
+Basic and keeps UltraCache. Previous central additions are folded into each
+corresponding site's local additions, in their original order. There are only
+two selectable/runtime presets after this idempotent conversion. The policy
+uses a fresh cache namespace; pages refill on demand without restarting Varnish.
+Protocol and content negotiation remain Vary variants, so exact PURGE removes
+them together. The origin's TTL/grace policy remains authoritative.
 
 ## Development checks
 

@@ -41,6 +41,9 @@ def desired_state(previous, inventory, kind):
             state.get('kind', kind) != kind):
         raise ValueError('Unsupported state schema or addon')
     state['kind'] = kind
+    if kind == 'varnish':
+        from profile_settings import consolidate
+        consolidate(state)
     owners = state['owners']
     # Retired slots stay reserved until explicit cleanup confirms removal of data.
     used = {row['database'] for row in [*owners.values(), *state['retired']]

@@ -55,7 +55,7 @@ class FragmentTests(unittest.TestCase):
         self.assertIn('return', validate('if(req.url){' * 60 + 'return(pass);' + '}' * 60, 'recv'))
 
     def test_all_profiles_selectable_with_no_application_inventory(self):
-        for profile in ('general', 'wordpress', 'woocommerce', 'ultracache'):
+        for profile in ('basic', 'ultracache'):
             fixture = state(); fixture['owners']['alice']['sites']['example.test']['profile'] = profile
             result = render(fixture, {'origin_ip': '127.0.0.1'})
             self.assertIn('set req.http.X-HVH-Profile = "' + profile + '";', result)

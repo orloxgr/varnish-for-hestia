@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.0 · 2026-11-15
+
+- Replace four preset choices with Basic and UltraCache. Both use one HTTP/WordPress/WooCommerce policy; UltraCache adds only its ESI/private-fragment/approved async-parent integration.
+- Make public search, REST and XMLHttpRequest GETs and referral URLs eligible for caching. Preserve authentication/nonces, login/account/checkout/cart mutations, Store API cart/checkout and real session isolation. Keep original query parameters and referral attribution at the origin and in distinct cache keys.
+- Collapse equivalent unquoted Accept whitespace without changing media types, quality weights or q=0. Honor origin representation variants. Normalize only known analytics IDs out of the internal Vary: Cookie key; retain functional/unknown cookies, complete origin cookies and downstream Vary: Cookie.
+- Unify HIT/MISS/PASS across X-Hestia-Varnish and X-Cache and add a concrete X-Hestia-Varnish-Reason. Keep mandatory private/no-store/Set-Cookie decisions and hit-for-miss behavior. Preserve downstream privacy headers after ESI consumes Surrogate-Control and for unapproved private parents.
+- Convert existing General/WordPress/WooCommerce site/default selections to Basic during reconciliation, preserving tokens, IDs and settings. Fold old central additions into their sites before local additions; keep UltraCache rules. No former runtime preset implementations remain.
+- Use a new cache namespace for the changed policy. Add native Varnish coverage for public reads, referral handoff, warmup/browser reuse, cookie/Accept variants and two independent Woo sessions. Production is not modified by tests.
+
 ## 0.14.1 · 2026-11-12
 
 - Show immediate timestamped installer progress: operation-lock wait/acquisition, account inventory, code publication, managed routes, native VCL compilation/activation, each changed domain, web configuration validation/reload and final commit.

@@ -115,7 +115,7 @@ client c1 { txreq -req POST -url /wp-json/example/action -hdr "Host: example.tes
  rxresp
  expect resp.status == 200
  expect resp.body == "ok"
- expect resp.http.X-Hestia-Varnish == "BYPASS"
+ expect resp.http.X-Hestia-Varnish == "PASS"
 } -run
 server s1 -wait
 '''

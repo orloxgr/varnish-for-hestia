@@ -83,7 +83,7 @@ class ProfileCompatibility(unittest.TestCase):
                     for n in range(2):
                         body = method+str(n)
                         responses.append(response('/private.php', body, expect=[assertion]))
-                        requests.append(request('/private.php', body, headers=[header], method=method, cache='BYPASS'))
+                        requests.append(request('/private.php', body, headers=[header], method=method, cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
     def test_origin_private_cookies_and_errors_are_delivered_without_caching(self):
@@ -100,14 +100,14 @@ class ProfileCompatibility(unittest.TestCase):
                 self.run_policy(profile, responses, requests)
 
     def test_woocommerce_paths_work_without_woocommerce_or_ultracache(self):
-        for profile in ['woocommerce', 'ultracache']:
+        for profile in ['basic', 'ultracache']:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for path in ['/cart/', '/checkout/', '/my-account/', '/?add-to-cart=42']:
                     for n in range(2):
                         body = 'plain PHP '+str(n)
                         responses.append(response(path, body))
-                        requests.append(request(path, body, cache='BYPASS'))
+                        requests.append(request(path, body, cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
     def test_generic_application_can_use_esi_without_ultracache(self):

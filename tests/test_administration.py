@@ -13,7 +13,7 @@ import addon
 
 def fixture():
     def site():
-        return {'enabled': True, 'suspended': False, 'profile': 'general',
+        return {'enabled': True, 'suspended': False, 'profile': 'basic',
                 'custom_recv': 'return (pass);', 'custom_backend_response': '',
                 'token': 'example-test-token', 'aliases': [], 'settings': {}}
     def owner(domains):
@@ -40,9 +40,9 @@ class Administration(unittest.TestCase):
         self.assertEqual(self.state, expected)
 
     def test_all_scope_covers_every_existing_site(self):
-        changed = self.apply(scope='all', operation='set-profile', profile='woocommerce')
+        changed = self.apply(scope='all', operation='set-profile', profile='basic')
         self.assertEqual(changed['sites'], 3)
-        self.assertTrue(all(site['profile'] == 'woocommerce' for owner in self.state['owners'].values() for site in owner['sites'].values()))
+        self.assertTrue(all(site['profile'] == 'basic' for owner in self.state['owners'].values() for site in owner['sites'].values()))
 
     def test_mixed_selection_deduplicates(self):
         self.assertEqual(self.apply(operation='disable-sites', accounts=['alice'],

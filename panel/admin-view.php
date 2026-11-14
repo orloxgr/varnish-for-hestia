@@ -1,7 +1,7 @@
 <?php
 require $root . '/web/templates/header.php';
 $panel = top_panel($headerOwner, $TAB);
-$profiles = ['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' => 'WooCommerce', 'ultracache' => 'UltraCache for Hestia'];
+$profiles = ['basic' => 'Basic', 'ultracache' => 'UltraCache'];
 ?>
 <script>document.title = <?= json_encode($meta['title'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
 <div class="toolbar"><div class="toolbar-inner"><div class="toolbar-buttons"><a class="button button-secondary" href="/list/web/" title="Return to the Hestia website list."><i class="fas fa-arrow-left icon-blue"></i>Back</a></div></div></div>
@@ -47,7 +47,7 @@ $profiles = ['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' =
         <?php foreach ($profiles as $profileKey => $profileLabel): $rules = $data['profile_settings']['rules'][$profileKey] ?? []; ?>
         <details class="box-collapse u-mb10"><summary class="box-collapse-header" title="Edit central additions for this profile."><?= $escape($profileLabel) ?></summary><div class="box-collapse-content"><form method="post">
             <?php $formFields('admin-profile-settings'); ?><input type="hidden" name="profile" value="<?= $escape($profileKey) ?>">
-            <label class="form-label">Default profile for new domains<select class="form-select u-mb10" name="default_profile" title="Only newly discovered domains receive this profile. Existing profiles and enable settings are retained."><?php foreach ($profiles as $key => $label): ?><option value="<?= $escape($key) ?>" <?= ($data['profile_settings']['default_profile'] ?? 'general') === $key ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
+            <label class="form-label">Default profile for new domains<select class="form-select u-mb10" name="default_profile" title="Only newly discovered domains receive this profile. Existing profiles and enable settings are retained."><?php foreach ($profiles as $key => $label): ?><option value="<?= $escape($key) ?>" <?= ($data['profile_settings']['default_profile'] ?? 'basic') === $key ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
             <label class="form-label">Request VCL<textarea class="form-control u-mb10" name="custom_recv" rows="5" spellcheck="false" title="Supported request rules added to this profile. Empty adds no rules. Authentication and tenant boundaries remain enforced."><?= $escape($rules['custom_recv'] ?? '') ?></textarea></label>
             <label class="form-label">Backend response VCL<textarea class="form-control u-mb10" name="custom_backend_response" rows="5" spellcheck="false" title="Supported response additions for this profile. Site additions run afterwards; response privacy remains enforced."><?= $escape($rules['custom_backend_response'] ?? '') ?></textarea></label>
             <button class="button" type="submit" title="Compile and apply these additions. Only sites whose profile rules changed are invalidated; other profiles retain their warm cache.">Apply profile rules</button>

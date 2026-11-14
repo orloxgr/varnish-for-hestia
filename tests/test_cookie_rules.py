@@ -25,7 +25,7 @@ def fixture():
     state = desired_state(None, inventory, 'varnish')
     for owner in state['owners'].values():
         for site in owner['sites'].values():
-            site['profile'] = 'woocommerce'
+            site['profile'] = 'basic'
     return state, inventory
 
 
@@ -79,7 +79,7 @@ class CookieRules(unittest.TestCase):
                     {'domain':'s0.user000.test', 'bypass_cookies':'*'})
             self.assertEqual(state, expected)
             service.request(None, 'user000', 'configure-site',
-                {'domain':'s0.user000.test', 'profile':'wordpress', 'custom_recv':'return (pass);'})
+                {'domain':'s0.user000.test', 'profile':'basic', 'custom_recv':'return (pass);'})
             self.assertEqual(state['owners']['user000']['sites']['s0.user000.test']['bypass_cookies'],
                              ['membership_*', 'currency'])
             service.request(None, 'user000', 'configure-cookies',
@@ -139,7 +139,7 @@ class NativeRules(unittest.TestCase):
                     for visitor in ('A','B'):
                         responses.append(compatibility.response('/page',visitor,
                             expect=['expect req.http.Cookie == "'+cookie+'"']))
-                        requests.append(compatibility.request('/page',visitor,headers=['Cookie: '+cookie],cache='BYPASS'))
+                        requests.append(compatibility.request('/page',visitor,headers=['Cookie: '+cookie],cache='PASS'))
                 for number, cookie in enumerate(['prefixcurrency=EUR', 'Currency=EUR', 'membership=1',
                                                  'pluginXcookie-name=1', 'plugin.cookieXname=1']):
                     path = '/public-'+str(number)
@@ -155,7 +155,7 @@ class NativeRules(unittest.TestCase):
                 self.run_policy(profile,
                     [compatibility.response('/page',visitor) for visitor in ('A','B')],
                     [compatibility.request('/page',visitor,
-                         headers=['Cookie: tracking=1','Cookie: membership_gold=1'],cache='BYPASS')
+                         headers=['Cookie: tracking=1','Cookie: membership_gold=1'],cache='PASS')
                      for visitor in ('A','B')],
                     program=compatibility.program(profile,bypass_cookies=['membership_*']))
 
@@ -165,14 +165,14 @@ class NativeRules(unittest.TestCase):
                 self.run_policy(profile,
                     [compatibility.response('/page',visitor) for visitor in ('A','B')],
                     [compatibility.request('/page',visitor,
-                         headers=['Cookie: tracking=1','Cookie: wordpress_logged_in_abcd=private'],cache='BYPASS')
+                         headers=['Cookie: tracking=1','Cookie: wordpress_logged_in_abcd=private'],cache='PASS')
                      for visitor in ('A','B')])
 
     def test_custom_rule_takes_precedence_over_esi_opt_in(self):
         self.run_policy('ultracache',
             [compatibility.response('/page',visitor) for visitor in ('A','B')],
             [compatibility.request('/page',visitor,headers=[
-                'Cookie: ultracache_esi_optin=1; woocommerce_items_in_cart=1; membership_gold=1'],cache='BYPASS')
+                'Cookie: ultracache_esi_optin=1; woocommerce_items_in_cart=1; membership_gold=1'],cache='PASS')
              for visitor in ('A','B')],
             program=compatibility.program('ultracache',bypass_cookies=['membership_*']))
 
@@ -193,7 +193,7 @@ class NativeRules(unittest.TestCase):
     def test_cookie_rules_are_confined_to_one_site_and_its_aliases(self):
         from vcl import render
         def site(identity, aliases, rules):
-            return {'id':identity*32,'profile':'woocommerce','token':'A'*32,'aliases':aliases,
+            return {'id':identity*32,'profile':'basic','token':'A'*32,'aliases':aliases,
                     'enabled':True,'suspended':False,'custom_recv':'','custom_backend_response':'', 'bypass_cookies':rules}
         state={'owners':{'one':{'enabled':True,'suspended':False,'package':'default','sites':{
             'example.test':site('a',['alias.example.test'],['membership_*'])}},
@@ -208,9 +208,9 @@ class NativeRules(unittest.TestCase):
                     expect=['expect req.http.host == "'+host+'"']))
             for number in range(2):
                 request=compatibility.request('/page',str(number if count==2 else 0),
-                    headers=['Cookie: membership_gold=1'],cache='BYPASS' if count==2 else ('MISS' if number==0 else 'HIT'))
+                    headers=['Cookie: membership_gold=1'],cache='PASS' if count==2 else ('MISS' if number==0 else 'HIT'))
                 requests.append(request.replace('Host: example.test','Host: '+host))
-        self.run_policy('woocommerce',responses,requests,program=source)
+        self.run_policy('basic',responses,requests,program=source)
 
 
 if __name__ == '__main__': unittest.main()

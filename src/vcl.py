@@ -10,7 +10,7 @@ import browser_cache
 import hosting_timeouts
 import profile_settings
 
-PROFILES = ('general', 'wordpress', 'woocommerce', 'ultracache')
+PROFILES = profile_settings.PROFILES
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -85,14 +85,14 @@ def render(state, config):
                      ' && req.http.X-UltraCache-Token != ' + quoted(site['token']) +
                      ') { return (synth(403, "Purge token denied")); } }')
         if site['recv']:
-            custom_recv.append(condition + ' { set req.http.X-Cache-Mode = "PASS"; ' + site['recv'] +
-                               ' unset req.http.X-Cache-Mode; }')
+            custom_recv.append(condition + ' { set req.http.X-Cache-Mode = "PASS"; set req.http.X-HVH-Pass-Reason = "site-rule"; ' + site['recv'] +
+                               ' unset req.http.X-Cache-Mode; unset req.http.X-HVH-Pass-Reason; }')
         if site['response']:
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
         if site['bypass_cookies']:
             cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
                 cookie_policy.vcl_pattern(site['bypass_cookies']) +
-                ') { set req.http.X-Cache-Mode = "PASS"; return (pass); } }')
+                ') { set req.http.X-HVH-Pass-Reason = "site-cookie-rule"; return (pass); } }')
     text.append('''sub vcl_recv {''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
   unset req.http.X-HVH-Site;
@@ -104,6 +104,15 @@ def render(state, config):
   unset req.http.X-HVH-Control;
   unset req.http.X-HVH-Soft-Purge;
   unset req.http.X-Cache-Mode;
+  unset req.http.X-HVH-Pass-Reason;
+  unset req.http.X-HVH-Vary-Cookie;
+  unset req.http.X-ESI-Private-Request;
+  unset req.http.X-ESI-Request-Level;
+  unset req.http.X-ESI-Original-Cookie;
+  unset req.http.X-UltraCache-ESI-Candidate;
+  unset req.http.X-UltraCache-ESI-Cookie-Check;
+  unset req.http.X-UltraCache-ESI-Opt-In;
+  unset req.http.X-UltraCache-ESI-Shared-Parent;
   std.collect(req.http.Cookie, "; ");
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
   ''' + '\n'.join(dispatch) + '''
@@ -129,52 +138,33 @@ def render(state, config):
   unset req.http.X-UltraCache-Operation;
   unset req.http.X-UltraCache-Object-Expression;
   if (req.http.X-HVH-Disabled == "1") {
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
+    set req.http.X-HVH-Pass-Reason = "site-disabled"; return (pass);
   }
   ''' + '\n'.join(custom_recv) + '''
   ''' + '\n'.join(cookie_bypass) + '''
-  if (req.url ~ "^/[.]well-known/(acme-challenge|pki-validation)/") {
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
-  }
   if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_recv; }
-  if (req.http.Authorization || req.http.Upgrade || (req.method != "GET" && req.method != "HEAD")) {
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
-  }
-  if (req.http.X-HVH-Profile == "wordpress" || req.http.X-HVH-Profile == "woocommerce") {
-    if (req.url ~ "(?i)^/(wp-admin(?:/|[?]|$)|wp-login[.]php|wp-json(?:/|[?]|$)|xmlrpc[.]php|wp-cron[.]php)" ||
-        req.url ~ "(?i)[?&](preview|preview_id|preview_nonce|customize_changeset_uuid|elementor-preview|et_fb|vc_editable|rest_route|s|nocache)=") {
-      set req.http.X-Cache-Mode = "PASS"; return (pass);
-    }
-  }
-  if (req.http.X-HVH-Profile == "woocommerce" &&
-      (req.url ~ "(?i)^/(cart|checkout|my-account|wc-api)(/|[?]|$)" ||
-       req.url ~ "(?i)[?&](add-to-cart|wc-ajax|wc-api)=")) {
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
-  }
-  # Shared cookie protection also applies to General. Unknown cookies alone
-  # do not bypass public content; the origin keeps them on a cache miss.
-  call hvh_private_cookie_recv;
-  call hvh_cart_cookie_recv;
+  call hvh_common_recv;
   return (hash);
+}
+sub vcl_pass {
+  set req.http.X-Cache-Mode = "PASS";
 }
 sub hvh_private_cookie_recv {
   if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.PRIVATE) + ''') {
-    set req.http.X-Cache-Mode = "PASS"; return (pass);
+    set req.http.X-HVH-Pass-Reason = "private-cookie"; return (pass);
   }
 }
 sub hvh_cart_cookie_recv {
   if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.CART) + ''') {
     if (req.http.X-HVH-Profile == "ultracache" && req.http.X-UltraCache-ESI-Opt-In == "1") {
       set req.http.X-UltraCache-ESI-Candidate = "1";
-    } else { set req.http.X-Cache-Mode = "PASS"; return (pass); }
+    } else { set req.http.X-HVH-Pass-Reason = "cart-session"; return (pass); }
   }
 }
 sub vcl_hash {
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
-  hash_data("hvh-cache-policy-v4");
-  # Only General changes policy here; retain other profiles' warm objects.
-  if (req.http.X-HVH-Profile == "general") { hash_data("hvh-general-cookie-v1"); }
+  hash_data("hvh-cache-policy-v5");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.url);
@@ -192,11 +182,13 @@ sub hvh_soft_purge {
   return (synth(200, "Soft purge completed"));
 }
 sub vcl_backend_fetch {
+  unset bereq.http.Surrogate-Capability;
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_fetch; }
 }
 sub hvh_mark_uncacheable {
   # Keep only a hit-for-miss decision, never the private response body.
   # A zero-lived marker makes concurrent fetches wait for one another.
+  if (!beresp.http.X-HVH-Pass-Reason) { set beresp.http.X-HVH-Pass-Reason = "origin-uncacheable"; }
   set beresp.ttl = 120s;
   set beresp.uncacheable = true;
   set beresp.grace = 0s;
@@ -214,32 +206,51 @@ sub vcl_backend_response {
   set beresp.http.X-HVH-Site = bereq.http.X-HVH-Site;
   set beresp.http.X-Cache-Object-Host = bereq.http.host;
   set beresp.http.X-Cache-Object-URL = bereq.url;
-  # Record this before ESI handling consumes Surrogate-Control. ESI may still
-  # compose this one delivery, but cannot make a no-store response cacheable.
+  unset beresp.http.X-HVH-Pass-Reason;
+  std.collect(beresp.http.Cache-Control);
   std.collect(beresp.http.Surrogate-Control);
-  if (beresp.http.Surrogate-Control ~ "(?i)no-store") { call hvh_mark_uncacheable; }
+  std.collect(beresp.http.Vary);
+  call hvh_response_privacy;
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_response; }
-  if (beresp.uncacheable || beresp.ttl <= 0s || beresp.status >= 400 || beresp.http.Set-Cookie || beresp.http.Vary == "*" ||
-      beresp.http.Cache-Control ~ "(?i)(private|no-cache|no-store)" || beresp.http.Pragma ~ "(?i)no-cache") {
-    call hvh_mark_uncacheable;
-  }
+  call hvh_response_variants;
   return (deliver);
 }
 sub vcl_deliver {
-  if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_deliver; }
-  if (req.http.X-Cache-Mode == "PASS" || obj.uncacheable) { set resp.http.X-Hestia-Varnish = "BYPASS"; }
-  else if (obj.hits > 0) { set resp.http.X-Hestia-Varnish = "HIT"; }
-  else { set resp.http.X-Hestia-Varnish = "MISS"; }
+  if (req.http.X-Cache-Mode == "PASS" || obj.uncacheable) {
+    set resp.http.X-Hestia-Varnish = "PASS";
+    if (req.http.X-HVH-Pass-Reason) { set resp.http.X-Hestia-Varnish-Reason = req.http.X-HVH-Pass-Reason; }
+    else if (resp.http.X-HVH-Pass-Reason) { set resp.http.X-Hestia-Varnish-Reason = resp.http.X-HVH-Pass-Reason; }
+    else { set resp.http.X-Hestia-Varnish-Reason = "origin-uncacheable"; }
+  } else if (obj.hits > 0) {
+    set resp.http.X-Hestia-Varnish = "HIT";
+    set resp.http.X-Hestia-Varnish-Reason = "cache-hit";
+  } else {
+    set resp.http.X-Hestia-Varnish = "MISS";
+    set resp.http.X-Hestia-Varnish-Reason = "cache-miss";
+  }
+  set resp.http.X-Cache = resp.http.X-Hestia-Varnish;
+  unset resp.http.X-Cache-Hits;
+  if (resp.http.X-Cache == "HIT") { set resp.http.X-Cache-Hits = obj.hits; }
   set resp.http.X-Hestia-Varnish-Profile = req.http.X-HVH-Profile;
+  # Downstream caches vary on the real Cookie header, not our scratch key.
+  set resp.http.Vary = regsuball(resp.http.Vary,
+    "(?i)(^|,)[[:blank:]]*X-HVH-Vary-Cookie[[:blank:]]*(?=,|$)", "\\1Cookie");
+  unset resp.http.X-HVH-Pass-Reason;
   unset resp.http.X-HVH-Site;
   unset resp.http.X-HVH-ESI-Parent;
   unset resp.http.X-HVH-Profile;
+  unset resp.http.X-HVH-Vary-Cookie;
+  unset resp.http.X-UltraCache-ESI-Shared-Parent;
+  unset resp.http.X-UltraCache-ESI-Candidate;
+  unset resp.http.X-UltraCache-ESI-Opt-In;
   unset resp.http.X-Cache-Object-Host;
   unset resp.http.X-Cache-Object-URL;
 }
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
+    text.insert(4, (ROOT / 'profiles/common.vcl').read_text().replace('__TRACKING_COOKIES__',
+        '{"' + cookie_policy.pattern(cookie_policy.TRACKING) + '[^;]*"}'))
     text.insert(4, (ROOT / 'profiles/ultracache.vcl').read_text())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'

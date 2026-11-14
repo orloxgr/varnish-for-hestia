@@ -250,7 +250,7 @@ class HTTPControl(unittest.TestCase):
                       get('/control','control',cache='HIT'),get(selected[0],'new1',cache='MISS'),get(selected[1],'new2',cache='MISS')])
 
     def test_scoped_ban_works_without_wordpress_or_ultracache_for_every_profile(self):
-        for profile in ('general', 'wordpress', 'woocommerce', 'ultracache'):
+        for profile in ('basic', 'basic', 'basic', 'ultracache'):
             with self.subTest(profile=profile):
                 self.run_vcl([origin('/target', 'old', mime='text/plain'),
                               origin('/control', 'control', mime='text/plain'),

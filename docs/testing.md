@@ -1,3 +1,38 @@
+# 0.15.0 shared Basic / UltraCache policy verification
+
+All **137 tests passed** in **174.298 seconds**.
+
+Verified in a separate checkout on the disposable Ubuntu 26.04 / Hestia lab,
+using native Varnish 9.1 and PHP 8.3. The production server was not changed and
+the lab's installed panel/service configuration was not replaced. Native HTTP
+origins are deterministic fixtures; no customer WordPress jobs or orders run.
+
+The native suite verifies both presets with public HTML/CSS, search, REST,
+XMLHttpRequest and referral reads; different functional queries remain distinct.
+Referral Set-Cookie reaches each visitor without replay from a shared object.
+A warmed parent is reused by browser requests with different analytics cookies.
+
+Vary: Cookie tests retain original cookies at the origin, merge only analytics
+identifier variants and keep locale/unknown values separate. Delivered Vary
+names the real Cookie header. Accept tests retain JSON/XML/image negotiation,
+normalize equivalent unquoted whitespace and preserve q=0. A compressed cached
+object is served uncompressed to a client that rejects gzip.
+
+Two independent Woo-style sessions receive their own notices and Store API/cart
+responses. Ordinary parents cannot borrow the ESI/async approval of another
+object. ESI private fragments, authenticated/no-opt-in requests, cold misses,
+Set-Cookie, Vary, private/no-store and Surrogate-Control remain covered. Consumed
+surrogate privacy and unapproved private parents retain private/no-store delivery
+headers for downstream caches. Basic rejects forged private-transport/capability
+headers, and both cache diagnostic headers agree on HIT/MISS/PASS and reason.
+
+State tests exercise General/WordPress/WooCommerce conversion to Basic, central
+rule scoping/order, application against old applied state, idempotence and token,
+ID, cookie and local setting preservation. HTTP contract exact/soft purge and
+scoped BAN, tenant isolation, native Nginx routing/headers, atomic rollback and
+existing administrator/owner boundaries remain in the suite. All panel PHP
+files pass the PHP 8.3 syntax check.
+
 # 0.14.1 installer progress verification
 
 All **124 tests passed** in 204.480 seconds.

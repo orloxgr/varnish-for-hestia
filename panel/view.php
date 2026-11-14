@@ -63,8 +63,8 @@ $panel = top_panel($headerOwner, $TAB);
                         <summary class="box-collapse-header" title="Choose this website’s cache profile and optional supported VCL additions.">Profile and site VCL</summary>
                         <div class="box-collapse-content"><form method="post">
                             <?php $formFields('configure-site', $site['domain']); ?>
-                            <div class="u-mb20"><label class="form-label" for="profile-<?= $escape($site['domain']) ?>">Profile</label><select title="Choose General, WordPress, WooCommerce or UltraCache caching behavior for this website and its aliases." class="form-select" id="profile-<?= $escape($site['domain']) ?>" name="profile">
-                                <?php foreach (['general' => 'General', 'wordpress' => 'WordPress', 'woocommerce' => 'WooCommerce', 'ultracache' => 'UltraCache for Hestia'] as $value => $label): ?>
+                            <div class="u-mb20"><label class="form-label" for="profile-<?= $escape($site['domain']) ?>">Profile</label><select title="Basic: WordPress/WooCommerce and public HTTP content. UltraCache: the same policy with ESI and async parent integration." class="form-select" id="profile-<?= $escape($site['domain']) ?>" name="profile">
+                                <?php foreach (['basic' => 'Basic', 'ultracache' => 'UltraCache'] as $value => $label): ?>
                                     <option value="<?= $escape($value) ?>" <?= $site['profile'] === $value ? 'selected' : '' ?>><?= $escape($label) ?></option>
                                 <?php endforeach; ?>
                             </select></div>
