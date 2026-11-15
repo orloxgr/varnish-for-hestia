@@ -186,16 +186,13 @@ sub vcl_backend_fetch {
   if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_fetch; }
 }
 sub hvh_mark_uncacheable {
-  # Keep only a hit-for-miss decision, never the private response body.
-  # A zero-lived marker makes concurrent fetches wait for one another.
+  # Follow the running Varnish's hit-for-miss setting, not an addon lifetime.
+  # Set the native fields without returning early: ESI still needs composition.
   if (!beresp.http.X-HVH-Pass-Reason) { set beresp.http.X-HVH-Pass-Reason = "origin-uncacheable"; }
-  set beresp.ttl = 120s;
+  set beresp.ttl = param.uncacheable_ttl;
   set beresp.uncacheable = true;
-  set beresp.grace = 0s;
-  set beresp.keep = 0s;
 }
 sub vcl_backend_response {
-  if (bereq.http.X-HVH-Profile == "ultracache") { set beresp.keep = 5m; }
   if (beresp.http.Vary != "*") {
     if (!beresp.http.Vary) { set beresp.http.Vary = "X-Forwarded-Proto"; }
     else if (beresp.http.Vary !~ "(?i)(^|,)[[:blank:]]*X-Forwarded-Proto[[:blank:]]*(,|$)") {

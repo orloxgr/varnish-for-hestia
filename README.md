@@ -1,13 +1,14 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.15.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.15.1** · GPL-3.0-or-later.
 
 ## Quick start
 
 Requires **Ubuntu 26.04 amd64 with Hestia 1.10.x already installed**, using
 **Nginx -> Apache/PHP-FPM** (Nginx 1.29.3+ for native response-header inheritance). Run commands over SSH as an administrator. The
-installer also installs Varnish **9.1.0**; do not install the service separately.
+installer also installs the signed Varnish package selected by APT from the
+official repository for this distribution; do not install the service separately.
 
 1. **Get the code. Choose one command:**
 
@@ -93,16 +94,17 @@ set -o pipefail
 sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py 2>&1 | tee varnish-install.log
 ```
 
-Version **0.15.0** provides two presets with one common request/response policy.
+Version **0.15.1** provides two presets with one common request/response policy.
 Existing General, WordPress and WooCommerce selections become Basic automatically.
 Site IDs, tokens, enable settings, cookie rules, browser settings and local VCL
 are retained. Former central profile rules are prepended to the corresponding
 sites' local VCL, retaining their original scope and execution order. UltraCache
 selections and their central rules remain UltraCache. The conversion is idempotent.
 
-The installer regenerates the VCL and managed domain routes. It starts a fresh
-cache namespace for the changed policy; pages refill on demand. It does not need
-a Varnish restart or a manual domain rebuild. Refresh Hestia with **Ctrl+F5**.
+The installer regenerates the VCL and managed domain routes. Upgrading from
+before 0.15.0 starts that version's new cache namespace; 0.15.1 retains the
+0.15.0 namespace and warm public objects. No Varnish restart or manual domain
+rebuild is needed. Refresh Hestia with **Ctrl+F5**.
 
 ## Cache behavior
 
@@ -110,6 +112,13 @@ a Varnish restart or a manual domain rebuild. Refresh Hestia with **Ctrl+F5**.
 private-state handling. **UltraCache** adds ESI composition and explicitly approved
 shared parents using exactly that same base policy. No application detection or
 extra protection switches are required.
+
+There is no addon TTL cap or forced grace/keep duration. Freshness follows the
+origin and native Varnish, with explicit central/site VCL additions retained.
+Uncacheable-response markers use the running Varnish's `uncacheable_ttl` setting.
+Ordinary Set-Cookie responses remain uncacheable in Varnish without rewriting
+the origin's Cache-Control. Personal ESI/session responses retain their privacy
+headers. HTTP status alone does not impose an additional addon caching veto.
 
 Public searches (`s=`), REST GETs (`/wp-json/` and `rest_route`), XMLHttpRequest GETs,
 and `ref=` are cache candidates. The original URL, query values and cookies still

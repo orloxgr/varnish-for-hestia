@@ -1,3 +1,32 @@
+# 0.15.1 native policy verification
+
+The complete suite passed **143 tests in 178.446 seconds** on the isolated
+Ubuntu 26.04 / Hestia lab with native Varnish 9.1. After the final installer
+dependency-cleanup change, all **7 installer tests** passed again. All four PHP
+panel files passed PHP 8.3 lint. A read-only `apt-get -s install varnish` selected
+the official repository candidate without an explicit package version.
+
+Native runtime tests change `uncacheable_ttl`, `default_grace` and `default_keep`
+and verify that both presets follow those settings. Public responses retain an
+origin TTL of 1800 seconds; uncacheable responses remain separate without forced
+grace/keep values. Parallel private fetches and a private-to-public transition
+remain covered by the existing hit-for-miss tests.
+
+Public 404/410 responses with origin freshness MISS then HIT. Native 500/503
+freshness remains noncacheable unless a central/site rule explicitly sets a
+positive TTL; the addon no longer vetoes that rule by status alone. Private
+errors remain uncacheable even with an explicit site TTL. Ordinary Set-Cookie
+responses preserve public, no-cache or absent Cache-Control and deliver each
+visitor's own cookie/body. Private ESI and consumed surrogate privacy remain
+protected. The existing two-visitor ESI, async parent, authentication, scoped
+purge/BAN, Nginx transport, state preservation and rollback tests passed.
+
+Installer tests verify unpinned APT selection, the matching distro boundary,
+no manual library-generation removal, and rejection of an installation plan
+that would remove unrelated services. Actual package installation/upgrade was
+not performed by this verification; the APT command was a simulation. Production
+and the lab's installed addon/service configuration were not changed.
+
 # 0.15.0 shared Basic / UltraCache policy verification
 
 All **137 tests passed** in **174.298 seconds**.

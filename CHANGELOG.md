@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.1 · 2026-11-15
+
+- Use the running Varnish's `param.uncacheable_ttl` for hit-for-miss markers instead of an addon-owned 120-second lifetime. Remove forced marker grace/keep values and UltraCache's five-minute keep override; preserve native, origin and explicitly configured retention.
+- Preserve the origin's Cache-Control on ordinary Set-Cookie responses while keeping those responses uncacheable in Varnish. Retain explicit downstream privacy for private ESI fragments, unapproved session parents and consumed private/no-store Surrogate-Control.
+- Remove the blanket HTTP status >=400 caching exclusion. Public errors follow their origin/native freshness; private/no-store/expired responses remain uncacheable.
+- Install the signed APT candidate instead of pinning one Varnish package build or manually removing a particular library generation. Let APT resolve dependencies. Retain Ubuntu/amd64, the matching resolute repository, signing-key verification and checks against removing unrelated services. Addon updates still preserve the installed native package.
+- Verify native runtime retention settings, long origin freshness, public error HITs, separate Set-Cookie deliveries and installer package selection without changing production.
+
 ## 0.15.0 · 2026-11-15
 
 - Replace four preset choices with Basic and UltraCache. Both use one HTTP/WordPress/WooCommerce policy; UltraCache adds only its ESI/private-fragment/approved async-parent integration.

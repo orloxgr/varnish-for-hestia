@@ -37,7 +37,6 @@ GUARD = DROPIN.with_name('zz-varnish-for-hestia-install.conf')
 PENDING = service.STORE / 'install.json'
 RECEIPT = service.STORE / 'install-receipt.json'
 IN_PROGRESS = service.CONFIG / '.install-in-progress'
-PACKAGE = '9.1.0-2~resolute'
 
 
 def run(*args, **kwargs):
@@ -60,25 +59,19 @@ def native_version():
 
 
 def install_package():
-    # This signed package/repository is built for this distro. Existing native
-    # services are upgraded/adopted without downloading or replacing their package.
+    # Keep the distro/repository boundary; let APT select its signed candidate.
+    # Existing native services are adopted without replacing their package.
     release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
     if release.get('VERSION_CODENAME', '').strip('"') != 'resolute':
         raise ValueError('The selected official fresh-install package requires the matching Ubuntu resolute repository')
     repository.setup()
     env = dict(os.environ, DEBIAN_FRONTEND='noninteractive')
     run('apt-get', 'update', '-o', 'APT::Update::Error-Mode=any', env=env)
-    simulation = run('apt-get', '-s', 'install', 'varnish=' + PACKAGE).stdout.decode()
+    simulation = run('apt-get', '-s', 'install', 'varnish').stdout.decode()
     removals = [line.split()[1] for line in simulation.splitlines() if line.startswith('Remv ')]
     if set(removals) - {'libvarnishapi1', 'libvarnishapi2', 'libvarnishapi3'}:
         raise ValueError('Package installation would remove another service')
-    run('apt-get', 'install', '-y', 'varnish=' + PACKAGE, env=env)
-    old = subprocess.run(['dpkg-query', '-W', '-f=${db:Status-Status}', 'libvarnishapi3'], capture_output=True, text=True)
-    if old.stdout.strip() == 'installed':
-        plan = run('apt-get', '-s', 'remove', 'libvarnishapi3').stdout.decode()
-        if [line.split()[1] for line in plan.splitlines() if line.startswith('Remv ')] != ['libvarnishapi3']:
-            raise ValueError('Obsolete library removal would affect another package')
-        run('apt-get', 'remove', '-y', 'libvarnishapi3', env=env); run('ldconfig')
+    run('apt-get', 'install', '-y', 'varnish', env=env)
 
 
 def private_manifest(path):

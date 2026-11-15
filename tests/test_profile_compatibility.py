@@ -86,13 +86,13 @@ class ProfileCompatibility(unittest.TestCase):
                         requests.append(request('/private.php', body, headers=[header], method=method, cache='PASS'))
                 self.run_policy(profile, responses, requests)
 
-    def test_origin_private_cookies_and_errors_are_delivered_without_caching(self):
+    def test_origin_private_cookies_and_noncacheable_errors_are_delivered_without_caching(self):
         for profile in PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for path, policy, headers, status in [('/private', 'private, no-store', [], 200),
                     ('/cookie', 'public, max-age=120', ['Set-Cookie: PHPSESSID=example'], 200),
-                    ('/missing', 'public, max-age=120', [], 404), ('/error', 'public, max-age=120', [], 500)]:
+                    ('/missing', 'private, no-store', [], 404), ('/error', 'public, max-age=0', [], 500)]:
                     for n in range(2):
                         body = path+str(n)
                         responses.append(response(path, body, policy=policy, headers=headers, status=status))

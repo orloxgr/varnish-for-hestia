@@ -16,11 +16,11 @@ import test_profile_compatibility as compatibility
 
 @unittest.skipUnless(shutil.which('varnishtest'), 'native varnishtest is required')
 class CachePolicy(unittest.TestCase):
-    def run_policy(self, profile, responses, requests, *, tail='', program=None):
+    def run_policy(self, profile, responses, requests, *, tail='', program=None, varnish_args=''):
         source = compatibility.program(profile) if program is None else program
         content = ('varnishtest "Cache policy regression"\nserver s1 {\n' +
                    '\n'.join(responses).removeprefix('accept\n') + '\n} -start\n' +
-                   'varnish v1 -vcl {\n' + source + '\n} -start\nclient c1 {\n' +
+                   'varnish v1 ' + varnish_args + ' -vcl {\n' + source + '\n} -start\nclient c1 {\n' +
                    '\n'.join(requests) + '\n} -run\n' + tail + '\nserver s1 -wait\n')
         with tempfile.TemporaryDirectory(prefix='hvh-policy-') as directory:
             path = Path(directory) / 'policy.vtc'
@@ -35,8 +35,8 @@ class CachePolicy(unittest.TestCase):
                  ('public, max-age=120', ['Surrogate-Control: no-store'], 200),
                  ('public, max-age=120', ['Surrogate-Control: No-Store'], 200),
                  ('public, max-age=120', ['Surrogate-Control: max-age=600', 'Surrogate-Control: no-store'], 200),
-                 ('public, max-age=0', [], 200), ('public, max-age=120', [], 404),
-                 ('public, max-age=120', [], 503)]
+                 ('public, max-age=0', [], 200), ('private, no-store', [], 404),
+                 ('public, max-age=0', [], 503)]
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []

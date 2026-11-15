@@ -86,14 +86,11 @@ sub hvh_response_privacy {
         set beresp.http.Cache-Control = "private, no-store";
     } else if (beresp.http.Set-Cookie) {
         set beresp.http.X-HVH-Pass-Reason = "origin-set-cookie";
-        set beresp.http.Cache-Control = "private, no-store";
     } else if (beresp.http.Cache-Control ~ "(?i)(^|[[:space:],])(private|no-cache|no-store)([[:space:],=]|$)" ||
                beresp.http.Pragma ~ "(?i)(^|[[:space:],])no-cache([[:space:],=]|$)") {
         set beresp.http.X-HVH-Pass-Reason = "origin-cache-control";
     } else if (beresp.http.Vary ~ "(^|,)[[:blank:]]*[*][[:blank:]]*(,|$)") {
         set beresp.http.X-HVH-Pass-Reason = "origin-vary-star";
-    } else if (beresp.status >= 400) {
-        set beresp.http.X-HVH-Pass-Reason = "origin-status";
     } else if (beresp.ttl <= 0s) {
         set beresp.http.X-HVH-Pass-Reason = "origin-ttl";
     }

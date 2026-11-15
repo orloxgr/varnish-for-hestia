@@ -7,7 +7,7 @@ import shlex
 import subprocess
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
@@ -26,7 +26,43 @@ def installer_runner():
     return namespace['run']
 
 
+def installer_function(name, namespace):
+    source = ROOT / 'tools/install.py'
+    tree = ast.parse(source.read_text())
+    function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name)
+    exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
+    return namespace[name]
+
+
 class InstallerErrors(unittest.TestCase):
+    def test_fresh_install_uses_signed_apt_candidate_without_a_version_pin(self):
+        run = Mock(return_value=subprocess.CompletedProcess([], 0, b'Inst varnish (9.2.0 official [amd64])', b''))
+        path = Mock(return_value=Mock(read_text=Mock(return_value='ID=ubuntu\nVERSION_CODENAME=resolute\n')))
+        repository = Mock()
+        namespace = dict(Path=path, run=run, repository=repository, os=Mock(environ={}), subprocess=Mock())
+        namespace['subprocess'].run.return_value = subprocess.CompletedProcess([], 1, b'', b'')
+        installer_function('install_package', namespace)()
+        repository.setup.assert_called_once_with()
+        self.assertEqual(run.call_args_list[1].args, ('apt-get', '-s', 'install', 'varnish'))
+        self.assertEqual(run.call_args_list[2].args, ('apt-get', 'install', '-y', 'varnish'))
+        self.assertEqual(len(run.call_args_list), 3)
+        namespace['subprocess'].run.assert_not_called()
+
+    def test_fresh_install_keeps_distro_boundary_and_refuses_removing_other_services(self):
+        path = Mock(return_value=Mock(read_text=Mock(return_value='VERSION_CODENAME=other\n')))
+        run, repository = Mock(), Mock()
+        namespace = dict(Path=path, run=run, repository=repository, os=Mock(environ={}), subprocess=Mock())
+        install = installer_function('install_package', namespace)
+        with self.assertRaisesRegex(ValueError, 'matching Ubuntu resolute'):
+            install()
+        run.assert_not_called()
+        repository.setup.assert_not_called()
+        path.return_value.read_text.return_value = 'VERSION_CODENAME=resolute\n'
+        run.return_value = subprocess.CompletedProcess([], 0, b'Remv apache2 [1.0]\n', b'')
+        with self.assertRaisesRegex(ValueError, 'remove another service'):
+            install()
+        self.assertEqual(len(run.call_args_list), 2)
+
     def test_failed_child_preserves_output_exit_code_and_arguments(self):
         run = installer_runner()
         output = io.StringIO()

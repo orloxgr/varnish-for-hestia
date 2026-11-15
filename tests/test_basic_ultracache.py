@@ -202,7 +202,7 @@ class PublicReads(unittest.TestCase):
                      http.request('/cookie', 'private', cache='PASS'),
                      'expect resp.http.X-Cache == "PASS"',
                      'expect resp.http.X-Hestia-Varnish-Reason == "origin-set-cookie"',
-                     'expect resp.http.Cache-Control == "private, no-store"',
+                     'expect resp.http.Cache-Control == "public, max-age=120"',
                      http.request('/private', 'private', cache='PASS'),
                      'expect resp.http.X-Hestia-Varnish-Reason == "origin-cache-control"',
                      http.request('/wp-login.php', 'login', cache='PASS'),

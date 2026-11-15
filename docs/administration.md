@@ -5,7 +5,7 @@ two presets, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.13.0**.
+Version **0.15.1**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -14,8 +14,9 @@ For the four-step installation, see [Quick start](../README.md#quick-start).
 ## Server controls
 
 In **Plugins → Varnish → All accounts**, the administrator can set **Backend
-first-byte timeout (seconds)** for all current and future domains. The permitted
-range is 1–3600 seconds. `300` allows a five-minute wait for the origin's first
+first-byte timeout (seconds)** for all current and future domains. The field
+accepts finite nonnegative seconds, including fractions; blank follows hosting.
+`300` allows a five-minute wait for the origin's first
 response byte. The setting is stored in the root-private desired/applied state
 and compiled as `.first_byte_timeout` on every generated VCL backend. The native
 global `varnishadm param.show first_byte_timeout` value remains unchanged; the
@@ -60,7 +61,7 @@ sudo python3 tools/install.py --memory-mb 8192
 Keep `/usr/local/src/varnish-for-hestia` for future updates and recovery.
 
 With no existing Varnish, the installer uses the official signed Ubuntu repository
-and pinned package `9.1.0-2~resolute`, with separate addon-owned repository files.
+and its signed APT candidate, with separate addon-owned repository files.
 The quick-start command sets an 8 GiB shared cache budget. Rerun without memory options to update
 addon files/templates and reconcile accounts, preserving credentials and choices.
 Complete code generations live in `/opt/varnish-for-hestia.releases/`; an atomic
@@ -319,8 +320,10 @@ is not started implicitly. Existing Hestia scripts/templates are never patched.
 ## Compatibility and operating limits
 
 Supported versions: Ubuntu 26.04 amd64 / Hestia 1.10.5 / Varnish 9.1.0.
-The installer uses the verified package version; a future unknown major release
-requires an addon update and is not an automatic compatibility promise.
+Fresh installations use the signed APT candidate from the matching official
+Ubuntu resolute repository, without an addon version pin. Existing installations
+retain their native package. Generated VCL is checked by the installed native
+compiler before activation; invalid configuration is not published.
 Initial support is the native Hestia Nginx/Apache/PHP-FPM layout and standard
 Apache templates containing the include point above. Original proxy-template
 selection is saved; directives embedded only in a previous custom template are
