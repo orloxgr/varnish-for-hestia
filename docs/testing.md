@@ -1,3 +1,45 @@
+# 0.16.0 shared Webuzo/Hestia policy verification
+
+The Hestia full suite passed **143 tests in 206.169 seconds** on the isolated
+Ubuntu 26.04 / Hestia VM with native Varnish 9.1. The same frozen source also
+passed the unchanged shared HTTP suite: **29 cases / 56 profile runs**.
+
+The Webuzo 0.4.3 integration passed its **146 tests in 154.027 seconds** and the
+same **56 shared profile runs**. An explicit development comparison of both
+repositories and their native JSON reports confirmed byte-identical policy,
+case and runner files and identical complete passed-result records:
+
+| File | SHA256 |
+| --- | --- |
+| `shared/cache-policy.vcl` | `7cea910fa4e05a4d874fb01f8ca51c28fe1e56d1af503ce219d0bc8d529edefb` |
+| `tests/shared_policy_cases.json` | `38bb8fd00002b6d81aae491072df3eb12bea93fb5ebd130fca4ec2dde11be797` |
+| `tests/shared_policy_parity.py` | `92dee05a5b06ec25510aaabc83657eec22b47374a27bfffe40ef56e5942c1c58` |
+
+The shared cases cover original origin URL/Cookie/Accept preservation, tracking
+URL and analytics-cookie HITs, consecutive tracking arguments, nested functional
+URLs, functional search/ref/language/currency and Cookie variations, consent and
+unknown cookies, canonical exact/soft/batch invalidation and host/language/scheme
+isolation. They exercise static HTML warmup/browser image capabilities, image
+q=0, dynamic/quoted/large Accept headers, absent versus present-empty Accept and
+Cookie fields, nonce/private route guards in subdirectories, public query values
+containing private-looking paths, response Set-Cookie/surrogate privacy, two
+independent private ESI visitors and reusable public ESI fragments. Native header/
+workspace allowances are enlarged only in the large-header test, not by the
+addon or installer.
+
+Hestia's existing native transport, scope/authentication, state preservation,
+parser, rollback, configuration and cache-policy tests also passed. The atomic
+publication test confirms that the full shared source is included in installed
+code. The comparison and JSON reports are development checks; runtime and
+installation do not access another checkout or network policy file. Origins are
+deterministic HTTP fixtures. Production and installed VM services were not
+changed by these checks.
+
+```sh
+python3 -m unittest discover -s tests -v
+python3 tests/shared_policy_parity.py --adapter tests/parity_adapter.py --output parity-results.json
+```
+
 # 0.15.1 native policy verification
 
 The complete suite passed **143 tests in 178.446 seconds** on the isolated

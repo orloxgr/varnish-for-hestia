@@ -85,15 +85,16 @@ def render(state, config):
                      ' && req.http.X-UltraCache-Token != ' + quoted(site['token']) +
                      ') { return (synth(403, "Purge token denied")); } }')
         if site['recv']:
-            custom_recv.append(condition + ' { set req.http.X-Cache-Mode = "PASS"; set req.http.X-HVH-Pass-Reason = "site-rule"; ' + site['recv'] +
-                               ' unset req.http.X-Cache-Mode; unset req.http.X-HVH-Pass-Reason; }')
+            custom_recv.append(condition + ' { set req.http.X-SCP-Reason = "site-rule"; ' + site['recv'] +
+                               ' unset req.http.X-SCP-Reason; }')
         if site['response']:
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
         if site['bypass_cookies']:
             cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
                 cookie_policy.vcl_pattern(site['bypass_cookies']) +
-                ') { set req.http.X-HVH-Pass-Reason = "site-cookie-rule"; return (pass); } }')
-    text.append('''sub vcl_recv {''' + hosting_timeouts.session(state) + '''
+                ') { set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
+    text.append('''sub vcl_recv {
+  call scp_init;''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
   unset req.http.X-HVH-Site;
   unset req.http.X-HVH-Profile;
@@ -103,19 +104,10 @@ def render(state, config):
   unset req.http.X-HVH-Ban-HTML;
   unset req.http.X-HVH-Control;
   unset req.http.X-HVH-Soft-Purge;
-  unset req.http.X-Cache-Mode;
-  unset req.http.X-HVH-Pass-Reason;
-  unset req.http.X-HVH-Vary-Cookie;
-  unset req.http.X-ESI-Private-Request;
-  unset req.http.X-ESI-Request-Level;
-  unset req.http.X-ESI-Original-Cookie;
-  unset req.http.X-UltraCache-ESI-Candidate;
-  unset req.http.X-UltraCache-ESI-Cookie-Check;
-  unset req.http.X-UltraCache-ESI-Opt-In;
-  unset req.http.X-UltraCache-ESI-Shared-Parent;
   std.collect(req.http.Cookie, "; ");
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
   ''' + '\n'.join(dispatch) + '''
+  set req.http.X-SCP-Profile = req.http.X-HVH-Profile;
   if (req.esi_level > 0 && req_top.http.X-HVH-Site != req.http.X-HVH-Site) {
     return (synth(403, "Cross-site ESI denied"));
   }
@@ -138,41 +130,29 @@ def render(state, config):
   unset req.http.X-UltraCache-Operation;
   unset req.http.X-UltraCache-Object-Expression;
   if (req.http.X-HVH-Disabled == "1") {
-    set req.http.X-HVH-Pass-Reason = "site-disabled"; return (pass);
+    set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
   ''' + '\n'.join(custom_recv) + '''
   ''' + '\n'.join(cookie_bypass) + '''
-  if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_recv; }
-  call hvh_common_recv;
+  call scp_recv;
   return (hash);
 }
 sub vcl_pass {
-  set req.http.X-Cache-Mode = "PASS";
-}
-sub hvh_private_cookie_recv {
-  if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.PRIVATE) + ''') {
-    set req.http.X-HVH-Pass-Reason = "private-cookie"; return (pass);
-  }
-}
-sub hvh_cart_cookie_recv {
-  if (req.http.Cookie ~ ''' + cookie_policy.vcl_pattern(cookie_policy.CART) + ''') {
-    if (req.http.X-HVH-Profile == "ultracache" && req.http.X-UltraCache-ESI-Opt-In == "1") {
-      set req.http.X-UltraCache-ESI-Candidate = "1";
-    } else { set req.http.X-HVH-Pass-Reason = "cart-session"; return (pass); }
-  }
+  call scp_pass;
 }
 sub vcl_hash {
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
-  hash_data("hvh-cache-policy-v5");
+  call scp_key;
+  hash_data("hvh-cache-policy-v6");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
-  hash_data(req.url);
+  hash_data(req.http.X-SCP-Key-URL);
   return (lookup);
 }
 sub vcl_hit {
   if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
-  if (req.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_hit; }
+  call scp_hit;
 }
 sub vcl_miss {
   if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
@@ -182,72 +162,32 @@ sub hvh_soft_purge {
   return (synth(200, "Soft purge completed"));
 }
 sub vcl_backend_fetch {
-  unset bereq.http.Surrogate-Capability;
-  if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_fetch; }
-}
-sub hvh_mark_uncacheable {
-  # Follow the running Varnish's hit-for-miss setting, not an addon lifetime.
-  # Set the native fields without returning early: ESI still needs composition.
-  if (!beresp.http.X-HVH-Pass-Reason) { set beresp.http.X-HVH-Pass-Reason = "origin-uncacheable"; }
-  set beresp.ttl = param.uncacheable_ttl;
-  set beresp.uncacheable = true;
+  call scp_backend_fetch;
 }
 sub vcl_backend_response {
-  if (beresp.http.Vary != "*") {
-    if (!beresp.http.Vary) { set beresp.http.Vary = "X-Forwarded-Proto"; }
-    else if (beresp.http.Vary !~ "(?i)(^|,)[[:blank:]]*X-Forwarded-Proto[[:blank:]]*(,|$)") {
-      set beresp.http.Vary = beresp.http.Vary + ", X-Forwarded-Proto";
-    }
-  }
   ''' + '\n'.join(custom_response) + '''
   set beresp.http.X-HVH-Site = bereq.http.X-HVH-Site;
   set beresp.http.X-Cache-Object-Host = bereq.http.host;
-  set beresp.http.X-Cache-Object-URL = bereq.url;
-  unset beresp.http.X-HVH-Pass-Reason;
-  std.collect(beresp.http.Cache-Control);
-  std.collect(beresp.http.Surrogate-Control);
-  std.collect(beresp.http.Vary);
-  call hvh_response_privacy;
-  if (bereq.http.X-HVH-Profile == "ultracache") { call hvh_ultracache_backend_response; }
-  call hvh_response_variants;
+  set beresp.http.X-Cache-Object-URL = bereq.http.X-SCP-Key-URL;
+  call scp_backend_response;
   return (deliver);
 }
 sub vcl_deliver {
-  if (req.http.X-Cache-Mode == "PASS" || obj.uncacheable) {
-    set resp.http.X-Hestia-Varnish = "PASS";
-    if (req.http.X-HVH-Pass-Reason) { set resp.http.X-Hestia-Varnish-Reason = req.http.X-HVH-Pass-Reason; }
-    else if (resp.http.X-HVH-Pass-Reason) { set resp.http.X-Hestia-Varnish-Reason = resp.http.X-HVH-Pass-Reason; }
-    else { set resp.http.X-Hestia-Varnish-Reason = "origin-uncacheable"; }
-  } else if (obj.hits > 0) {
-    set resp.http.X-Hestia-Varnish = "HIT";
-    set resp.http.X-Hestia-Varnish-Reason = "cache-hit";
-  } else {
-    set resp.http.X-Hestia-Varnish = "MISS";
-    set resp.http.X-Hestia-Varnish-Reason = "cache-miss";
-  }
-  set resp.http.X-Cache = resp.http.X-Hestia-Varnish;
-  unset resp.http.X-Cache-Hits;
-  if (resp.http.X-Cache == "HIT") { set resp.http.X-Cache-Hits = obj.hits; }
+  call scp_deliver;
+  set resp.http.X-Hestia-Varnish = resp.http.X-SCP-Result;
+  set resp.http.X-Hestia-Varnish-Reason = resp.http.X-SCP-Result-Reason;
   set resp.http.X-Hestia-Varnish-Profile = req.http.X-HVH-Profile;
-  # Downstream caches vary on the real Cookie header, not our scratch key.
-  set resp.http.Vary = regsuball(resp.http.Vary,
-    "(?i)(^|,)[[:blank:]]*X-HVH-Vary-Cookie[[:blank:]]*(?=,|$)", "\\1Cookie");
-  unset resp.http.X-HVH-Pass-Reason;
+  unset resp.http.X-SCP-Result;
+  unset resp.http.X-SCP-Result-Reason;
   unset resp.http.X-HVH-Site;
   unset resp.http.X-HVH-ESI-Parent;
   unset resp.http.X-HVH-Profile;
-  unset resp.http.X-HVH-Vary-Cookie;
-  unset resp.http.X-UltraCache-ESI-Shared-Parent;
-  unset resp.http.X-UltraCache-ESI-Candidate;
-  unset resp.http.X-UltraCache-ESI-Opt-In;
   unset resp.http.X-Cache-Object-Host;
   unset resp.http.X-Cache-Object-URL;
 }
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, (ROOT / 'profiles/common.vcl').read_text().replace('__TRACKING_COOKIES__',
-        '{"' + cookie_policy.pattern(cookie_policy.TRACKING) + '[^;]*"}'))
-    text.insert(4, (ROOT / 'profiles/ultracache.vcl').read_text())
+    text.insert(4, (ROOT / 'shared/cache-policy.vcl').read_text())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'

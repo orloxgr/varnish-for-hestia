@@ -173,7 +173,7 @@ class CachePolicy(unittest.TestCase):
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 source = compatibility.program(profile)
-                old = source.replace('hash_data("hvh-cache-policy-v5");', 'hash_data("hvh-cache-policy-v4");')
+                old = source.replace('hash_data("hvh-cache-policy-v6");', 'hash_data("hvh-cache-policy-v5");')
                 tail = ('varnish v1 -vcl {\n'+source+'\n}\nclient c2 {\n'+
                         compatibility.request('/page', 'new', cache='MISS')+'\n'+
                         compatibility.request('/page', 'new', cache='HIT')+'\n} -run')

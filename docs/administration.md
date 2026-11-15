@@ -5,7 +5,7 @@ two presets, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.15.1**.
+Version **0.16.0**.
 
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
@@ -360,12 +360,31 @@ uses a fresh cache namespace; pages refill on demand without restarting Varnish.
 Protocol and content negotiation remain Vary variants, so exact PURGE removes
 them together. The origin's TTL/grace policy remains authoritative.
 
+Version 0.16.0 includes `shared/cache-policy.vcl` unchanged from the Webuzo
+integration. Hestia's adapter retains host/backend/token isolation, native
+transport and explicit administrator additions; application, ESI, privacy,
+representation and lookup-key rules are defined only in the shared file.
+The complete shared directory is part of atomic addon code publication.
+
+Tracking parameters are omitted from an internal lookup URL, while the original
+URL/Cookie remain available to the application on a MISS. Functional query values
+and functional Cookie variations remain distinct. Exact HTTP PURGE maps tracking
+URLs to the same canonical object within site/host scope. Exact/batch/regex BAN
+expressions target canonical lookup URLs in `X-Cache-Object-URL`; the URL
+normalizer is not applied to arbitrary regex source. Soft purge uses the same
+key and follows native grace/background refresh. See [the shared contract](../shared/CONTRACT.md).
+
+The new representation/key policy uses a fresh cache namespace without a native
+service restart. The shared source and parity checks are local distribution/
+development files, with no runtime dependency on another repository or network.
+
 ## Development checks
 
 ```sh
 python3 tests/test_registry.py
 python3 tests/test_fragments.py
 python3 -m unittest discover -s tests -p 'test_http_control.py' -v
+python3 tests/shared_policy_parity.py --adapter tests/parity_adapter.py --output parity-results.json
 ```
 
 The registry and fragment-parser suites run without a live hosting installation.

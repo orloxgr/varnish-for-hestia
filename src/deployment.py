@@ -104,7 +104,7 @@ def publish(source,meta):
     stage=Path(tempfile.mkdtemp(prefix='release-',dir=RELEASES))
     stage.chmod(0o755)
     try:
-        for name in ('src','panel','profiles','templates','tools'):
+        for name in ('src','panel','profiles','shared','templates','tools'):
             if (source/name).is_dir():
                 shutil.copytree(source/name,stage/name,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
         shutil.copyfile(source/'addon.json',stage/'addon.json')

@@ -26,6 +26,8 @@ class FreshDeployment(unittest.TestCase):
         (self.source/'src/addon.py').write_text('# fixture\n')
         (self.source/'panel/index.php').write_text('<?php /* __INSTALL_ROOT__ */ ?>')
         (self.source/'panel/menu.js').write_bytes((ROOT/'panel/menu.js').read_bytes())
+        (self.source/'shared').mkdir()
+        (self.source/'shared/cache-policy.vcl').write_bytes((ROOT/'shared/cache-policy.vcl').read_bytes())
         (self.source/'addon.json').write_text(json.dumps(self.meta))
         self.hestia = self.root/'hestia'
         (self.hestia/'web').mkdir(parents=True)
@@ -55,6 +57,8 @@ class FreshDeployment(unittest.TestCase):
         self.assertIn(str(self.target), (plugins/self.meta['slug']/'index.php').read_text())
         self.assertTrue((self.hestia/'bin'/self.meta['command']).is_file())
         self.assertTrue(self.target.is_symlink())
+        self.assertEqual((self.target/'shared/cache-policy.vcl').read_bytes(),
+                         (self.source/'shared/cache-policy.vcl').read_bytes())
         self.assertEqual(deployment.menu_path().read_bytes(), (self.source/'panel/menu.js').read_bytes())
         self.assertEqual(stat.S_IMODE(deployment.menu_path().stat().st_mode), 0o644)
         self.assertEqual(stat.S_IMODE(deployment.menu_path().parent.stat().st_mode), 0o755)

@@ -23,7 +23,7 @@ sub hvh_http_control {
             return (synth(200, "Cache control capabilities"));
         }
         if (req.http.X-UltraCache-Operation == "exact-purge") {
-            return (purge);
+            call hvh_exact_http_purge;
         }
         if (req.http.X-UltraCache-Operation == "soft-purge") {
             set req.http.X-HVH-Soft-Purge = "1";
@@ -60,7 +60,7 @@ sub hvh_http_control {
         }
     }
     if (!req.http.X-HVH-Control && req.method == "PURGE") {
-        return (purge);
+        call hvh_exact_http_purge;
     }
 
     # Portable UltraCache expressions contain literal, unquoted HTTP operands.
@@ -107,6 +107,21 @@ sub hvh_http_control {
         }
     }
     return (synth(200, "Ban added"));
+}
+
+# Match canonical object metadata for every representation of this host/URL.
+# Raw tracking URLs remain untouched and map to the same authenticated selector.
+sub hvh_exact_http_purge {
+    call scp_key;
+    if (req.http.X-SCP-Key-URL ~ {"[[:space:]"\\]"}) {
+        return (synth(400, "Invalid purge URL"));
+    }
+    if (!std.ban("obj.http.X-HVH-Site == " + req.http.X-HVH-Site +
+        " && obj.http.X-Cache-Object-Host == " + req.http.host +
+        " && obj.http.X-Cache-Object-URL == " + req.http.X-SCP-Key-URL)) {
+        return (synth(400, "Invalid purge URL"));
+    }
+    return (synth(200, "URL cache purged"));
 }
 
 sub vcl_synth {

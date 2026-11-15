@@ -13,11 +13,12 @@ class NativePolicy(unittest.TestCase):
     def test_native_marker_lifetime_grace_and_keep_are_not_overridden(self):
         for profile in http.PROFILES:
             with self.subTest(profile=profile):
-                source = http.program(profile).replace('  call hvh_response_variants;', '''
+                source = http.program(profile).replace('  call scp_backend_response;', '''
+  call scp_backend_response;
   set beresp.http.X-Test-TTL = beresp.ttl;
   set beresp.http.X-Test-Grace = beresp.grace;
   set beresp.http.X-Test-Keep = beresp.keep;
-  call hvh_response_variants;''')
+''')
                 self.run_policy(profile,
                     [http.response('/public', 'public', policy='public, max-age=1800'),
                      http.response('/private', 'A', policy='private, no-store'),

@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.15.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -94,17 +94,17 @@ set -o pipefail
 sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py 2>&1 | tee varnish-install.log
 ```
 
-Version **0.15.1** provides two presets with one common request/response policy.
+Version **0.16.0** ships the same shared Basic/UltraCache policy source as Webuzo.
 Existing General, WordPress and WooCommerce selections become Basic automatically.
 Site IDs, tokens, enable settings, cookie rules, browser settings and local VCL
 are retained. Former central profile rules are prepended to the corresponding
 sites' local VCL, retaining their original scope and execution order. UltraCache
 selections and their central rules remain UltraCache. The conversion is idempotent.
 
-The installer regenerates the VCL and managed domain routes. Upgrading from
-before 0.15.0 starts that version's new cache namespace; 0.15.1 retains the
-0.15.0 namespace and warm public objects. No Varnish restart or manual domain
-rebuild is needed. Refresh Hestia with **Ctrl+F5**.
+The installer regenerates the VCL and managed domain routes. Version 0.16.0 uses
+a new cache namespace for the normalized lookup URL and shared representation
+policy; pages refill on demand. No Varnish restart or manual domain rebuild is
+needed. Refresh Hestia with **Ctrl+F5**.
 
 ## Cache behavior
 
@@ -118,30 +118,48 @@ origin and native Varnish, with explicit central/site VCL additions retained.
 Uncacheable-response markers use the running Varnish's `uncacheable_ttl` setting.
 Ordinary Set-Cookie responses remain uncacheable in Varnish without rewriting
 the origin's Cache-Control. Personal ESI/session responses retain their privacy
-headers. HTTP status alone does not impose an additional addon caching veto.
+headers. The native freshness of errors is retained; a positive administrator
+TTL is not vetoed merely because a response is HTTP 400 or above. Incomplete
+standalone responses are not stored as complete pages.
 
 Public searches (`s=`), REST GETs (`/wp-json/` and `rest_route`), XMLHttpRequest GETs,
 and `ref=` are cache candidates. The original URL, query values and cookies still
-reach the application on a miss. All query parameters, including campaign and
-referral parameters, remain distinct cache keys: attribution is not discarded or
-silently merged into another referral. Set-Cookie and private/no-store responses
+reach the application on a miss. An internal copy of the URL omits known campaign
+parameters (`utm_*`, `gclid`, `fbclid` and related click IDs) from the lookup key.
+Different tracking IDs can reuse the same page. Functional parameters, including
+search, language, currency and `ref`, remain distinct. Browser analytics still
+see the original landing URL; PHP tracking on every landing needs a separate
+tracking request/integration because PHP does not run on a cache HIT.
+Set-Cookie and private/no-store responses
 are delivered without sharing their bodies. Account/cart/checkout routes, cart
 mutations, authentication/nonces, login and private session cookies remain private.
 Store API cart/checkout reads are private too; public product REST reads can cache.
 
-Native `Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`.
-Only equivalent unquoted header whitespace is normalized; different media
-preferences are not guessed to be equivalent. With `Vary: Cookie`, a private
-internal variant key omits only the known analytics IDs listed in
-[`cookie_policy.py`](src/cookie_policy.py). Unknown, consent, referral and language
+`Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`. An internal
+copy normalizes equivalent unquoted header whitespace while the original header
+reaches the origin. Recognized prebuilt UltraCache HTML additionally groups
+equivalent AVIF/WebP capabilities, so matching warmup/browser requests reuse the
+same representation. Other dynamic negotiation retains its real dimensions.
+With `Vary: Cookie`, an internal variant key omits only the known analytics IDs
+listed in [`shared/cache-policy.vcl`](shared/cache-policy.vcl).
+Unknown, consent, referral and language
 cookies still select separate variants. Cookies are not stripped from origin
 requests; downstream responses retain `Vary: Cookie`. Without an origin Vary,
 ordinary unknown cookies do not cause a cache bypass.
 
 Both `X-Hestia-Varnish` and `X-Cache` consistently report **HIT**, **MISS** or
 **PASS**. `X-Hestia-Varnish-Reason` reports a concrete request/origin reason,
-such as `cart-session`, `private-rest-route`, `origin-set-cookie` or
-`origin-cache-control`. Public hits/misses report `cache-hit`/`cache-miss`.
+such as `woocommerce-session-cookie`, `private-rest-context`, `origin-set-cookie`
+or `origin-cache-policy`. Public hits/misses report `cached-response`/
+`fetch-required`.
+
+The shared file contains the request/privacy/session/ESI, representation and
+lookup-key rules unchanged in both panel integrations. Hestia supplies the
+host/backend, scoped tokens, native transport and administrator additions.
+Each distribution includes the full file and works independently. See the
+[shared contract](shared/CONTRACT.md) for hooks and canonical invalidation URLs.
+Exact PURGE accepts any tracking URL; regex/batch BAN selects canonical lookup
+URLs. The shared parity fixtures exercise both generated adapters.
 
 ## Cookie exclusions per website
 

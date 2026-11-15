@@ -85,7 +85,7 @@ class Parser:
         if name in (request + '.url', request + '.method'):
             return True
         match = re.fullmatch(request + r'\.http\.([A-Za-z0-9_-]+)', name)
-        if match and not match[1].lower().startswith(('x-hvh-', 'x-esi-', 'x-ultracache-')):
+        if match and not match[1].lower().startswith(('x-hvh-', 'x-scp-', 'x-esi-', 'x-ultracache-')):
             return True
         if self.stage == 'backend_response':
             return name in ('beresp.status', 'beresp.ttl', 'beresp.grace', 'beresp.keep',

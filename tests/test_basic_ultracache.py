@@ -133,9 +133,9 @@ class PublicReads(unittest.TestCase):
                     [http.response('/negotiate', 'html', headers=['Vary: Accept', 'Content-Type: text/html'],
                          expect=['expect req.http.Accept == "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"']),
                      http.response('/negotiate', 'json', headers=['Vary: Accept', 'Content-Type: application/json'],
-                         expect=['expect req.http.Accept == "text/html;q=0,application/json"']),
+                         expect=['expect req.http.Accept == "text/html;q=0, application/json"']),
                      http.response('/negotiate', 'webp', headers=['Vary: Accept', 'Content-Type: image/webp'],
-                         expect=['expect req.http.Accept == "image/avif;q=0,image/webp;q=0.5"'])],
+                         expect=['expect req.http.Accept == "image/avif;q=0, image/webp;q=0.5"'])],
                     [http.request('/negotiate', 'html', headers=['Accept: text/html,application/xhtml+xml;q=0.9,*/*;q=0.8'], cache='MISS'),
                      http.request('/negotiate', 'html', headers=['Accept: text/html, application/xhtml+xml; q=0.9, */*; q=0.8'], cache='HIT'),
                      http.request('/negotiate', 'json', headers=['Accept: text/html;q=0, application/json'], cache='MISS'),
@@ -196,7 +196,7 @@ class PublicReads(unittest.TestCase):
                      http.response('/wp-login.php', 'login')],
                     [http.request('/public', 'public', cache='MISS'),
                      'expect resp.http.X-Cache == "MISS"',
-                     'expect resp.http.X-Hestia-Varnish-Reason == "cache-miss"',
+                     'expect resp.http.X-Hestia-Varnish-Reason == "fetch-required"',
                      http.request('/public', 'public', cache='HIT'),
                      'expect resp.http.X-Cache == "HIT"',
                      http.request('/cookie', 'private', cache='PASS'),
@@ -204,7 +204,7 @@ class PublicReads(unittest.TestCase):
                      'expect resp.http.X-Hestia-Varnish-Reason == "origin-set-cookie"',
                      'expect resp.http.Cache-Control == "public, max-age=120"',
                      http.request('/private', 'private', cache='PASS'),
-                     'expect resp.http.X-Hestia-Varnish-Reason == "origin-cache-control"',
+                     'expect resp.http.X-Hestia-Varnish-Reason == "origin-cache-policy"',
                      http.request('/wp-login.php', 'login', cache='PASS'),
                      'expect resp.http.X-Hestia-Varnish-Reason == "wordpress-private-route"',
                      'expect resp.http.X-HVH-Pass-Reason == <undef>'])
@@ -230,6 +230,8 @@ class PublicReads(unittest.TestCase):
                 'expect req.http.X-ESI-Original-Cookie == <undef>'])],
             [http.request('/parent', 'public', headers=[
                 'Surrogate-Capability: varnish=ESI/1.0',
+                'X-SCP-Profile: ultracache', 'X-SCP-Key-URL: /forged',
+                'X-SCP-Pass: 1', 'X-SCP-Reason: forged',
                 'X-UltraCache-ESI-Candidate: 1', 'X-ESI-Private-Request: 1',
                 'X-ESI-Original-Cookie: wp_woocommerce_session_demo=forged'], cache='MISS'),
              http.request('/parent', 'public', cache='HIT')])

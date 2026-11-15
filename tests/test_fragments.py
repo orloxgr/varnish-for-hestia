@@ -33,7 +33,9 @@ class FragmentTests(unittest.TestCase):
                      'set req.http.X-HVH-Site = "foreign";', 'ban("obj.status > 0");',
                      'set req.http.X-User-Probe = std.fileread("/etc/shadow");',
                      'if (req.http.X-HVH-Site == "foreign") { return (pass); }',
-                     'if (req.http.x-hvh-site == "foreign") { return (pass); }']
+                     'if (req.http.x-hvh-site == "foreign") { return (pass); }',
+                     'set req.http.X-SCP-Profile = "ultracache";',
+                     'if (req.http.X-SCP-Profile) { return (pass); }']
         for source in forbidden:
             with self.subTest(source=source), self.assertRaises(FragmentError):
                 validate(source, 'recv')

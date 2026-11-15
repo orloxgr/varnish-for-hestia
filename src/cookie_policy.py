@@ -1,17 +1,7 @@
-"""Application cookie exclusions; additional owner rules can only add bypasses."""
+"""Owner cookie exclusions; built-in HTTP policy lives in the shared VCL."""
 import re
 
-# WordPress private state, PHP sessions and common personalized Woo extensions.
-# Cart cookies are separate because UltraCache may explicitly approve an ESI parent.
-PRIVATE = ('wordpress_logged_in_*', 'wordpress_sec_*', 'wp-postpass_*', 'comment_author_*',
-           'PHPSESSID', 'woocommerce_recently_viewed', 'yith_wcwl_session_*', 'yith_woocompare_*')
-CART = ('woocommerce_items_in_cart', 'woocommerce_cart_hash', 'wp_woocommerce_session_*')
-# Client analytics identifiers do not select a representation. Referral,
-# consent, language and unknown cookies are deliberately not in this set.
-TRACKING = ('_ga', '_ga_*', '_gid', '_gat', '_gat_*', '_gcl_au', '_fbp', '_fbc',
-            '__utma', '__utmb', '__utmc', '__utmt', '__utmv', '__utmz',
-            'sbjs_migrations', 'sbjs_current', 'sbjs_current_add', 'sbjs_first',
-            'sbjs_first_add', 'sbjs_udata', 'sbjs_session')
+# Built-in application/analytics policy lives in shared/cache-policy.vcl.
 RULE = re.compile(r"[!#$%&'+.^_`|~0-9A-Za-z-]+\*?")
 
 

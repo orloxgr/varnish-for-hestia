@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 · 2026-11-15
+
+- Ship one unchanged `shared/cache-policy.vcl` with Webuzo, covering Basic/UltraCache request, privacy, session, ESI, representation and lookup-key rules. Remove the duplicate Hestia common/UltraCache policy sources and built-in Python cookie lists. Keep Hestia host/backend/token boundaries, transport, custom additions and panel headers in the adapter.
+- Normalize a copy of the URL for cache lookup and authenticated exact/soft invalidation. Different known campaign IDs reuse a public page; preserve the full original URL and analytics cookies at the origin. Keep functional queries, referral, language, currency and functional Cookie variants distinct. Regex/batch BAN selects canonical lookup URLs.
+- Share origin-attested static HTML Accept capability grouping, equivalent unquoted Accept whitespace normalization, original origin Accept, real JSON/XML/image negotiation and q=0. Keep Cookie's functional remainder for both static and dynamic representations. No addon Accept length/item optimization cutoff.
+- Cover WordPress/WooCommerce private routes in subdirectories. Reset ESI request flags independently for each subrequest while retaining the top-level private-cookie carrier, so public ESI fragments remain reusable and personal fragments remain separate.
+- Publish the complete shared directory atomically with the addon. Keep distributions independent and use identical native HTTP parity fixtures to verify the generated panel adapters; no cross-repository runtime or installer check.
+
 ## 0.15.1 · 2026-11-15
 
 - Use the running Varnish's `param.uncacheable_ttl` for hit-for-miss markers instead of an addon-owned 120-second lifetime. Remove forced marker grace/keep values and UltraCache's five-minute keep override; preserve native, origin and explicitly configured retention.
