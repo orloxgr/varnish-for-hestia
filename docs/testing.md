@@ -1,3 +1,18 @@
+# 0.16.1 installer console verification
+
+All **24 targeted Varnish tests passed** in the disposable Ubuntu/Hestia VM:
+installer output/argument dispatch, progress, child errors and atomic deployment.
+The same run passed 20 Dragonfly, 31 De-Noise and 10 Mass WP Update checks.
+
+The default installer now reports a readable final summary. Explicit `--json`
+keeps one complete JSON document on stdout, with progress and technical diagnostics
+on stderr. Tests cover slow work, closed streams, failure stages, exit status,
+optional terminal color and quiet behavior outside installer reporting. The
+Mass WP Update tests publish/reinstall into a disposable directory tree and verify
+that the reporter is included in the installed generation. Existing De-Noise
+publication/rollback and saved-policy tests also pass. No production installation
+was performed. Earlier full VCL verification remains recorded below.
+
 # 0.16.0 shared Webuzo/Hestia policy verification
 
 The Hestia full suite passed **143 tests in 206.169 seconds** on the isolated

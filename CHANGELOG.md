@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.1 · 2026-11-15
+
+- Show timestamped installer stages, actual work counts where available and a current-stage heartbeat during slow work or lock waits. Reporting adds no work deadline and stays silent outside the administrator installer.
+- Replace the default final JSON dump with a readable success/failure summary, installed version, full result details and elapsed time. Retain explicit `--json` mode with progress/diagnostics on stderr and one JSON document on stdout; preserve native failure details and nonzero exit status.
+- Keep panel, background and internal JSON interfaces unchanged. Respect `NO_COLOR` and plain redirected logs; a closed reporting stream cannot cancel completed installation work.
+
 ## 0.16.0 · 2026-11-15
 
 - Ship one unchanged `shared/cache-policy.vcl` with Webuzo, covering Basic/UltraCache request, privacy, session, ESI, representation and lookup-key rules. Remove the duplicate Hestia common/UltraCache policy sources and built-in Python cookie lists. Keep Hestia host/backend/token boundaries, transport, custom additions and panel headers in the adapter.

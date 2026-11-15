@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -86,8 +86,10 @@ Updates retain existing tokens, site settings and memory budget.
 The installer prints timestamped stages and actual account/domain counts to
 stderr as it works. During a slow native command or lock wait it reports the
 current stage every ten seconds; this does not set an execution deadline.
-The final machine-readable JSON stays on stdout. Panel/API and cron operations
-remain quiet. To keep both progress and the result in a local terminal log:
+The default final output is a readable summary with the installed version, actual
+result details and elapsed time. Add `--json` for a single machine-readable JSON
+result on stdout; progress remains on stderr. Panel/API and cron interfaces keep
+their existing JSON contract and do not emit installer progress. To keep both progress and the result in a local terminal log:
 
 ```sh
 set -o pipefail

@@ -13,7 +13,6 @@ import shlex
 import socket
 import subprocess
 import sys
-import traceback
 
 SOURCE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SOURCE / 'src'))
@@ -30,6 +29,7 @@ import deployment
 import progress
 from vcl import render
 
+META = json.loads((SOURCE / 'addon.json').read_text())
 ID = 'varnish-for-hestia'
 DROPIN = maintenance.DROPIN
 CRON = maintenance.CRON
@@ -211,8 +211,7 @@ def install(args):
             raise
         deployment.commit()
         progress.stage('Upgrade complete; native Varnish and web configuration applied')
-        print(json.dumps({'ok': True, 'mode': 'upgrade-or-reinstall', 'credentials_preserved': True, **result}))
-        return
+        return {'ok': True, 'mode': 'upgrade-or-reinstall', 'credentials_preserved': True, **result}
     else:
         progress.stage('Preparing initial installation/adoption and complete account inventory')
         record = initialize(args, collect(hestia), port)
@@ -274,7 +273,7 @@ def install(args):
             os.close(directory)
         deployment.commit()
         progress.stage('Installation complete; service enabled and configuration committed')
-        print(json.dumps({'ok': True, 'mode': record['mode'], 'resumed': resumed, 'accounts': len(state['owners']), **result}))
+        return {'ok': True, 'mode': record['mode'], 'resumed': resumed, 'accounts': len(state['owners']), **result}
     except Exception:
         try:
             routing.rollback(undo, apache_before)
@@ -298,24 +297,22 @@ def install(args):
         raise
 
 
+def perform(args):
+    if args.memory_mb is not None and args.memory_mb <= 0:
+        raise ValueError('Choose a positive cache budget in MiB')
+    progress.stage('Waiting for the addon operation lock (another reconcile or panel operation may be active)')
+    with exclusive():
+        progress.stage('Operation lock acquired')
+        return install(args)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adopt', metavar='PRIVATE_MANIFEST')
     parser.add_argument('--memory-mb', type=int)
     parser.add_argument('--listen-port', type=int, help='Initial loopback HTTP listener port (default 6081)')
     parser.add_argument('--admin-port', type=int, help='Initial loopback administrative port (default 6082)')
+    parser.add_argument('--json', action='store_true', help='Write the final result as JSON to stdout; progress stays on stderr')
     args = parser.parse_args()
-    try:
-        if args.memory_mb is not None and args.memory_mb <= 0:
-            raise ValueError('Choose a positive cache budget in MiB')
-        with progress.reporting():
-            progress.stage('Waiting for the addon operation lock (another reconcile or panel operation may be active)')
-            with exclusive():
-                progress.stage('Operation lock acquired')
-                install(args)
-    except Exception as error:
-        # This is the administrator's installer, not a hosting-user response.
-        traceback.print_exc(file=sys.stderr)
-        print(json.dumps({'ok': False, 'error_type': type(error).__name__,
-                          'error': str(error)}))
-        raise SystemExit(1)
+    raise SystemExit(progress.execute(lambda: perform(args), title=META['title'],
+                                     version=META['version'], json_output=args.json))
