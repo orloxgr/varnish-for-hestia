@@ -29,7 +29,8 @@ executed or compiled into policy. Failure keeps the prior data and reports its
 stage. The digest is byte identity, not an independent signature.
 
 Input safety bounds are 32 MiB CSV, 1 MiB revision/license, 100,000 records and
-256 KiB characters per field. Strict UTF-8/CSV and column/wildcard/control checks
+128 columns per row and 256 KiB characters per field. Column count is checked
+before constructing CSV row arrays. Strict UTF-8/CSV and column/wildcard/control checks
 reject malformed input while preserving valid Unicode and optional metadata.
 An upstream recognition update must not change cache/consent/issuance behavior,
 reload VCL, purge/warm pages or make requests during visitor traffic.

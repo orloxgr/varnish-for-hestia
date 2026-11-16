@@ -77,6 +77,23 @@ class ParseRecognition(unittest.TestCase):
             with self.assertRaises(ValueError):
                 recognition.fetch(recognition.HEAD)
 
+    def test_column_amplification_is_rejected_before_row_arrays_exist(self):
+        for data in (b',' * 128, fixture() + b'Unquoted"' + b',' * 128):
+            with patch.object(recognition.csv,'DictReader') as reader:
+                with self.assertRaisesRegex(ValueError,'128-column'):
+                    recognition.parse_csv(data)
+                reader.assert_not_called()
+
+    def test_column_scan_preserves_quoted_commas_newlines_and_escaped_quotes(self):
+        name = 'name,"quote"\n' + ',' * 256
+        self.assertEqual(recognition.parse_csv(fixture(name))[0]['name'],name)
+        output = io.StringIO(newline='')
+        writer = csv.writer(output)
+        extra = recognition.MAX_COLUMNS - len(recognition.FIELDS)
+        writer.writerow([*recognition.FIELDS,*('extra'+str(i) for i in range(extra))])
+        writer.writerow(['id','Provider','Functional','name','','90 days','0',*('' for _ in range(extra))])
+        self.assertEqual(len(recognition.parse_csv(output.getvalue().encode())),1)
+
 
 @unittest.skipUnless(sys.platform == 'linux' and os.geteuid() == 0, 'Root-owned Linux updater state')
 class RecognitionUpdates(unittest.TestCase):

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1 · 2026-11-16
+
+- Check upstream CSV column count before the CSV parser allocates field arrays. This prevents memory amplification from many tiny columns inside an otherwise size-bounded download. Preserve quoted commas, escaped quotes, multiline fields and legitimate Unicode; the current upstream database has ten columns.
+- Add targeted pre-allocation rejection and valid quoted-field/128-column tests. Executable cookie policy, VCL, consent and provider behavior are unchanged.
+
 ## 0.18.0 · 2026-11-16
 
 - Update cookie recognition metadata directly from the original Open Cookie Database GitHub repository, independently of plugin-code releases. Daily updates default on; administrators can disable them, check status or use Update now. Preferences and the downloaded snapshot survive code updates.

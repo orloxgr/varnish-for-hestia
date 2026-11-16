@@ -117,7 +117,8 @@ scheduled operation, which respects the automatic-update switch.
 
 Downloads use verified HTTPS, fixed endpoints and no redirects. Untrusted input
 has explicit safety bounds: 32 MiB CSV, 1 MiB revision/license responses, 100,000
-records and 256 KiB characters per field. UTF-8, CSV structure, columns, wildcard
+records, 128 columns per row and 256 KiB characters per field. The column count
+is checked before allocating CSV field arrays. UTF-8, CSV structure, columns, wildcard
 values and control characters are validated. Valid Unicode and optional empty
 provider metadata are retained. The download SHA256 records byte identity; it
 is not an independent upstream signature. The last valid snapshot remains on

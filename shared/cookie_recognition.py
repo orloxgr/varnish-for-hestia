@@ -26,7 +26,40 @@ MAX_CSV_BYTES = 32 * 1024 * 1024
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_RECORDS = 100000
 MAX_FIELD_CHARACTERS = 256 * 1024
+MAX_COLUMNS = 128
 CONTROLS = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+
+
+def _check_columns(text):
+    """Bound CSV row allocation before DictReader constructs any field arrays.
+
+    Match the default dialect's quote/escaped-quote handling, including quoted
+    newlines and literal quotes inside unquoted fields. Quoted commas are data.
+    """
+    columns, field_start, quoted, after_quote = 1, True, False, False
+    for char in text:
+        if quoted:
+            if char == '"':
+                quoted, after_quote = False, True
+            continue
+        if after_quote:
+            after_quote = False
+            if char == '"':
+                quoted = True
+                continue
+            if char not in ',\r\n':
+                raise csv.Error('Unexpected character after quoted CSV field')
+        if char == ',':
+            columns += 1
+            if columns > MAX_COLUMNS:
+                raise ValueError('Upstream CSV exceeds the 128-column input safety limit')
+            field_start = True
+        elif char in '\r\n':
+            columns, field_start = 1, True
+        else:
+            if field_start and char == '"':
+                quoted = True
+            field_start = False
 
 
 def parse_csv(data):
@@ -36,6 +69,7 @@ def parse_csv(data):
     text = data.decode('utf-8-sig')
     if CONTROLS.search(text):
         raise ValueError('Unexpected control character in upstream CSV')
+    _check_columns(text)
     reader = csv.DictReader(io.StringIO(text, newline=''), strict=True)
     if (not reader.fieldnames or len(set(reader.fieldnames)) != len(reader.fieldnames) or
             not set(FIELDS).issubset(reader.fieldnames)):
