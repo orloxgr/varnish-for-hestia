@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.3** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.4** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -138,8 +138,17 @@ mutations, authentication/nonces, login and private session cookies remain priva
 Store API cart/checkout reads are private too; public product REST reads can cache.
 
 `Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`. An internal
-copy normalizes equivalent unquoted header whitespace while the original header
-reaches the origin. Recognized stored UltraCache HTML additionally groups
+copy normalizes equivalent unquoted header whitespace. Simple media lists also
+share variants across token case and equivalent quality notation (`q=0.900` /
+`q=0.9`, implicit quality 1 / `q=1.000`). Simple `Accept-Language` lists receive
+the same treatment for language-tag case, spacing and quality notation. Both
+original headers reach the origin; browsers retain the public `Vary` headers.
+Different languages, weights and preference order remain distinct. Media
+parameter values, quoted values and nonstandard syntax retain their existing
+variation. These improvements work in Basic without any application plugin;
+requests with other syntax continue normally without the extra normalization.
+The rules follow [HTTP negotiation semantics](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.4).
+Recognized stored UltraCache HTML additionally groups
 equivalent AVIF/WebP capabilities, so matching warmup/browser requests reuse the
 same representation.
 This includes Apache static snapshots and actual PHP page-cache responses marked

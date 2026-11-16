@@ -1,3 +1,27 @@
+# 0.16.4 plugin-independent Basic negotiation verification
+
+The isolated Hestia VM passed the complete **157-test suite in 195.849 seconds**.
+Before the fix, native Basic fixtures for equivalent Accept and Accept-Language
+values fetched the origin again instead of hitting the existing object. Those
+same fixtures now HIT without UltraCache headers or an application plugin.
+
+Six additional shared HTTP scenarios cover token case, default quality 1,
+fractional trailing zeros, zero quality, real weight/language/order differences,
+quoted and case-sensitive media parameters, nonstandard syntax, absent/empty
+headers, combined Cookie/Accept/language Vary and forged internal headers.
+They assert original origin values and public downstream Vary names. Existing
+privacy, session, invalidation and ESI behavior remains covered by the full suite.
+
+Both native adapters passed **39 shared scenarios / 75 profile runs**. Their
+complete JSON reports match, and the policy, contract, HTTP fixtures and runner
+are byte-identical to Webuzo 0.4.6 (`50da6d6`). The shared policy SHA256 is
+`b18c2dd20dfe0b0b2a36ceb395456f5d454edb367e6b1c79edfd51f11eaffcc3`;
+the fixture SHA256 is
+`afc4e48bd1252445928de137b7c7d46a7d513932fd97ba169af3b5eecd77e694`.
+Installed lab Varnish, Nginx and Apache service PIDs stayed unchanged. Tests use
+disposable loopback processes; no production installation was performed. These
+checks establish the specific equivalent-header reuse, not a live hit-rate gain.
+
 # 0.16.2 stored PHP page-cache Accept verification
 
 The full Hestia suite passed **151 tests in 185.898 seconds** in the isolated

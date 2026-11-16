@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.4 · 2026-11-16
+
+- Reduce Basic cache fragmentation without an application plugin: simple `Accept` and `Accept-Language` lists reuse variants across token case and equivalent quality notation, including default quality 1 and fractional trailing zeros. Original origin headers and downstream public Vary remain intact; the same base behavior applies to UltraCache.
+- Preserve actual languages, media types, preference order, different qualities, case-sensitive media parameter values, quoted values and nonstandard syntax. Requests are not blocked or rewritten, and private/session policy is unchanged.
+- Add six shared native HTTP fixtures covering reproduced Basic misses, equivalent reuse, real negotiation differences, combined Cookie/Accept/language variation, forged internal keys, quoted parameters and absent/empty headers. Keep the shared policy and fixtures identical in both panel distributions.
+
 ## 0.16.3 · 2026-11-16
 
 - Enable native ESI parsing inside HTML attributes via `esi_ignore_other_elements`. Persist the startup flag in the managed service unit and enable it additively on upgrade through the authenticated native CLI, with no Varnish restart or automatic cache flush.
