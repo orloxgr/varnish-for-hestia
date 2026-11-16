@@ -162,8 +162,18 @@ def configure_esi(config):
 def integration_files(source, config):
     DROPIN.parent.mkdir(parents=True, exist_ok=True)
     write(DROPIN, service_dropin(config), 0o644)
+    install_cron()
+
+
+def install_cron():
+    if CRON.is_symlink() or (CRON.exists() and MARKER not in CRON.read_text()):
+        raise ValueError('Refusing an unmanaged addon cron file')
+    # Stable host-specific scheduling spreads upstream checks across installs.
+    import socket
+    minute = int(hashlib.sha256(socket.gethostname().encode()).hexdigest()[:8], 16) % 60
     write(CRON, MARKER + '\nSHELL=/bin/sh\nPATH=/usr/sbin:/usr/bin:/sbin:/bin\n'
-          '* * * * * root /usr/local/hestia/bin/v-varnish-hestia reconcile >/dev/null 2>&1\n', 0o644)
+          '* * * * * root /usr/local/hestia/bin/v-varnish-hestia reconcile >/dev/null 2>&1\n' +
+          str(minute) + ' 3 * * * root /usr/local/hestia/bin/v-varnish-hestia update-cookie-database >/dev/null 2>&1\n', 0o644)
 
 
 

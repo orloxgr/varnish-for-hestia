@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0 · 2026-11-16
+
+- Update cookie recognition metadata directly from the original Open Cookie Database GitHub repository, independently of plugin-code releases. Daily updates default on; administrators can disable them, check status or use Update now. Preferences and the downloaded snapshot survive code updates.
+- Use one shared updater for both panel distributions, with verified HTTPS, fixed revision-pinned URLs, no redirects, bounded untrusted input, strict CSV/UTF-8 validation and an atomic root-private last-good record. Preserve legitimate Unicode and the upstream's optional empty provider field.
+- Keep downloads separate from the Varnish operation lock and visitor requests. Recognition updates do not change executable cookie policies, consent, VCL, website overrides or cache contents. Show stage-specific failures and retain the last valid database.
+- Verify 47 targeted Linux checks and actual native Hestia admin Update now, persisted settings, role/CSRF rejection and escaped UI text, with no VCL changes or service restart. Actual upstream download contains 2,288 records; the next check detects no change.
+
 ## 0.16.4 · 2026-11-16
 
 - Reduce Basic cache fragmentation without an application plugin: simple `Accept` and `Accept-Language` lists reuse variants across token case and equivalent quality notation, including default quality 1 and fractional trailing zeros. Original origin headers and downstream public Vary remain intact; the same base behavior applies to UltraCache.

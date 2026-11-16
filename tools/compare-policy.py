@@ -15,7 +15,7 @@ def main():
     root=Path(__file__).resolve().parents[1]
     digests={}
     for name in ('shared/cache-policy.vcl','shared/cookie-policies.json','shared/cookie_catalogue.py','shared/cookie_delivery.py',
-                 'shared/CONTRACT.md','shared/cookie-recognition/recognition.json',
+                 'shared/CONTRACT.md','shared/cookie_recognition.py','shared/cookie-recognition/recognition.json',
                  'shared/cookie-recognition/Open-Cookie-Database-LICENSE.txt',
                  'tests/shared_policy_cases.json','tests/shared_policy_parity.py'):
         left=(root/name).read_bytes();right=(args.other/name).read_bytes()

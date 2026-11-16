@@ -275,6 +275,8 @@ def install(args):
             _, _, result = service.reconcile(hestia)
             progress.stage('Enabling native ESI attribute processing without restarting Varnish')
             maintenance.configure_esi(existing)
+            progress.stage('Scheduling daily upstream cookie recognition updates')
+            maintenance.install_cron()
         except Exception:
             write(service.CONFIG / 'settings.json', before)
             deployment.rollback()

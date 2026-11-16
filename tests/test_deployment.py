@@ -27,7 +27,7 @@ class FreshDeployment(unittest.TestCase):
         (self.source/'panel/index.php').write_text('<?php /* __INSTALL_ROOT__ */ ?>')
         (self.source/'panel/menu.js').write_bytes((ROOT/'panel/menu.js').read_bytes())
         (self.source/'shared').mkdir()
-        for name in ('cache-policy.vcl', 'cookie-policies.json', 'cookie_catalogue.py', 'cookie_delivery.py'):
+        for name in ('cache-policy.vcl', 'cookie-policies.json', 'cookie_catalogue.py', 'cookie_delivery.py', 'cookie_recognition.py'):
             (self.source/'shared'/name).write_bytes((ROOT/'shared'/name).read_bytes())
         (self.source/'addon.json').write_text(json.dumps(self.meta))
         self.hestia = self.root/'hestia'
@@ -58,7 +58,7 @@ class FreshDeployment(unittest.TestCase):
         self.assertIn(str(self.target), (plugins/self.meta['slug']/'index.php').read_text())
         self.assertTrue((self.hestia/'bin'/self.meta['command']).is_file())
         self.assertTrue(self.target.is_symlink())
-        for name in ('cache-policy.vcl', 'cookie-policies.json', 'cookie_catalogue.py', 'cookie_delivery.py'):
+        for name in ('cache-policy.vcl', 'cookie-policies.json', 'cookie_catalogue.py', 'cookie_delivery.py', 'cookie_recognition.py'):
             self.assertEqual((self.target/'shared'/name).read_bytes(),
                              (self.source/'shared'/name).read_bytes())
         self.assertEqual(deployment.menu_path().read_bytes(), (self.source/'panel/menu.js').read_bytes())

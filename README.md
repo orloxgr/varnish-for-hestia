@@ -98,6 +98,37 @@ UltraCache. The separately attributed Open Cookie Database snapshot is for
 recognition; its categories do not automatically authorize caching or issuing
 cookies. Unknown cookies do not gain a new automatic bypass rule.
 
+### Automatic recognition database updates
+
+Administrators: **All accounts → Cookie recognition database**. Daily updates
+are enabled by default. **Update now** checks immediately, even when automatic
+updates are disabled. The panel shows the upstream revision, record count, last
+attempt, successful check, database update and any failure. Opening the panel or
+saving the switch does not download anything.
+
+Updates fetch the original Open Cookie Database repository directly: read its
+current commit, then download that exact revision's CSV and Apache-2.0 license.
+The snapshot and preference live under
+`/var/lib/varnish-for-hestia/cookie-recognition/`, independently of installed code,
+and survive plugin updates. A host-specific minute in the 03:00 local-server
+hour spreads daily checks across installations, using the existing managed cron
+file. Root can also run `v-varnish-hestia update-cookie-database` to execute the
+scheduled operation, which respects the automatic-update switch.
+
+Downloads use verified HTTPS, fixed endpoints and no redirects. Untrusted input
+has explicit safety bounds: 32 MiB CSV, 1 MiB revision/license responses, 100,000
+records and 256 KiB characters per field. UTF-8, CSV structure, columns, wildcard
+values and control characters are validated. Valid Unicode and optional empty
+provider metadata are retained. The download SHA256 records byte identity; it
+is not an independent upstream signature. The last valid snapshot remains on
+download/validation failure, with a visible error. Status reads do not wait on
+the download lock; downloads never hold the Varnish operation lock.
+
+This updates **recognition metadata only**, for both presets. It does not change
+reviewed executable policies, site cookie overrides, consent or provider issuance;
+it does not reload VCL, restart services, purge or warm pages. Runtime visitor
+requests do not contact GitHub and no visitor cookie values are uploaded.
+
 Inspect `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,
 `X-Cache-Cookie-Policy` and `X-Cache-Cookie-Delivery` beside `X-Cache` to see the
 applied policy. These diagnostics contain names and decisions, never cookie
