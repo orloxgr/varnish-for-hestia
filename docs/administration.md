@@ -366,6 +366,12 @@ transport and explicit administrator additions; application, ESI, privacy,
 representation and lookup-key rules are defined only in the shared file.
 The complete shared directory is part of atomic addon code publication.
 
+Version 0.16.2 also recognizes an actual origin `X-Ultra-Cache: HIT` as stored
+HTML, alongside Apache static snapshots, for equivalent browser Accept reuse.
+This includes PHP-served ESI parents. It retains public/cacheable/status/HTML,
+image-variant and no-Set-Cookie checks, and the existing private-fragment rules.
+A new dynamic `STORE` response still varies on its real Accept header.
+
 Tracking parameters are omitted from an internal lookup URL, while the original
 URL/Cookie remain available to the application on a MISS. Functional query values
 and functional Cookie variations remain distinct. Exact HTTP PURGE maps tracking

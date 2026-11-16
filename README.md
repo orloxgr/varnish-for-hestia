@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.2** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -139,9 +139,13 @@ Store API cart/checkout reads are private too; public product REST reads can cac
 
 `Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`. An internal
 copy normalizes equivalent unquoted header whitespace while the original header
-reaches the origin. Recognized prebuilt UltraCache HTML additionally groups
+reaches the origin. Recognized stored UltraCache HTML additionally groups
 equivalent AVIF/WebP capabilities, so matching warmup/browser requests reuse the
-same representation. Other dynamic negotiation retains its real dimensions.
+same representation.
+This includes Apache static snapshots and actual PHP page-cache responses marked
+`X-Ultra-Cache: HIT`, including stored ESI parents. The existing public, cacheable,
+variant and no-Set-Cookie conditions still apply. Newly rendered `STORE` responses
+and other dynamic negotiation retain their real Accept dimensions.
 With `Vary: Cookie`, an internal variant key omits only the known analytics IDs
 listed in [`shared/cache-policy.vcl`](shared/cache-policy.vcl).
 Unknown, consent, referral and language

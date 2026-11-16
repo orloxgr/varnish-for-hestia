@@ -1,3 +1,31 @@
+# 0.16.2 stored PHP page-cache Accept verification
+
+The full Hestia suite passed **151 tests in 185.898 seconds** in the isolated
+Ubuntu/Hestia VM with native Varnish. The shared HTTP runner passed **33 cases /
+63 profile runs** against Hestia's generated Basic and UltraCache adapters.
+
+The development comparator confirmed byte-identical policy, cases and runner
+against Webuzo 0.4.4 (commit `7fa6246`), matching native JSON reports and complete
+coverage of all 63 profile runs. The shared contract is also byte-identical.
+
+| File | SHA256 |
+| --- | --- |
+| `shared/cache-policy.vcl` | `9408d8b5d5b4467d867226de221ce500e85c3672d0c896b75195b2ce77b6a641` |
+| `shared/CONTRACT.md` | `8960c3efa06b3a1a9caa3d10d17bd0a8412478f5c98b2ca565fbdd192f486c5b` |
+| `tests/shared_policy_cases.json` | `b67e274308b7ad4fc18714fb2e148baa84bdc96ed7f88c762e81764e05b09696` |
+| `tests/shared_policy_parity.py` | `92dee05a5b06ec25510aaabc83657eec22b47374a27bfffe40ef56e5942c1c58` |
+
+New native cases verify stored PHP page-cache HIT reuse across compatible
+browser Accept headers and codec q=0, a warmed ESI parent reused by two visitors
+with separate personal fragments, dynamic STORE retaining raw Accept variation,
+and Set-Cookie privacy despite an origin HIT marker. Existing authentication,
+cart, host isolation, functional variation and invalidation checks also pass.
+
+These Hestia native cases use deterministic HTTP origins. The separate real
+WordPress/UltraCache/Edge check is documented by the Webuzo integration.
+Production was not changed; installed lab Varnish, Nginx and Apache service PIDs
+were unchanged before and after the full Hestia suite.
+
 # 0.16.1 installer console verification
 
 All **24 targeted Varnish tests passed** in the disposable Ubuntu/Hestia VM:

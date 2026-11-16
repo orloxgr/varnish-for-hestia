@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.2 · 2026-11-16
+
+- Port the shared Webuzo stored-HTML Accept fix unchanged. Accept an actual origin `X-Ultra-Cache: HIT` alongside Apache-static provenance, so warmed PHP page-cache objects and stored ESI parents can serve the first compatible browser Accept without another origin fetch.
+- Keep the public/cacheable/status/HTML/variant/no-Set-Cookie conditions, original origin Accept, real codec negotiation and ESI privacy rules. New dynamic `STORE` responses retain raw Accept variation.
+- Add the same shared native HTTP cases for PHP cache HIT reuse, warmed ESI parents with separate personal fragments, dynamic STORE variation and Set-Cookie privacy. Keep the shared runner unchanged and the Hestia adapter native.
+
 ## 0.16.1 · 2026-11-15
 
 - Show timestamped installer stages, actual work counts where available and a current-stage heartbeat during slow work or lock waits. Reporting adds no work deadline and stays silent outside the administrator installer.
