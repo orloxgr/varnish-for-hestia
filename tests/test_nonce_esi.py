@@ -79,7 +79,7 @@ class NonceEsi(unittest.TestCase):
                     "<input value='" + values['attribute'] + "'></html>")
 
         origins = [http.response('/nonce-parent', body(tags), headers=[
-            'Content-Type: text/html', 'Surrogate-Control: ESI/1.0', 'X-UltraCache-ESI-Shared-Parent: 1'])]
+            'Content-Type: text/html', 'Surrogate-Control: ESI/1.0', 'X-UltraCache-ESI-Shared-Parent: 1', 'X-UltraCache-ESI-Private-Count: 3', 'Vary: Cookie'])]
         requests = []
         for index, visitor in enumerate(('A', 'B', 'A')):
             values = {context: visitor + str(index) + context for context in paths}
@@ -91,7 +91,8 @@ class NonceEsi(unittest.TestCase):
                             'expect req.http.X-ESI-Original-Cookie == <undef>']))
             requests += [http.request('/nonce-parent', body(values), headers=[
                 'Cookie: wp_woocommerce_session_demo=' + visitor + '; ultracache_esi_optin=1; unrelated=do-not-forward'],
-                cache='MISS' if index == 0 else 'HIT'), 'expect resp.http.Set-Cookie == <undef>']
+                cache='MISS' if index == 0 else 'HIT'), 'expect resp.http.Set-Cookie == <undef>',
+                'expect resp.http.Cache-Control == "private, no-store"', 'expect resp.http.Surrogate-Control == "no-store"']
         self.run_policy('ultracache', origins, requests, varnish_args='-arg "-p ' + flag + '"')
 
     def test_runtime_feature_update_is_additive_and_effective_without_restart(self):

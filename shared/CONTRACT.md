@@ -1,9 +1,100 @@
 # Shared cache policy contract
 
-`cache-policy.vcl` is included byte-for-byte in each distribution. It contains
+`cache-policy.vcl` is shipped byte-for-byte in each distribution. It contains
 Basic/UltraCache request, privacy, ESI, representation and key policy. It imports
 nothing from another checkout or network resource. The adapter imports `std`
-and `purge` in the complete VCL and defines host/backend/token isolation.
+and `purge`, `header`, and `blob` in the complete VCL and defines
+host/backend/token isolation. `header` comes from the ABI-matching official
+`varnish-modules` package; duplicate Set-Cookie fields are never comma-joined.
+
+## Local cookie catalogue
+
+The shared `cookie-policies.json` is the reviewed execution catalogue, schema 1.
+`cookie_catalogue.py` validates it and expands `@@COOKIE_PATTERN_<consumer>@@`
+markers when the adapter generates a complete standalone VCL. The three current
+consumers are `varnishPrivate`, `varnishCart`, and `varnishTrackingIgnore`.
+Exact and prefix cookie names are case-sensitive and escaped as literal PCRE.
+No recognition category grants an executable policy or a cookie issuer.
+
+The catalogue distinguishes HTML effect, key role, issuer, independent-delivery
+support, consent, and cookie attributes. An unsupported independent issuer does
+not disable an existing cookie's request policy. Unknown cookies keep existing
+HTTP behavior. Removing tracking variation never removes those cookies from
+the origin request and never grants permission to replay personal Set-Cookie.
+
+`cookie-recognition/recognition.json` is an attributed, revision-pinned Open
+Cookie Database snapshot for recognition only. Its Apache-2.0 license is shipped
+alongside it. It is not read by the VCL compiler or during an HTTP request. Do
+not replace executable rules with a category-derived allowlist. All distributed
+copies of the reviewed catalogue and compiler must agree at release time;
+installed servers neither import another checkout nor contact a lookup service.
+
+## Independent Meta cookie delivery
+
+`cookie_delivery.py` supplies the common per-site configuration and request
+assignment generator. Default configuration is
+`{"fbp":{"enabled":false,"consent_cookie":"cmplz_marketing","consent_value":"allow","domain":""}}`.
+An empty domain is host-only. An explicit parent domain must belong to the same
+hosting account. A site setting does not authorize a cookie for an unrelated
+alias. The host-only subdomain index is computed from the actual request host,
+including wildcard aliases. The current exact consent cookie/value is evaluated
+for each delivery. This adapter is suitable only where that exact pair expresses
+the required permission; service/revision-based CMPs keep their actual API owner.
+
+Adapters call `recv_configuration(value, hostname, owned_domains)` only after
+`scp_init`, inside the authenticated route. The shared init discards forged
+configuration and application approval headers. No visitor values are part of
+site settings. The shared backend hook removes delivery scratch before origin.
+
+On a cacheable public HTML delivery, the Basic policy can issue a missing `_fbp`
+independently. UltraCache additionally requires clean, public origin metadata:
+`X-UltraCache-Cookie-Policy: <catalogue version>`,
+`X-UltraCache-Cookie-Delivery: proxy-fbp`, and `X-UltraCache-Cacheable: 1`.
+`provider-endpoint-fbp` means the application's provider/CMP API owns delivery,
+including when Basic is selected. Basic needs no application metadata when no
+such integration is present. The native issuer also honors the actual Meta
+provider hold conditions stored in the catalogue; a hold does not bypass HTML.
+These response metadata contain no individual identifier and do not represent
+the current visitor's consent. Browser headers never supply approval.
+
+For an origin-approved shared ESI parent, `Vary: Cookie` uses a second internal
+functional remainder without the catalogue's private cart carrier cookies.
+Original cookies still reach the origin and private children; ordinary objects
+retain their full functional Vary. This keeps personal session IDs out of the
+approved public parent's variant key while language/other functional dimensions
+remain distinct. Adapters use a new cache namespace for these key semantics.
+
+The existing `X-UltraCache-ESI-Private-Count` determines downstream privacy of an
+assembled response. A positive count makes only the final delivery private;
+the template remains shared and keeps producing HITs with separate fragments.
+For older approved parents without a count, Shared-Parent:1 is the legacy
+private-parent declaration. An explicit zero retains public-only ESI response
+caching. No general ESI PASS, retention limit, or raw Cookie removal is added.
+
+The native value uses Meta's documented four-part identifier, timestamp in
+milliseconds and random integer in its provider range. The actual Meta SDK
+accepts it and may add its own fifth provenance appendix at the next origin
+request. The proxy never invents that SDK appendix. It preserves every existing
+cookie and all original Set-Cookie fields, including provider normalization,
+renewal and deletion. New values are created only in `vcl_deliver` and appended
+with the native header API; no personal value is stored in a shared object.
+The lifetime is 90 days, path `/`, SameSite=Lax and Secure on HTTPS.
+When a delivery gains a personal cookie, its response-only Cache-Control and
+Surrogate-Control prevent downstream caches replaying that identifier. The
+stored public object retains its original policy and still serves other HITs.
+
+A cold Basic origin response that sets a cookie retains normal uncacheable
+delivery. This does not add a hidden origin refill or promise that a cold MISS
+is a HIT. UltraCache retains its existing explicit clean refill/handoff to fill
+public HTML. Once a public object exists, new consenting visitors can receive a
+HIT and a distinct personal cookie without executing origin PHP. Application
+browser/private-endpoint delivery covers its direct-origin and static HIT paths.
+
+Value-free diagnostics are `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,
+`X-Cache-Cookie-Policy` (catalogue version), and `X-Cache-Cookie-Delivery`.
+Names report the actual matched private/cart cookie or functional Vary names.
+Malformed raw Cookie text is never reflected as a name. Diagnostics do not
+change caching and never contain cookie values, session tokens or credentials.
 
 ## Calls and trusted inputs
 

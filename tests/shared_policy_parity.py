@@ -16,14 +16,23 @@ def main():
     args=parser.parse_args()
     cases=Path(__file__).with_name('shared_policy_cases.json')
     policy=Path(__file__).resolve().parents[1]/'shared/cache-policy.vcl'
+    catalogue_version=json.loads(policy.with_name('cookie-policies.json').read_text(encoding='utf-8'))['version']
     results=[]
     for profile in ('basic','ultracache'):
-        rendered=json.loads(subprocess.run([sys.executable,str(args.adapter),'--profile',profile],capture_output=True,text=True,check=True).stdout)
+        programs={}
         for case in json.loads(cases.read_text(encoding='utf-8')):
             if profile not in case.get('profiles',['basic','ultracache']):continue
             if args.case and not any(value.lower() in case['name'].lower() for value in args.case):continue
+            configuration=json.dumps(case.get('cookie_delivery'),sort_keys=True)
+            if configuration not in programs:
+                command=[sys.executable,str(args.adapter),'--profile',profile]
+                if 'cookie_delivery' in case:command.extend(['--cookie-delivery',configuration])
+                programs[configuration]=json.loads(subprocess.run(command,capture_output=True,text=True,check=True).stdout)
+            rendered=programs[configuration]
             server='\n'.join(case['origin']).removeprefix('accept\n')
             client='\n'.join(case['requests'])
+            server=server.replace('@@CATALOGUE_VERSION@@',catalogue_version)
+            client=client.replace('@@CATALOGUE_VERSION@@',catalogue_version)
             for marker,headers in (('@@GET_HEADERS@@',rendered.get('get_headers',{})),('@@PURGE_HEADERS@@',rendered.get('purge_headers',{}))):
                 client=client.replace(marker,' '.join('-hdr '+json.dumps(k+': '+v) for k,v in headers.items()))
             content=('varnishtest '+json.dumps(case['name']+' '+profile)+'\nserver s1 {\n'+server+'\n} -start\n'
@@ -36,7 +45,11 @@ def main():
                 print(case['name']+' '+profile+' FAILED\n'+run.stdout+run.stderr,file=sys.stderr)
                 raise SystemExit(1)
             results.append(dict(case=case['name'],profile=profile,result='passed'))
-    report=dict(policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),cases_sha256=hashlib.sha256(cases.read_bytes()).hexdigest(),results=results)
+    report=dict(policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        catalogue_sha256=hashlib.sha256(policy.with_name('cookie-policies.json').read_bytes()).hexdigest(),
+        compiler_sha256=hashlib.sha256(policy.with_name('cookie_catalogue.py').read_bytes()).hexdigest(),
+        delivery_module_sha256=hashlib.sha256(policy.with_name('cookie_delivery.py').read_bytes()).hexdigest(),
+        cases_sha256=hashlib.sha256(cases.read_bytes()).hexdigest(),results=results)
     encoded=json.dumps(report,indent=2)+'\n'
     if args.output:args.output.write_text(encoded,encoding='utf-8')
     print(encoded,end='')

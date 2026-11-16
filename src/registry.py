@@ -86,6 +86,8 @@ def desired_state(previous, inventory, kind):
             entry = row['sites'][domain]
             if kind == 'varnish':
                 entry.setdefault('bypass_cookies', [])
+                from cookie_policy import normalize_delivery
+                entry['cookie_delivery'] = normalize_delivery(entry.get('cookie_delivery'), domain, row['sites'])
             entry.update(aliases=sorted(set(site.get('aliases', []))),
                          suspended=site.get('suspended', False))
     if kind == 'dragonfly':

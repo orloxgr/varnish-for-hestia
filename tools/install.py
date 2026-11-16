@@ -13,6 +13,7 @@ import shlex
 import socket
 import subprocess
 import sys
+import tempfile
 
 SOURCE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SOURCE / 'src'))
@@ -67,11 +68,77 @@ def install_package():
     repository.setup()
     env = dict(os.environ, DEBIAN_FRONTEND='noninteractive')
     run('apt-get', 'update', '-o', 'APT::Update::Error-Mode=any', env=env)
-    simulation = run('apt-get', '-s', 'install', 'varnish').stdout.decode()
+    simulation = run('apt-get', '-s', 'install', 'varnish', 'varnish-modules').stdout.decode()
     removals = [line.split()[1] for line in simulation.splitlines() if line.startswith('Remv ')]
     if set(removals) - {'libvarnishapi1', 'libvarnishapi2', 'libvarnishapi3'}:
         raise ValueError('Package installation would remove another service')
-    run('apt-get', 'install', '-y', 'varnish', env=env)
+    run('apt-get', 'install', '-y', 'varnish', 'varnish-modules', env=env)
+
+
+def cookie_modules_available():
+    # Compile the actual duplicate-header APIs, rather than guessing from a
+    # package version or treating a missing optional module as a broken engine.
+    program = '''vcl 4.1;
+import header;
+import cookie;
+backend default { .host = "127.0.0.1"; .port = "9"; }
+sub vcl_recv { cookie.parse(req.http.Cookie); }
+sub vcl_backend_response {
+    header.append(beresp.http.Set-Cookie, "fixture=1; Path=/");
+    header.remove(beresp.http.Set-Cookie, "^fixture=");
+}
+'''
+    with tempfile.TemporaryDirectory(prefix='hvh-cookie-modules-') as directory:
+        # varnishd drops privileges while compiling. This fixture contains no
+        # secrets and must remain readable by its native compiler account.
+        Path(directory).chmod(0o755)
+        source = Path(directory) / 'probe.vcl'
+        source.write_text(program, encoding='utf-8')
+        source.chmod(0o644)
+        return subprocess.run(['/usr/sbin/varnishd', '-C', '-f', str(source)],
+                              capture_output=True).returncode == 0
+
+
+def cookie_module_package(engine_version):
+    """Prefer a published module for the installed ABI, not a newer engine."""
+    provides = run('dpkg-query', '-W', '-f=${Provides}', 'varnish').stdout.decode()
+    abi = re.search(r'\b(?:varnishabi|varnishd-abi)-[A-Za-z0-9]+\b', provides)
+    if abi is None:
+        return 'varnish-modules'  # Let APT resolve its declared dependencies.
+    available = run('apt-cache', 'show', 'varnish-modules').stdout.decode()
+    for paragraph in available.split('\n\n'):
+        version = re.search(r'^Version: (\S+)$', paragraph, re.M)
+        dependencies = re.search(r'^Depends: (.*(?:\n[ \t].*)*)', paragraph, re.M)
+        if not version or not dependencies:
+            continue
+        exact_engine = re.search(r'\bvarnish\s*\(\s*=\s*([^\s)]+)\s*\)', dependencies[1])
+        if exact_engine and exact_engine[1] != engine_version:
+            continue
+        if re.search(r'(?<![A-Za-z0-9+-])' + re.escape(abi[0]) + r'(?![A-Za-z0-9+-])', dependencies[1]):
+            return 'varnish-modules=' + version[1]
+    return 'varnish-modules'  # Preserve native dependency resolution and errors.
+
+
+def ensure_cookie_modules():
+    if cookie_modules_available():
+        return
+    progress.stage('Installing native cookie/header modules for the existing Varnish ABI')
+    # An adopted native engine already has its package source configured. Adding
+    # the same repository with another Signed-By path makes APT itself unusable.
+    # Use those configured sources for this dependency transaction.
+    env = dict(os.environ, DEBIAN_FRONTEND='noninteractive', NEEDRESTART_MODE='l')
+    run('apt-get', 'update', '-o', 'APT::Update::Error-Mode=any', env=env)
+    # The engine is deliberately held at the installed version for this module
+    # transaction. This is an ABI dependency, not a supported-version ceiling.
+    engine_version = native_version()
+    packages = ('varnish=' + engine_version, cookie_module_package(engine_version))
+    preview = run('apt-get', '-s', '--no-remove', 'install', *packages, env=env).stdout.decode()
+    if any(line.startswith('Remv ') or re.match(r'Inst varnish(?::[^ ]+)? ', line)
+           for line in preview.splitlines()):
+        raise ValueError('Cookie modules require a different Varnish engine; install the matching native module package')
+    run('apt-get', 'install', '-y', '--no-remove', *packages, env=env)
+    if not cookie_modules_available():
+        raise ValueError('Installed native modules cannot compile the required cookie/header APIs')
 
 
 def private_manifest(path):
@@ -194,6 +261,7 @@ def install(args):
     elif (service.CONFIG / 'settings.json').exists() and json.loads((service.CONFIG / 'settings.json').read_text()).get('installed'):
         progress.stage('Existing installation found; retaining credentials, site choices and cache size')
         native_version()
+        ensure_cookie_modules()
         existing = service.settings()
         if args.memory_mb is not None and args.memory_mb != existing['memory_mb']:
             raise ValueError('Existing memory budget is retained; change Varnish cache size in Hestia Plugins > Varnish > All accounts')
@@ -246,6 +314,7 @@ def install(args):
         if record['mode'] == 'fresh':
             install_package()
         native_version()
+        ensure_cookie_modules()
         gid = grp.getgrnam('varnish').gr_gid
         os.chown(service.CONFIG, 0, gid); service.CONFIG.chmod(0o750)
         generations = service.CONFIG / 'generations'; generations.mkdir(mode=0o750, exist_ok=True)

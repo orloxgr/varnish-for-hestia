@@ -43,8 +43,8 @@ class InstallerErrors(unittest.TestCase):
         namespace['subprocess'].run.return_value = subprocess.CompletedProcess([], 1, b'', b'')
         installer_function('install_package', namespace)()
         repository.setup.assert_called_once_with()
-        self.assertEqual(run.call_args_list[1].args, ('apt-get', '-s', 'install', 'varnish'))
-        self.assertEqual(run.call_args_list[2].args, ('apt-get', 'install', '-y', 'varnish'))
+        self.assertEqual(run.call_args_list[1].args, ('apt-get', '-s', 'install', 'varnish', 'varnish-modules'))
+        self.assertEqual(run.call_args_list[2].args, ('apt-get', 'install', '-y', 'varnish', 'varnish-modules'))
         self.assertEqual(len(run.call_args_list), 3)
         namespace['subprocess'].run.assert_not_called()
 
@@ -62,6 +62,42 @@ class InstallerErrors(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'remove another service'):
             install()
         self.assertEqual(len(run.call_args_list), 2)
+
+    def test_existing_native_modules_need_no_apt_or_repository_changes(self):
+        namespace = dict(cookie_modules_available=Mock(return_value=True), repository=Mock(),
+                         run=Mock(), progress=Mock())
+        installer_function('ensure_cookie_modules', namespace)()
+        namespace['repository'].setup.assert_not_called()
+        namespace['run'].assert_not_called()
+
+    def test_module_install_keeps_the_running_engine_and_does_not_restart_services(self):
+        run = Mock(return_value=subprocess.CompletedProcess([], 0, b'Inst varnish-modules (9.1.0 official [amd64])\n', b''))
+        namespace = dict(cookie_modules_available=Mock(side_effect=[False, True]), repository=Mock(),
+                         run=run, progress=Mock(), os=Mock(environ={}), re=__import__('re'),
+                         cookie_module_package=Mock(return_value='varnish-modules'),
+                         native_version=Mock(return_value='9.1.0-official'))
+        installer_function('ensure_cookie_modules', namespace)()
+        self.assertEqual(run.call_args_list[-1].args,
+                         ('apt-get','install','-y','--no-remove','varnish=9.1.0-official','varnish-modules'))
+        self.assertEqual(run.call_args.kwargs['env']['NEEDRESTART_MODE'], 'l')
+        namespace['repository'].setup.assert_not_called()
+
+    def test_module_preview_cannot_replace_a_running_engine_or_another_service(self):
+        for preview in (b'Inst varnish [9.1] (9.2 official)\n', b'Remv apache2 [1.0]\n'):
+            run = Mock(return_value=subprocess.CompletedProcess([], 0, preview, b''))
+            namespace = dict(cookie_modules_available=Mock(return_value=False), repository=Mock(),
+                             run=run, progress=Mock(), os=Mock(environ={}), re=__import__('re'),
+                             cookie_module_package=Mock(return_value='varnish-modules'),
+                             native_version=Mock(return_value='9.1.0-official'))
+            with self.assertRaisesRegex(ValueError, 'different Varnish engine'):
+                installer_function('ensure_cookie_modules', namespace)()
+            self.assertEqual(len(run.call_args_list), 2)
+
+    def test_module_selection_uses_installed_abi_when_newer_module_needs_newer_engine(self):
+        run = Mock(side_effect=[subprocess.CompletedProcess([],0,b'varnishabi-existing',b''),
+            subprocess.CompletedProcess([],0,b'Package: varnish-modules\nVersion: 9.2\nDepends: varnishabi-new\n\nPackage: varnish-modules\nVersion: 9.1-rebuild\nDepends: varnishabi-existing, varnish (= 9.1-rebuild)\n\nPackage: varnish-modules\nVersion: 9.1\nDepends: varnishabi-existing, varnish (= 9.1), libc6\n',b'')])
+        namespace = dict(run=run,re=__import__('re'))
+        self.assertEqual(installer_function('cookie_module_package',namespace)('9.1'),'varnish-modules=9.1')
 
     def test_failed_child_preserves_output_exit_code_and_arguments(self):
         run = installer_runner()

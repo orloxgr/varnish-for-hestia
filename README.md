@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.4** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.17.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -67,6 +67,41 @@ and templates are not replaced.
 
 While this repository is private, cloning requires your GitHub username and a
 token with repository access at the password prompt, not your GitHub password.
+
+## Cookies on cached pages
+
+Under each website, **Cookies on cached pages** can deliver a missing Meta
+`_fbp` separately from public cached HTML. Enable it only for an existing Meta
+integration and enter the exact cookie/value that expresses the visitor's
+current consent, such as `cmplz_marketing=allow` for an appropriate Complianz
+configuration. This does not install Meta Pixel or change the consent manager. The native
+issuer also respects Meta's explicit provider hold state. An available actual
+provider endpoint remains authoritative for complex consent rules in either
+profile.
+
+Each consenting visitor receives their own cookie. Existing cookies, provider
+renewals, deletions and all other Set-Cookie fields are preserved. Login/cart
+privacy remains active. Basic works independently of UltraCache; UltraCache
+also uses its trusted application approval and provider/CMP delivery owner.
+Service-specific CMPs such as Real Cookie Banner use their actual provider API,
+not a guessed category cookie. PHP/direct-origin and static-page delivery are
+handled by the application integration.
+
+A cold Basic response that sets a cookie still reaches its visitor unchanged;
+there is no hidden warm-up. After public HTML has been cached, new visitors can
+receive a HIT and an independent cookie. The native header VMOD preserves
+separate Set-Cookie fields. When adding modules to an existing installation, the installer selects the
+matching native ABI without replacing or restarting the running engine.
+
+The reviewed cookie catalogue is local, versioned, and shared with Webuzo and
+UltraCache. The separately attributed Open Cookie Database snapshot is for
+recognition; its categories do not automatically authorize caching or issuing
+cookies. Unknown cookies do not gain a new automatic bypass rule.
+
+Inspect `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,
+`X-Cache-Cookie-Policy` and `X-Cache-Cookie-Delivery` beside `X-Cache` to see the
+applied policy. These diagnostics contain names and decisions, never cookie
+values. See [the common contract](shared/CONTRACT.md) for the wire protocol.
 
 ## Update
 

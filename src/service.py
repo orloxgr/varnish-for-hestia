@@ -21,6 +21,7 @@ import browser_cache
 import hosting_timeouts
 import profile_settings
 import progress
+import cookie_policy
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -169,6 +170,7 @@ def apply(state, previous, inventory, config, changes=None):
                 old = old_sites.get(site['id'])
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
+                            old.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) != site.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active') or
                             old_site_rules[site['id']] != new_rules[site['profile']]):
                     purge(config, site); invalidated += 1
@@ -279,14 +281,17 @@ def request(hestia, owner_name, action, payload):
             owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
         elif action == 'configure-browser-cache':
             browser_cache.change(state, payload, owner['sites'][domain])
+        elif action == 'configure-cookie-delivery':
+            owner['sites'][domain]['cookie_delivery'] = cookie_policy.normalize_delivery(
+                payload.get('cookie_delivery'), domain, owner['sites'])
         elif action == 'token':
             value = payload.get('password')
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
                 raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush') and not isinstance(domain, str):
         raise ValueError('Select a site')
     state, config, result = reconcile(hestia, mutate)
     owner = state['owners'][owner_name]
@@ -299,6 +304,7 @@ def request(hestia, owner_name, action, payload):
                            'enabled': site['enabled'], 'profile': site['profile'],
                            'custom_recv': site['custom_recv'], 'custom_backend_response': site['custom_backend_response'],
                            'bypass_cookies': site.get('bypass_cookies', []),
+                           'cookie_delivery': cookie_policy.normalize_delivery(site.get('cookie_delivery'), name, owner['sites']),
                            'browser_cache': browser_cache.selected(site, state),
                            'browser_cache_override': site.get('browser_cache'),
                            'routing_active': site['settings'].get('routing_active', False)}

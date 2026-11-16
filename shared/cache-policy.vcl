@@ -1,6 +1,6 @@
 # Shared HTTP cache policy for Basic and UltraCache. GPL-3.0-or-later.
 # This file is shipped unchanged in each panel integration. No remote imports.
-# Integration contract: shared/CONTRACT.md. Requires std and native Varnish params.
+# Integration contract: shared/CONTRACT.md. Requires std, header, blob and native params.
 
 sub scp_init {
     unset req.http.X-SCP-Profile;
@@ -11,10 +11,20 @@ sub scp_init {
     unset req.http.X-SCP-Key-Path;
     unset req.http.X-SCP-Key-Query;
     unset req.http.X-SCP-Vary-Cookie;
+    unset req.http.X-SCP-Vary-ESI-Cookie;
     unset req.http.X-SCP-Vary-Accept;
     unset req.http.X-SCP-Vary-Accept-Language;
     unset req.http.X-SCP-Normalize-Value;
     unset req.http.X-SCP-HTML-Accept;
+    unset req.http.X-SCP-Fbp-Enabled;
+    unset req.http.X-SCP-Fbp-Consent;
+    unset req.http.X-SCP-Fbp-Domain;
+    unset req.http.X-SCP-Fbp-Index;
+    unset req.http.X-SCP-Fbp-New;
+    unset req.http.X-SCP-Cookie-Name;
+    unset req.http.X-SCP-Cookie-Role;
+    unset req.http.X-UltraCache-Cookie-Policy;
+    unset req.http.X-UltraCache-Cookie-Delivery;
     unset req.http.X-SCP-Accept-Check;
     unset req.http.X-ESI-Private-Request;
     unset req.http.X-ESI-Request-Level;
@@ -54,13 +64,17 @@ sub scp_recv {
 }
 
 sub scp_private_cookie_recv {
-    if (req.http.Cookie ~ {"(^|;[[:blank:]]*)(wordpress_logged_in_[^=;[:blank:]]*|wordpress_sec_[^=;[:blank:]]*|wp\-postpass_[^=;[:blank:]]*|comment_author_[^=;[:blank:]]*|PHPSESSID|woocommerce_recently_viewed|yith_wcwl_session_[^=;[:blank:]]*|yith_woocompare_[^=;[:blank:]]*)="}) {
+    if (req.http.Cookie ~ {"@@COOKIE_PATTERN_varnishPrivate@@"}) {
+        set req.http.X-SCP-Cookie-Name = regsub(req.http.Cookie, {"^.*?@@COOKIE_PATTERN_varnishPrivate@@.*$"}, "\2");
+        set req.http.X-SCP-Cookie-Role = "private";
         set req.http.X-SCP-Reason = "private-session-cookie"; return (pass);
     }
 }
 
 sub scp_cart_cookie_recv {
-    if (req.http.Cookie ~ {"(^|;[[:blank:]]*)(woocommerce_items_in_cart|woocommerce_cart_hash|wp_woocommerce_session_[^=;[:blank:]]*)="}) {
+    if (req.http.Cookie ~ {"@@COOKIE_PATTERN_varnishCart@@"}) {
+        set req.http.X-SCP-Cookie-Name = regsub(req.http.Cookie, {"^.*?@@COOKIE_PATTERN_varnishCart@@.*$"}, "\2");
+        set req.http.X-SCP-Cookie-Role = "private-fragment";
         if (req.http.X-SCP-Profile == "ultracache" && req.http.X-UltraCache-ESI-Opt-In == "1") {
             set req.http.X-UltraCache-ESI-Candidate = "1";
         } else { set req.http.X-SCP-Reason = "woocommerce-session-cookie"; return (pass); }
@@ -75,6 +89,13 @@ sub scp_hit {
 
 sub scp_backend_fetch {
     unset bereq.http.Surrogate-Capability;
+    unset bereq.http.X-SCP-Fbp-Enabled;
+    unset bereq.http.X-SCP-Fbp-Consent;
+    unset bereq.http.X-SCP-Fbp-Domain;
+    unset bereq.http.X-SCP-Fbp-Index;
+    unset bereq.http.X-SCP-Fbp-New;
+    unset bereq.http.X-SCP-Cookie-Name;
+    unset bereq.http.X-SCP-Cookie-Role;
     if (bereq.http.X-SCP-Profile == "ultracache") { call scp_ultracache_backend_fetch; }
 }
 
@@ -119,11 +140,21 @@ sub scp_deliver {
         set resp.http.X-SCP-Result-Reason = "fetch-required";
     }
     set resp.http.X-Cache = resp.http.X-SCP-Result;
+    call scp_cookie_delivery;
+    if (req.http.X-SCP-Profile == "ultracache" &&
+        (resp.http.X-UltraCache-ESI-Private-Count ~ "^[1-9][0-9]*$" ||
+         (!resp.http.X-UltraCache-ESI-Private-Count && resp.http.X-UltraCache-ESI-Shared-Parent == "1"))) {
+        # The object is a reusable ESI template, but this assembled delivery
+        # contains private fragments. Only its downstream response is private.
+        call scp_private_delivery;
+    }
     unset resp.http.X-Cache-Hits;
     if (resp.http.X-Cache == "HIT") { set resp.http.X-Cache-Hits = obj.hits; }
     if (resp.http.X-SCP-Client-Vary) { set resp.http.Vary = resp.http.X-SCP-Client-Vary; }
     set resp.http.Vary = regsuball(resp.http.Vary,
         "(?i)(^|,)[[:blank:]]*X-SCP-Vary-Cookie[[:blank:]]*(?=,|$)", "\1Cookie");
+    set resp.http.Vary = regsuball(resp.http.Vary,
+        "(?i)(^|,)[[:blank:]]*X-SCP-Vary-ESI-Cookie[[:blank:]]*(?=,|$)", "\1Cookie");
     set resp.http.Vary = regsuball(resp.http.Vary,
         "(?i)(^|,)[[:blank:]]*X-SCP-Vary-Accept[[:blank:]]*(?=,|$)", "\1Accept");
     set resp.http.Vary = regsuball(resp.http.Vary,
@@ -136,10 +167,106 @@ sub scp_deliver {
     unset resp.http.X-SCP-Key-URL;
     unset resp.http.X-SCP-Profile;
     unset resp.http.X-SCP-Vary-Cookie;
+    unset resp.http.X-SCP-Vary-ESI-Cookie;
     unset resp.http.X-SCP-HTML-Accept;
     unset resp.http.X-UltraCache-ESI-Shared-Parent;
     unset resp.http.X-UltraCache-ESI-Candidate;
     unset resp.http.X-UltraCache-ESI-Opt-In;
+    call scp_cookie_diagnostics;
+}
+
+sub scp_cookie_diagnostics {
+    unset resp.http.X-Cache-Cookie-Names;
+    unset resp.http.X-Cache-Cookie-Role;
+    if (req.http.X-SCP-Cookie-Name) {
+        set resp.http.X-Cache-Cookie-Names = req.http.X-SCP-Cookie-Name;
+        set resp.http.X-Cache-Cookie-Role = req.http.X-SCP-Cookie-Role;
+    } else if (resp.http.Vary ~ "(?i)(^|,)[[:blank:]]*Cookie[[:blank:]]*(,|$)" &&
+               req.http.X-SCP-Vary-Cookie ~ {"^[[:blank:]]*[!#$%&'*+.^_`|~0-9A-Za-z-]+=[^;]*(;[[:blank:]]*[!#$%&'*+.^_`|~0-9A-Za-z-]+=[^;]*)*$"}) {
+        # Validate pair syntax first: malformed Cookie text without '=' must not
+        # be reflected as a supposed cookie name. Values are always removed.
+        set resp.http.X-Cache-Cookie-Names = regsuball(req.http.X-SCP-Vary-Cookie, "=[^;]*", "");
+        set resp.http.X-Cache-Cookie-Names = regsuball(resp.http.X-Cache-Cookie-Names, ";[[:blank:]]*", ", ");
+        set resp.http.X-Cache-Cookie-Role = "public-variant";
+    } else if (req.http.Cookie ~ {"@@COOKIE_PATTERN_varnishTrackingIgnore@@"}) {
+        set resp.http.X-Cache-Cookie-Names = regsub(req.http.Cookie, {"^.*?@@COOKIE_PATTERN_varnishTrackingIgnore@@.*$"}, "\2");
+        set resp.http.X-Cache-Cookie-Role = "tracking-ignored-for-variation";
+    }
+    if (resp.http.X-Cache-Cookie-Delivery && !resp.http.X-Cache-Cookie-Names) {
+        set resp.http.X-Cache-Cookie-Names = "_fbp";
+        set resp.http.X-Cache-Cookie-Role = "independent-cookie";
+    }
+    if (resp.http.X-Cache-Cookie-Names) {
+        set resp.http.X-Cache-Cookie-Policy = "@@COOKIE_POLICY_VERSION@@";
+    }
+}
+
+sub scp_private_delivery {
+    set resp.http.Cache-Control = "private, no-store";
+    set resp.http.Surrogate-Control = "no-store";
+}
+
+# Personal values are created in deliver, after lookup, and never written to a
+# stored object or origin header. The original provider Set-Cookie always wins.
+# Four-part _fbp is accepted by Meta's real ParamBuilder; it may add its own
+# provenance appendix on a later origin request. We never invent that appendix.
+sub scp_cookie_delivery {
+    unset resp.http.X-Cache-Cookie-Delivery;
+    unset resp.http.X-Cache-Cookie-Policy;
+    if (req.http.X-SCP-Fbp-Enabled != "1" || req.esi_level > 0) { return; }
+    set resp.http.X-Cache-Cookie-Policy = "@@COOKIE_POLICY_VERSION@@";
+    if (header.get(resp.http.Set-Cookie, {"^[[:blank:]]*_fbp="})) {
+        call scp_private_delivery;
+        set resp.http.X-Cache-Cookie-Delivery = "fbp:origin-provider";
+        return;
+    }
+    # An available application provider API owns complex consent decisions even
+    # when the site selects Basic. Absence of this optional contract does not
+    # make Basic depend on a WordPress plugin.
+    if (resp.http.X-UltraCache-Cookie-Delivery == "provider-endpoint-fbp") {
+        set resp.http.X-Cache-Cookie-Delivery = "fbp:provider-endpoint";
+        return;
+    }
+    if (req.http.X-SCP-Fbp-Consent != "1") {
+        set resp.http.X-Cache-Cookie-Delivery = "fbp:consent-not-granted";
+        return;
+    }
+    @@FBP_PROVIDER_HOLD@@
+    if (req.http.Cookie ~ {"(^|;[[:blank:]]*)_fbp=[^;[:blank:]]+"}) {
+        set resp.http.X-Cache-Cookie-Delivery = "fbp:existing-preserved";
+        return;
+    }
+    if (req.method != "GET" || resp.status != 200 ||
+        resp.http.Content-Type !~ "(?i)^text/html([;[:blank:]]|$)" ||
+        req.http.X-SCP-Pass == "1" || obj.uncacheable) {
+        set resp.http.X-Cache-Cookie-Delivery = "fbp:origin-private-or-non-html";
+        return;
+    }
+    if (req.http.X-SCP-Profile == "ultracache") {
+        if (resp.http.X-UltraCache-Cookie-Policy != "@@COOKIE_POLICY_VERSION@@" ||
+            resp.http.X-UltraCache-Cacheable != "1") {
+            set resp.http.X-Cache-Cookie-Delivery = "fbp:origin-approval-required";
+            return;
+        }
+        if (resp.http.X-UltraCache-Cookie-Delivery != "proxy-fbp") {
+            set resp.http.X-Cache-Cookie-Delivery = "fbp:issuer-not-approved";
+            return;
+        }
+    }
+    set req.http.X-SCP-Fbp-New = "_fbp=fb." + req.http.X-SCP-Fbp-Index + "." +
+        std.integer(real=std.real(time=now) * 1000) + "." +
+        std.integer(real=std.random(0, 2147483647)) +
+        "; Max-Age=@@FBP_MAX_AGE@@; Path=@@FBP_PATH@@; SameSite=@@FBP_SAME_SITE@@@@FBP_HTTP_ONLY@@";
+    if (req.http.X-SCP-Fbp-Domain != "") {
+        set req.http.X-SCP-Fbp-New = req.http.X-SCP-Fbp-New + "; Domain=" + req.http.X-SCP-Fbp-Domain;
+    }
+    @@FBP_SECURE_VCL@@
+    header.append(resp.http.Set-Cookie, req.http.X-SCP-Fbp-New);
+    # This delivery now contains one visitor's identifier. Keep the stored
+    # public object reusable, but prevent downstream caches replaying its cookie.
+    call scp_private_delivery;
+    unset req.http.X-SCP-Fbp-New;
+    set resp.http.X-Cache-Cookie-Delivery = "fbp:independent";
 }
 
 # Basic HTTP/WordPress/WooCommerce policy, also used by UltraCache.
@@ -201,11 +328,19 @@ sub scp_cookie_variation {
     # Vary: Cookie is keyed by the functional remainder, without analytics IDs.
     # Unknown/consent/referral/language cookies are retained, never whitelisted.
     unset req.http.X-SCP-Vary-Cookie;
+    unset req.http.X-SCP-Vary-ESI-Cookie;
     if (req.http.Cookie) {
-        set req.http.X-SCP-Vary-Cookie = regsuball(req.http.Cookie, {"(^|;[[:blank:]]*)(_ga|_ga_[^=;[:blank:]]*|_gid|_gat|_gat_[^=;[:blank:]]*|_gcl_au|_fbp|_fbc|__utma|__utmb|__utmc|__utmt|__utmv|__utmz|sbjs_migrations|sbjs_current|sbjs_current_add|sbjs_first|sbjs_first_add|sbjs_udata|sbjs_session)=[^;]*"}, "");
+        set req.http.X-SCP-Vary-Cookie = regsuball(req.http.Cookie, {"@@COOKIE_PATTERN_varnishTrackingIgnore@@[^;]*"}, "");
         set req.http.X-SCP-Vary-Cookie = regsuball(req.http.X-SCP-Vary-Cookie, "^[;[:blank:]]+|[;[:blank:]]+$", "");
         set req.http.X-SCP-Vary-Cookie = regsuball(req.http.X-SCP-Vary-Cookie, ";[[:blank:]]*", "; ");
         if (req.http.Cookie != "" && req.http.X-SCP-Vary-Cookie == "") { unset req.http.X-SCP-Vary-Cookie; }
+        # Prepare a second lookup dimension without personal carrier values.
+        # Only an approved public ESI parent can choose this dimension below.
+        set req.http.X-SCP-Vary-ESI-Cookie = regsuball(req.http.X-SCP-Vary-Cookie,
+            {"@@COOKIE_PATTERN_varnishCart@@[^;]*"}, "");
+        set req.http.X-SCP-Vary-ESI-Cookie = regsuball(req.http.X-SCP-Vary-ESI-Cookie, "^[;[:blank:]]+|[;[:blank:]]+$", "");
+        set req.http.X-SCP-Vary-ESI-Cookie = regsuball(req.http.X-SCP-Vary-ESI-Cookie, ";[[:blank:]]*", "; ");
+        if (req.http.X-SCP-Vary-ESI-Cookie == "") { unset req.http.X-SCP-Vary-ESI-Cookie; }
     }
 }
 
@@ -238,8 +373,14 @@ sub scp_response_variants {
             "(?i)(^|,)[[:blank:]]*Accept[[:blank:]]*(?=,|$)", "\1X-SCP-Vary-Accept");
     }
     if (!beresp.uncacheable && beresp.http.Vary ~ "(?i)(^|,)[[:blank:]]*Cookie[[:blank:]]*(,|$)") {
-        set beresp.http.Vary = regsuball(beresp.http.Vary,
-            "(?i)(^|,)[[:blank:]]*Cookie[[:blank:]]*(?=,|$)", "\1X-SCP-Vary-Cookie");
+        if (bereq.http.X-SCP-Profile == "ultracache" && beresp.do_esi &&
+            beresp.http.X-UltraCache-ESI-Shared-Parent == "1") {
+            set beresp.http.Vary = regsuball(beresp.http.Vary,
+                "(?i)(^|,)[[:blank:]]*Cookie[[:blank:]]*(?=,|$)", "\1X-SCP-Vary-ESI-Cookie");
+        } else {
+            set beresp.http.Vary = regsuball(beresp.http.Vary,
+                "(?i)(^|,)[[:blank:]]*Cookie[[:blank:]]*(?=,|$)", "\1X-SCP-Vary-Cookie");
+        }
     }
     if (!beresp.uncacheable && beresp.http.Vary ~ "(?i)(^|,)[[:blank:]]*Accept-Language[[:blank:]]*(,|$)") {
         set beresp.http.Vary = regsuball(beresp.http.Vary,

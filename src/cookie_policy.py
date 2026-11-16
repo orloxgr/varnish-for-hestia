@@ -1,7 +1,13 @@
 """Owner cookie exclusions; built-in HTTP policy lives in the shared VCL."""
 import re
+from pathlib import Path
+import sys
 
-# Built-in application/analytics policy lives in shared/cache-policy.vcl.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'shared'))
+from cookie_catalogue import load_catalogue, render_policy
+from cookie_delivery import normalize_delivery, recv_configuration
+
+# Built-in roles come from the shared reviewed catalogue, not recognition categories.
 RULE = re.compile(r"[!#$%&'+.^_`|~0-9A-Za-z-]+\*?")
 
 
@@ -40,3 +46,8 @@ def vcl_pattern(rules):
     # Native long strings preserve PCRE escapes. Cookie names cannot contain
     # quotes/braces, so they cannot terminate this generated VCL literal.
     return '{"' + pattern(rules) + '"}'
+
+
+def shared_policy():
+    source = Path(__file__).resolve().parents[1] / "shared/cache-policy.vcl"
+    return render_policy(source.read_text(encoding="utf-8"), load_catalogue())

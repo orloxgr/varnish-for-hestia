@@ -57,10 +57,12 @@ def render(state, config):
                 backends[origin] = 'hvh_origin_' + str(len(backends))
             browser_cache.selected(site, state)
             sites.append(dict(site, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
+                              cookie_delivery=cookie_policy.normalize_delivery(site.get('cookie_delivery'), domain, owner['sites']),
+                              owned_domains=list(owner['sites']),
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
                               response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
                               bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
-    text = ['vcl 4.1;', 'import std; import purge;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
+    text = ['vcl 4.1;', 'import std; import purge; import header; import blob;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
     dispatch = []
@@ -69,12 +71,16 @@ def render(state, config):
     routes = [(site, h) for site in sites for h in site['hosts']]
     routes.sort(key=lambda route: (route[1].startswith('*.'), -len(route[1]), route[1]))
     for site, host in routes:
+            scope = site['cookie_delivery']['fbp']['domain']
+            delivery = (cookie_policy.recv_configuration(site['cookie_delivery'], host, site['owned_domains'])
+                        if not scope or host == scope or host.endswith('.'+scope) else '')
             condition = ('req.http.host ~ ' + quoted('^([a-z0-9-]+[.])+' + re.escape(host[2:]).replace(r'\.', '[.]') + '$')
                          if host.startswith('*.') else 'req.http.host == ' + quoted(host))
             dispatch.append(('if' if not dispatch else 'else if') + ' (' + condition + ') {\n' +
                             'set req.http.X-HVH-Site = ' + quoted(site['id']) + ';\n' +
                             'set req.http.X-HVH-Profile = ' + quoted(site['profile']) + ';\n' +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
+                            delivery + '\n' +
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
@@ -144,7 +150,7 @@ sub vcl_hash {
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
-  hash_data("hvh-cache-policy-v6");
+  hash_data("hvh-cache-policy-v7");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.http.X-SCP-Key-URL);
@@ -188,6 +194,6 @@ sub vcl_deliver {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, (ROOT / 'shared/cache-policy.vcl').read_text())
+    text.insert(4, cookie_policy.shared_policy())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'
