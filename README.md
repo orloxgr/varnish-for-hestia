@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.2** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.3-dev.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -166,6 +166,16 @@ Each distribution includes the full file and works independently. See the
 [shared contract](shared/CONTRACT.md) for hooks and canonical invalidation URLs.
 Exact PURGE accepts any tracking URL; regex/batch BAN selects canonical lookup
 URLs. The shared parity fixtures exercise both generated adapters.
+
+Development branch `codex/esi-nonce-attributes` enables the native
+`esi_ignore_other_elements` feature, so literal includes inside HTML attributes
+are composed as well as includes in inline JavaScript and JSON within HTML.
+Fresh starts use the managed unit flag; upgrades add it through the authenticated
+native CLI without restarting Varnish or replacing other runtime feature flags.
+Parent privacy and private-fragment cookie rules remain unchanged. This does not
+enable ESI for standalone JSON responses. Parents fetched before enabling the
+parser feature retain their old parsed body until invalidated or refetched;
+rewarm those pages through the application when testing the new nonce feature.
 
 ## Cookie exclusions per website
 

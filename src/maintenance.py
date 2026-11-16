@@ -130,8 +130,33 @@ def check_integration():
 def service_dropin(config):
     return (MARKER + '\n[Service]\nType=exec\nPIDFile=\nExecStart=\n'
           'ExecStart=/usr/sbin/varnishd -F -a 127.0.0.1:' + str(config['listen_port']) + ' -T 127.0.0.1:' + str(config['admin_port']) + ' -f ' + str(service.ACTIVE) +
-          ' -S ' + str(service.CONFIG / 'admin.secret') + ' -p feature=+http2 -s malloc,' + str(config['memory_mb']) + 'm\n'
+          ' -S ' + str(service.CONFIG / 'admin.secret') + ' -p feature=+http2,+esi_ignore_other_elements -s malloc,' + str(config['memory_mb']) + 'm\n'
           'ExecReload=\nExecReload=/usr/sbin/varnishreload -p hvh_reload -m 2 ' + str(service.ACTIVE) + '\n')
+
+
+def configure_esi(config):
+    """Enable attribute includes now and on future starts, without a restart."""
+    if DROPIN.is_symlink() or DROPIN.parent.resolve() != DROPIN.parent:
+        raise ValueError('Refusing an unmanaged native service path')
+    expected = service_dropin(config).encode()
+    previous = DROPIN.read_bytes() if DROPIN.exists() else None
+    if previous is not None and MARKER.encode() not in previous:
+        raise ValueError('Refusing an unmanaged native service file')
+    changed = previous != expected
+    try:
+        if changed:
+            write(DROPIN, expected, 0o644)
+            routing.run('systemctl', 'daemon-reload')
+        # Native incremental flag syntax retains other enabled feature flags.
+        service.admin(config, 'param.set', 'feature', '+esi_ignore_other_elements')
+    except Exception:
+        if changed:
+            if previous is None:
+                DROPIN.unlink(missing_ok=True)
+            else:
+                write(DROPIN, previous, 0o644)
+            routing.run('systemctl', 'daemon-reload')
+        raise
 
 
 def integration_files(source, config):

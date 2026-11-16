@@ -390,11 +390,14 @@ development files, with no runtime dependency on another repository or network.
 python3 tests/test_registry.py
 python3 tests/test_fragments.py
 python3 -m unittest discover -s tests -p 'test_http_control.py' -v
+python3 -m unittest discover -s tests -p 'test_nonce_esi.py' -v
 python3 tests/shared_policy_parity.py --adapter tests/parity_adapter.py --output parity-results.json
 ```
 
 The registry and fragment-parser suites run without a live hosting installation.
 VCL integration testing can use native `varnishtest` with isolated HTTP origins.
+The nonce suite checks the generated service feature flags, additive runtime
+activation and private-fragment composition in inline JS, JSON and attributes.
 
 ## License and upstream
 

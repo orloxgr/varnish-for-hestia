@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.3-dev.1 · 2026-11-16 · development branch
+
+- Enable native ESI parsing inside HTML attributes via `esi_ignore_other_elements`. Persist the startup flag in the managed service unit and enable it additively on upgrade through the authenticated native CLI, with no Varnish restart or automatic cache flush.
+- Preserve other runtime feature flags, startup cache size and private-parent admission. Restore the prior managed unit if native feature activation fails. Keep the shared VCL byte-identical to Webuzo 0.4.4; no response-cookie replay or login-cookie expansion.
+- Add native tests for inline JavaScript, JSON and attribute composition; repeated private nonce fetches across visitors without cached nonce/cookie leakage; runtime activation; managed-unit rollback; and uncached cold parents composing mini-cart ESI while retaining their native nonce and response cookie.
+
 ## 0.16.2 · 2026-11-16
 
 - Port the shared Webuzo stored-HTML Accept fix unchanged. Accept an actual origin `X-Ultra-Cache: HIT` alongside Apache-static provenance, so warmed PHP page-cache objects and stored ESI parents can serve the first compatible browser Accept without another origin fetch.

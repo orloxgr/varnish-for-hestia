@@ -205,6 +205,8 @@ def install(args):
             existing['template_name'] = routing.install_templates(SOURCE, existing)
             write_json(service.CONFIG / 'settings.json', existing)
             _, _, result = service.reconcile(hestia)
+            progress.stage('Enabling native ESI attribute processing without restarting Varnish')
+            maintenance.configure_esi(existing)
         except Exception:
             write(service.CONFIG / 'settings.json', before)
             deployment.rollback()
