@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.16.3-dev.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.16.3** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -167,15 +167,20 @@ Each distribution includes the full file and works independently. See the
 Exact PURGE accepts any tracking URL; regex/batch BAN selects canonical lookup
 URLs. The shared parity fixtures exercise both generated adapters.
 
-Development branch `codex/esi-nonce-attributes` enables the native
-`esi_ignore_other_elements` feature, so literal includes inside HTML attributes
-are composed as well as includes in inline JavaScript and JSON within HTML.
+The native `esi_ignore_other_elements` feature allows literal includes inside HTML
+attributes to be composed as well as includes in inline JavaScript and JSON within HTML.
 Fresh starts use the managed unit flag; upgrades add it through the authenticated
 native CLI without restarting Varnish or replacing other runtime feature flags.
 Parent privacy and private-fragment cookie rules remain unchanged. This does not
 enable ESI for standalone JSON responses. Parents fetched before enabling the
 parser feature retain their old parsed body until invalidated or refetched;
 rewarm those pages through the application when testing the new nonce feature.
+
+Basic's URL, cookie and header cache-key improvements work without UltraCache.
+Basic does not enable ESI composition. The UltraCache preset can also compose
+standard ESI from another application, but the application must produce the
+includes, fragment endpoints and suitable cache policy. Enabling a Varnish parser
+feature alone cannot turn ordinary WordPress nonces into private fragments.
 
 ## Cookie exclusions per website
 

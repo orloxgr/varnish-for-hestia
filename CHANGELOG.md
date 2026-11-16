@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.3-dev.1 · 2026-11-16 · development branch
+## 0.16.3 · 2026-11-16
 
 - Enable native ESI parsing inside HTML attributes via `esi_ignore_other_elements`. Persist the startup flag in the managed service unit and enable it additively on upgrade through the authenticated native CLI, with no Varnish restart or automatic cache flush.
 - Preserve other runtime feature flags, startup cache size and private-parent admission. Restore the prior managed unit if native feature activation fails. Keep the shared VCL byte-identical to Webuzo 0.4.4; no response-cookie replay or login-cookie expansion.
