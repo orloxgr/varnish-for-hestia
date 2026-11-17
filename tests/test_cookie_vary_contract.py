@@ -20,15 +20,21 @@ class CookieVaryContract(unittest.TestCase):
     def test_matching_policy_shares_unknown_automatic_ids_without_losing_variants(self):
         choices=settings('currency','variant')
         for profile in http.PROFILES:
-            with self.subTest(profile=profile):
-                self.run_policy(profile,
-                    [http.response('/page','EUR',headers=self.headers(choices),expect=['expect req.http.Cookie == "currency=EUR; vendor_id=alice"']),
-                     http.response('/page','USD',headers=self.headers(choices))],
-                    [http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=alice'],cache='MISS'),
-                     http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=bob'],cache='HIT')+'\nexpect resp.http.Vary ~ "Cookie"',
-                     http.request('/page','USD',headers=['Cookie: currency=USD; vendor_id=carol'],cache='MISS'),
-                     http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=dave'],cache='HIT')],
-                    program=program(profile,choices,connected=True))
+            for connected in (False,True):
+                with self.subTest(profile=profile,connected=connected):
+                    # Same four visits, two currencies and four unrelated IDs:
+                    # ordinary origin Cookie Vary gives four MISSes; the matching
+                    # explicit app contract gives two MISSes and two HITs.
+                    fetched=('EUR','USD') if connected else ('EUR','EUR','USD','EUR')
+                    responses=[http.response('/page',currency,headers=self.headers(choices),
+                        expect=['expect req.http.Cookie == "currency=EUR; vendor_id=alice"'] if index==0 else [])
+                        for index,currency in enumerate(fetched)]
+                    self.run_policy(profile,responses,
+                        [http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=alice'],cache='MISS'),
+                         http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=bob'],cache='HIT' if connected else 'MISS')+'\nexpect resp.http.Vary ~ "Cookie"',
+                         http.request('/page','USD',headers=['Cookie: currency=USD; vendor_id=carol'],cache='MISS'),
+                         http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=dave'],cache='HIT' if connected else 'MISS')],
+                        program=program(profile,choices,connected=connected))
 
     def test_mixed_or_mismatched_or_unconnected_origin_vary_remains_authoritative(self):
         choices=settings('currency','variant')
