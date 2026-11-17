@@ -17,7 +17,7 @@ POLICY_VERSION = load_catalogue()['version']
 
 
 @contextlib.contextmanager
-def proxy(profile, respond, transform=None, delivery=None, policies=None):
+def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False):
     """An isolated origin and daemon; never load/restart the installed service."""
     class Origin(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -52,11 +52,17 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None):
             with socket.socket() as reservation:
                 reservation.bind(('127.0.0.1', 0))
                 port = reservation.getsockname()[1]
+            admin_args=['-T','none']
+            if management:
+                with socket.socket() as reservation:
+                    reservation.bind(('127.0.0.1',0));admin_port=reservation.getsockname()[1]
+                secret=root/'admin.secret';secret.write_text('owned-test-only');secret.chmod(0o600)
+                admin_args=['-T','127.0.0.1:'+str(admin_port),'-S',str(secret)]
             with (root / 'daemon.log').open('w+') as log:
                 daemon = subprocess.Popen([
                     'varnishd', '-F', '-j', 'none', '-n', str(root / 'instance'),
                     '-f', str(root / 'policy.vcl'), '-a', '127.0.0.1:' + str(port),
-                    '-T', 'none', '-s', 'malloc,16m',
+                    *admin_args, '-s', 'malloc,16m',
                     '-p', 'feature=+esi_ignore_other_elements'], stdout=log, stderr=log)
                 deadline = time.monotonic() + 15
                 while True:
@@ -89,6 +95,15 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None):
                         connection.close()
 
                 get.endpoint = ('127.0.0.1', port)
+                get.origin_port = origin.server_port
+                if management:
+                    def activate(name,source):
+                        path=root/(name+'.vcl');path.write_text(source)
+                        for args in [('vcl.load',name,str(path)),('vcl.use',name)]:
+                            result=subprocess.run(['varnishadm','-T','127.0.0.1:'+str(admin_port),
+                                '-S',str(secret),*args],capture_output=True,text=True)
+                            if result.returncode:raise AssertionError(result.stdout+result.stderr)
+                    get.activate=activate
                 try:
                     yield get
                 finally:

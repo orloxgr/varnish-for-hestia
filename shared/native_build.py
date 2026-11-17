@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -37,7 +38,13 @@ def build():
         with tempfile.TemporaryDirectory(prefix='.cookie-handoff-',dir=target) as temporary:
             folder=Path(temporary)
             (folder/'cookie_handoff.c').write_bytes(inputs['cookie_handoff.c'])
-            (folder/'cookie_handoff.vcc').write_bytes(inputs['cookie_handoff.vcc']+b'\nBuild identity: '+signature.encode()+b'\n')
+            # vmodtool hashes directives, not their documentation. Put the
+            # source/ABI identity in $Module so a C-only update gets a new DSO
+            # identity even while an earlier VCL still holds the old module.
+            vcc,count=re.subn(r'^(\$Module\s+cookie_handoff\s+\d+\s+"[^"]*)(".*)$',
+                r'\g<1> build '+signature+r'\2',inputs['cookie_handoff.vcc'].decode('utf-8'),flags=re.M)
+            if count!=1:raise RuntimeError('Native cookie module needs one module declaration')
+            (folder/'cookie_handoff.vcc').write_text(vcc,encoding='utf-8')
             (folder/'vmod_vcs_version.txt').write_text(signature+'\n')
             (folder/'config.h').write_text('#define PACKAGE_VERSION "'+signature+'"\n')
             command('python3',tool,'cookie_handoff.vcc',cwd=folder)

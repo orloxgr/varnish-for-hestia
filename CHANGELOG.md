@@ -2,6 +2,7 @@
 
 ## 0.20.0 · 2026-11-17
 
+- Put the native build identity in the actual VMOD module directive so C-only updates load a new implementation. Verify native hot reload while an old client task remains active, plus rollback and failed-build retention.
 - Apply the common Shared HTML choice to real response cookies as well as request variation. Detach complete original Set-Cookie fields into client-task-owned native memory before storing otherwise public HTML; deliver them only to their original visitor, never through a shared object. Keep duplicate fields, attributes, renewal/deletion and original application/consent ownership.
 - Clean discarded cookies on backend retry/error, client restart and abort. Compile the small shared helper for the installed native ABI without upgrading/restarting the engine; rebuild before native startup after APT ABI changes. Native-source-only changes activate a new VCL generation.
 - Ship recognition descriptions and reviewed executable defaults together with plugin updates; remove daily metadata-only downloads and their controls. Preserve saved central/site choices and old snapshots for rollback. Retire the stale native Meta-issuer capability declaration.
