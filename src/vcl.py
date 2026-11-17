@@ -87,6 +87,7 @@ def render(state, config):
     purge = []
     custom_recv, custom_response, cookie_bypass, cookie_rules, response_rules = [], [], [], [], []
     cookie_groups={}
+    response_groups={}
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
         # Identical effective rules are emitted once, irrespective of the
@@ -111,9 +112,11 @@ def render(state, config):
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
         cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True)+'\n}')
-        backend_condition = condition.replace('req.http.', 'bereq.http.')
         rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'])
-        response_rules.append('if ('+backend_condition+') {\nif (cookie_handoff.detach({"'+rules+'"}, bereq.is_bgfetch)) {}\n}')
+        response_groups.setdefault(rules,[]).extend(group['ids'])
+    for rules,identities in response_groups.items():
+        condition=' || '.join('bereq.http.X-HVH-Site == '+quoted(identity) for identity in identities)
+        response_rules.append('if ('+condition+') {\nif (cookie_handoff.detach({"'+rules+'"}, bereq.is_bgfetch)) {}\n}')
     text.append('''sub vcl_recv {
   call scp_init;''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
