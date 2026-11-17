@@ -9,13 +9,13 @@ from vcl import render
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--profile', required=True, choices=('basic', 'ultracache'))
-parser.add_argument('--cookie-delivery', type=json.loads)
+parser.add_argument('--legacy-cookie-delivery', type=json.loads, help='Test fixture only: retired raw state must be ignored')
 args = parser.parse_args()
 sites = {}
 for domain, identity, token in [('example.test', 'a', 'b'), ('other.test', 'c', 'd')]:
     sites[domain] = dict(id=identity * 32, aliases=[], profile=args.profile, token=token * 64,
                          enabled=True, suspended=False, custom_recv='', custom_backend_response='')
-sites['example.test']['cookie_delivery'] = args.cookie_delivery
+sites['example.test']['cookie_delivery'] = args.legacy_cookie_delivery
 state = {'owners': {'alice': dict(enabled=True, suspended=False, package='default', sites=sites)}}
 source = render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080})
 source = source.replace('"8080"', '"${s1_port}"', 1)

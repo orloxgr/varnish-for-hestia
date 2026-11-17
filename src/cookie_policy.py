@@ -5,7 +5,6 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'shared'))
 from cookie_catalogue import load_catalogue, render_policy
-from cookie_delivery import normalize_delivery, recv_configuration
 
 # Built-in roles come from the shared reviewed catalogue, not recognition categories.
 RULE = re.compile(r"[!#$%&'+.^_`|~0-9A-Za-z-]+\*?")

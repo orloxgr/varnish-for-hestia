@@ -70,10 +70,6 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
             'password' => $_POST['password'] ?? null,
             'custom_recv' => $_POST['custom_recv'] ?? '',
             'bypass_cookies' => $_POST['bypass_cookies'] ?? '',
-            'cookie_delivery' => ['fbp' => ['enabled' => ($_POST['fbp_enabled'] ?? '') === '1',
-                'consent_cookie' => $_POST['fbp_consent_cookie'] ?? 'cmplz_marketing',
-                'consent_value' => $_POST['fbp_consent_value'] ?? 'allow',
-                'domain' => $_POST['fbp_domain'] ?? '']],
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
 if (in_array($action, ['admin-cookie-policies-save', 'configure-cookie-policies'], true)) {
     $rawChoices = $_POST['cookie_policies'] ?? '';
@@ -170,9 +166,6 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
     if ($action === 'configure-cookies') {
         $pageError = 'Cookie rules could not be applied. Use one cookie name or a trailing-star prefix per line. The previous rules remain active.';
     }
-    if ($action === 'configure-cookie-delivery') {
-        $pageError = 'Cookie delivery could not be applied. Check the consent cookie and domain settings. The previous configuration remains active.';
-    }
     if ($adminOverview) {
         $pageError = $action === 'admin-server-settings' ? 'The server timeout could not be applied. The previous setting remains active.' : ($action === 'admin-memory' ? 'The native memory snapshot is unavailable.' : ($action === 'admin-bulk'
             ? 'The bulk change could not be applied. Check the selection and that the service is running.'
@@ -214,8 +207,6 @@ if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Browser cache headers for ' . $selectedDomain . ' were applied.';
     } elseif ($action === 'configure-cookies') {
         $message = 'Cookie bypass rules for ' . $selectedDomain . ' were applied.';
-    } elseif ($action === 'configure-cookie-delivery') {
-        $message = 'Independent cookie delivery for ' . $selectedDomain . ' was applied.';
     } elseif ($action === 'toggle-site') {
         $message = 'Cache access for ' . $selectedDomain . ' was ' . (!empty($request['enabled']) ? 'enabled.' : 'disabled.');
     } elseif ($action === 'toggle-account') {

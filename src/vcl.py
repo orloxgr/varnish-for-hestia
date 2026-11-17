@@ -60,14 +60,13 @@ def render(state, config):
                 backends[origin] = 'hvh_origin_' + str(len(backends))
             browser_cache.selected(site, state)
             sites.append(dict(site, domain=domain, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
-                              cookie_delivery=cookie_policy.normalize_delivery(site.get('cookie_delivery'), domain, owner['sites']),
                               cookie_contract=cookie_control.cache_contract(site.get('cookie_integration'),domain,site['aliases'],
                                   state.get('cookie_policies'),site.get('cookie_policies')),
                               owned_domains=list(owner['sites']),
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
                               response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
                               bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
-    text = ['vcl 4.1;', 'import std; import purge; import header; import blob;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
+    text = ['vcl 4.1;', 'import std; import purge; import header;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
     dispatch = []
@@ -76,16 +75,12 @@ def render(state, config):
     routes = [(site, h) for site in sites for h in site['hosts']]
     routes.sort(key=lambda route: (route[1].startswith('*.'), -len(route[1]), route[1]))
     for site, host in routes:
-            scope = site['cookie_delivery']['fbp']['domain']
-            delivery = (cookie_policy.recv_configuration(site['cookie_delivery'], host, site['owned_domains'])
-                        if not scope or host == scope or host.endswith('.'+scope) else '')
             condition = ('req.http.host ~ ' + quoted('^([a-z0-9-]+[.])+' + re.escape(host[2:]).replace(r'\.', '[.]') + '$')
                          if host.startswith('*.') else 'req.http.host == ' + quoted(host))
             dispatch.append(('if' if not dispatch else 'else if') + ' (' + condition + ') {\n' +
                             'set req.http.X-HVH-Site = ' + quoted(site['id']) + ';\n' +
                             'set req.http.X-HVH-Profile = ' + quoted(site['profile']) + ';\n' +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
-                            delivery + '\n' +
                             ('set req.http.X-SCP-Cookie-Contract = ' + quoted(site['cookie_contract']) + ';\n') +
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')

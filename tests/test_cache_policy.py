@@ -106,7 +106,7 @@ class CachePolicy(unittest.TestCase):
             [compatibility.request('/parent', visitor, headers=['Cookie: '+cookie], cache='PASS')
              for visitor in ('A', 'B')], tail='varnish v1 -expect MAIN.cache_hitmiss == 1')
 
-    def test_analytics_and_unknown_cookies_share_public_objects_without_stripping(self):
+    def test_shared_analytics_unknown_and_functional_variants_preserve_original_cookies(self):
         cookies = ['_ga=first', '_ga=first; _gid=second',
                    '__utma=first; _ga_G123ABC=second; _gat_gtag_UA_123_1=third; _fbp=fourth',
                    '_ga=first; _ga=second; _gid=',
@@ -121,8 +121,17 @@ class CachePolicy(unittest.TestCase):
                     path = '/page-' + str(number)
                     responses.append(compatibility.response(path, 'anonymous',
                                      expect=['expect req.http.Cookie == "'+cookie+'"']))
+                    # The bundled consent-banner choice is Variant. Its
+                    # absence is distinct; unclassified cookie names still
+                    # follow origin variation rather than inventing a rule.
+                    second = 'MISS' if number == 6 else 'HIT'
+                    if second == 'MISS':
+                        responses.append(compatibility.response(path, 'other variant',
+                            expect=['expect req.http.Cookie == "_ga=another"']))
                     requests.extend([compatibility.request(path, 'anonymous', headers=['Cookie: '+cookie], cache='MISS'),
-                                     compatibility.request(path, 'anonymous', headers=['Cookie: _ga=another'], cache='HIT')])
+                                     compatibility.request(path, 'other variant' if second == 'MISS' else 'anonymous',
+                                         headers=['Cookie: _ga=another'], cache=second),
+                                     compatibility.request(path, 'anonymous', headers=['Cookie: '+cookie], cache='HIT')])
                 self.run_policy(profile, responses, requests)
 
     def test_builtin_private_cookies_pass_without_stripping_any_cookies(self):

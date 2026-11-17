@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.19.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.19.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -73,7 +73,7 @@ token with repository access at the password prompt, not your GitHub password.
 **Cookie policies** opens the searchable editor. Administrators have central
 choices under **All accounts**; account owners edit only their own websites.
 The table shows literal cookie names/prefixes, descriptions and concrete cache
-actions. Internal IDs stay hidden. Equal-height fields keep rows compact; the
+actions. Internal IDs stay hidden. Compact controls and a multiline description keep rows readable; the
 Why / precedence button opens the full-width behavior, evidence and priority. You can add rows, paste
 tab-separated rows from Excel, select rows for bulk changes, and reset local
 choices to the inherited policy. Save validates and compiles the actual VCL.
@@ -113,33 +113,12 @@ Varnish retains that complete variation and still caches each representation;
 an older Shared choice cannot collapse newer application variants. Connection
 does not provide a generic cookie issuer or replace the actual provider integration.
 
-Under each website, **Cookies on cached pages** can deliver a missing Meta
-`_fbp` separately from public cached HTML. Enable it only for an existing Meta
-integration and enter the exact cookie/value that expresses the visitor's
-current consent, such as `cmplz_marketing=allow` for an appropriate Complianz
-configuration. This does not install Meta Pixel or change the consent manager. The native
-issuer also respects Meta's explicit provider hold state. An available actual
-provider endpoint remains authoritative for complex consent rules in either
-profile.
-
-Each consenting visitor receives their own cookie. Existing cookies, provider
-renewals, deletions and all other Set-Cookie fields are preserved. Login/cart
-privacy remains active. Basic works independently of UltraCache; UltraCache
-also uses its trusted application approval and provider/CMP delivery owner.
-Service-specific CMPs such as Real Cookie Banner use their actual provider API,
-not a guessed category cookie. PHP/direct-origin and static-page delivery are
-handled by the application integration.
-
-A cold Basic response that sets a cookie still reaches its visitor unchanged;
-there is no hidden warm-up. After public HTML has been cached, new visitors can
-receive a HIT and an independent cookie. The native header VMOD preserves
-separate Set-Cookie fields. When adding modules to an existing installation, the installer selects the
-matching native ABI without replacing or restarting the running engine.
-
-The reviewed cookie catalogue is local, versioned, and shared with Webuzo and
-UltraCache. The separately attributed Open Cookie Database snapshot is for
-recognition; its categories do not automatically authorize caching or issuing
-cookies. Unknown cookies do not gain a new automatic bypass rule.
+Every cookie, including Meta `_fbp`, uses the same cookie-policy editor.
+The proxy does not mint provider-specific identifiers. Applications/providers
+create, renew and delete their own cookies under their actual consent rules.
+Shared HTML changes variation, not issuance or consent. Original Set-Cookie
+fields retain normal uncached delivery and are never replayed from a shared
+object. Old per-site `cookie_delivery` settings are retired on reconciliation.
 
 The bundled assessment covers 2,288 source records, with 2,293 editable rows
 including the additional reviewed rules. Every row has Shared HTML, Public

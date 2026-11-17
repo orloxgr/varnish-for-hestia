@@ -1,54 +1,31 @@
-# Cookie policy and delivery validation
+# Cookie policy validation
 
-Release: 0.17.0. Catalogue: 2026.11.16.4.
+Current native policy: 0.19.1. Both Basic and UltraCache use the common cookie
+sheet for Shared/Variant/Private choices, including `_fbp`. There is no native
+provider-specific cookie issuer or Meta configuration form. Older reports about
+native Meta issuance describe the removed 0.17.0 behavior, not this version.
 
-The catalogue contains 46 reviewed policies. The separately licensed Open Cookie
-Database snapshot contains 2,288 recognition records pinned to revision
-`7786335566460016f07a50705a92fc781c976f6f`. Recognition categories do not authorize
-cache sharing or minting identifiers. No external database is queried per request.
+## Current checks
 
-## Native and provider evidence
+- Legacy enabled `cookie_delivery` state is retired by native inventory and has
+  no effect on rendering, including before reconciliation. Other settings,
+  per-site tokens and explicit common cookie choices are preserved.
+- Real native HTTP checks cover MISS/HIT without identifier generation, original
+  provider Cookie forwarding and multiple Set-Cookie fields, renewal/deletion,
+  common `_fbp` Variant/Private choices in both presets, and public-only ESI.
+- Shared native cases retain consent variation, site isolation, application
+  private/no-store decisions, public variants, private ESI and nonce isolation.
+- Original provider Set-Cookie fields reach the requesting visitor unchanged.
+  These deliveries remain uncacheable and downstream private/no-store for every
+  cookie name. A shared object never stores and replays those personal fields.
 
-| Behavior | Evidence and result |
-| --- | --- |
-| Common Hestia/Webuzo behavior | 89 identical native HTTP runs, with identical policy, catalogue, compiler, delivery module and case bytes. Both Basic and UltraCache are exercised. |
-| Independent Meta delivery | Two new visitors receive different identifiers and the same cached public body; an existing identifier remains unchanged. Actual Meta ParamBuilder accepts both native-generated values and adds its own provider appendix when required. |
-| Cookie attributes and other fields | Native HTTP checks preserve original multiple Set-Cookie fields, HttpOnly, domain/path, expiry commas, renewal and deletion. Provider cookies take precedence over native issuance. |
-| Consent and authority | Native exact-cookie consent follows the current request; actual Meta hold prevents issuance while HTML remains HIT. An application-owned provider endpoint remains authoritative in either preset. |
-| Actual Hestia application integration | Real WordPress 7.1.4, WooCommerce 11.2.1, Meta for WooCommerce and Real Cookie Banner Pro 5.4.3, through generated Hestia VCL. Explicit warm-up, three independent browser contexts, actual consent UI, provider endpoint, return and revoke passed. |
-| Private fragments and variant keys | An approved common ESI parent with Vary: Cookie serves separate session-bound nonce fragments with MISS/HIT/HIT for A/B/A. Private cart carrier IDs are absent from its public variant dimension. Other functional Vary inputs remain. |
-| Downstream privacy | New native cookies, original provider cookies and assembled private ESI deliveries receive response-only private/no-store. Their stored public templates remain reusable. Public-only ESI retains public response caching. |
-| Diagnostics | Actual cookie names and decisions only. Malformed Cookie text is not reflected. Forged browser headers cannot enable issuance or approve public HTML. |
+## Boundaries
 
-The actual Hestia provider fixture used the verified UltraCache dev.1288 package,
-with its exact 424 runtime files. Native standalone tests also exercise Basic
-without UltraCache or WordPress. The current proxy HIT is verified with X-Cache;
-origin cache/source headers in an outer HIT describe its fill response, rather
-than a new execution of PHP.
+A cache policy is not a cookie issuer or a consent decision. Actual applications
+and providers create and renew their own identifiers. The table does not claim
+that an origin-only cookie can be newly created on a Varnish HIT: that needs the
+provider's real browser/application delivery path. Provider-side consent and
+WooCommerce/session/nonce protections remain authoritative.
 
-The common application's real two-cart/cross-session nonce, Apache Static,
-Basic fallback, warm stored-object and image-variant scenarios were independently
-executed in the Webuzo lab. The Hestia-specific proof consists of native parity,
-nonce composition and the actual WordPress/provider/CMP fixture above. The
-application's direct PHP, early drop-in, actual WP Consent API provider override,
-RCB UI, delayed-script and message-export paths were verified by the UltraCache
-owner. These are representative verified paths, not a claim about every CMP or
-every possible hosting environment.
-
-## Activation and boundaries
-
-Independent native `_fbp` delivery starts disabled and is configured per site.
-Use a real Meta integration and an exact consent predicate appropriate to that
-site. Complex service/revision or per-plugin PHP decisions retain the actual
-provider/CMP endpoint. Consent categories from a lookup database cannot replace
-those APIs. Other providers keep their own issuance; no arbitrary sessions,
-click IDs, signatures or authentication tokens are generated.
-
-A cold Basic response with original Set-Cookie remains private and reaches its
-visitor unchanged. This feature does not add a hidden warmer. Once a public
-object exists, eligible visitors can receive HIT plus their own cookie. Unknown
-cookies retain existing policy and do not gain an automatic bypass.
-
-All application/service mutations and test identities were confined to owned
-lab fixtures. Fixtures, databases, tunnels and temporary processes were cleaned;
-shared service PIDs were unchanged. No live site was changed.
+Validation uses owned VM processes and temporary HTTP origins. No production
+site configuration or runtime is modified by these tests.

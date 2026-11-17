@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.1 · 2026-11-17
+
+- Remove native Meta `_fbp` issuance, its per-site form/action and provider-specific VCL compiler. Retire old issuer settings during inventory. All cookie cache choices use the common sheet; applications/providers own identifier creation and actual consent. Preserve original provider fields, generic downstream privacy and private/public ESI behavior.
+
 ## 0.19.0 · 2026-11-17
 
 - Reuse identical cookie execution projections within each reconciliation stage instead of expanding the full defaults twice per hosted site. Avoid projection work for disconnected WordPress integrations while retaining signed disconnect operations, scoped change detection and cache invalidation.
