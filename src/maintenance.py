@@ -22,6 +22,8 @@ import service
 import deployment
 import transaction
 import repository
+import cookie_bridge
+import cookie_control
 
 ID = 'varnish-for-hestia'
 INSTALL = Path('/opt') / ID
@@ -65,6 +67,8 @@ def validate(payload):
         raise ValueError('Invalid administrator secret in archive')
     import profile_settings
     profile_settings.consolidate(state)
+    from cookie_bridge import validate as validate_cookies
+    validate_cookies(state)
     render(state, config)
     if payload.get('repository') is not None:
         repository.validate(payload['repository'])
@@ -186,6 +190,18 @@ def recover_restore():
     record=transaction.read(service.STORE,restore_paths(),filename='restore.json')
     if record is None:return
     extra=record['extra']
+    def persist():
+        write_json(service.STORE/'restore.json', record)
+    cookie_bridge.rollback(extra.get('cookie_operations', []), persist)
+    service.record_cookie_rollback(extra.get('cookie_operations', []))
+    if not extra.get('local_started', True):
+        transaction.restore_files(record)
+        if not extra['installed']:
+            # These paths were created and ownership-checked before staging.
+            # No native service/code changes took place in this phase.
+            if service.CONFIG.exists():shutil.rmtree(service.CONFIG)
+        transaction.finish(service.STORE,filename='restore.json')
+        return
     routing.run('systemctl','stop','varnish')
     repository.restore(extra['repository'])
     transaction.restore_files(record)
@@ -230,6 +246,11 @@ def restore(value, hestia, source):
         for site in row['sites'].values():
             site['settings']['routing_active'] = False
     state = desired_state(archived, inventory, 'varnish')
+    cookie_bridge.reconcile_inventory(state)
+    # Restored aliases must be rechecked against the fresh native inventory,
+    # before any saved application endpoint can become managed configuration.
+    from cookie_bridge import validate as validate_cookies
+    validate_cookies(state)
     config = copy.deepcopy(payload['settings'])
     config['installed'] = True
     config['template_name'] = routing.install_templates(source, config)
@@ -248,6 +269,11 @@ def restore(value, hestia, source):
         compiled = subprocess.run(['/usr/sbin/varnishd', '-C', '-f', str(candidate)], capture_output=True, timeout=None)
         if compiled.returncode:
             raise ValueError('Archived VCL did not compile; current service was retained')
+    previous_state = json.loads((service.STORE/'applied.json').read_text()) if installed else None
+    cookie_ops = cookie_bridge.plan(state, previous_state, force=True)
+    # Read-only application preflight must not leave newly created addon paths
+    # behind when restoring a removed installation and the endpoint is offline.
+    cookie_bridge.inspect(cookie_ops)
     ensure_owned_directory(service.CONFIG, ID)
     os.chown(service.CONFIG, 0, gid); service.CONFIG.chmod(0o750)
     service.STORE.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -263,11 +289,21 @@ def restore(value, hestia, source):
         original_routes=[(owner,domain,site['proxy_template'],site['proxy_template'],site['proxy_extensions'])
                          for owner,row in inventory.items() for domain,site in row['sites'].items() if site['proxy_template']]
         apache=routing.APACHE.read_bytes() if routing.APACHE.exists() else None
-        transaction.begin(service.STORE,restore_paths(),{'installed':bool(installed),'config':previous_config,
+        extra = {'installed':bool(installed),'config':previous_config,
                           'repository':previous_repository,'routes':original_routes,
-                          'apache':base64.b64encode(apache).decode() if apache is not None else None},filename='restore.json')
+                 'apache':base64.b64encode(apache).decode() if apache is not None else None,
+                 'cookie_operations':cookie_ops,'local_started':False}
+        transaction.begin(service.STORE,restore_paths(),extra,filename='restore.json')
+        def journal(**updates):
+            extra.update(updates)
+            record = transaction.read(service.STORE,restore_paths(),filename='restore.json')
+            record['extra'] = extra
+            write_json(service.STORE/'restore.json',record)
         try:
+            cookie_bridge.prepare(cookie_ops,journal)
             service.admin(previous_config, 'ping') if installed else None
+            cookie_bridge.commit(cookie_ops,journal)
+            journal(local_started=True)
             routing.run('systemctl', 'stop', 'varnish')
             write(service.CONFIG / '.addon-owner', ID + '\n', 0o644)
             write(service.CONFIG / 'admin.secret', validate(payload))
@@ -282,7 +318,17 @@ def restore(value, hestia, source):
             subprocess.run(['python3', str(source / 'tools/install-integration.py')], check=True, capture_output=True, timeout=None)
             write_json(service.STORE / 'desired.json', state); write_json(service.STORE / 'applied.json', state)
             routing.run('systemctl', 'enable', 'varnish')
-        except Exception:
+        except Exception as failure:
+            # Recovery also covers a commit whose response was lost. If remote
+            # rollback fails, its durable identity remains for the next retry.
+            cookie_bridge.rollback(cookie_ops,journal)
+            preserved=service.record_cookie_rollback(cookie_ops)
+            if not extra['local_started']:
+                recover_restore()
+                if preserved:
+                    cause=str(failure) if isinstance(failure,cookie_control.ControlError) else 'Restore failed.'
+                    raise cookie_control.ControlError(cause+' A newer WordPress policy was preserved while aborting this restore.') from None
+                raise
             routing.run('systemctl', 'stop', 'varnish')
             repository.restore(previous_repository)
             if undo is not None:
@@ -306,6 +352,10 @@ def restore(value, hestia, source):
                         path.unlink()
             deployment.rollback() if installed else deployment.remove()
             transaction.finish(service.STORE,filename='restore.json')
+            if preserved:
+                cause=str(failure) if isinstance(failure,cookie_control.ControlError) else 'Restore failed; native configuration was restored.'
+                raise cookie_control.ControlError(cause+' A newer WordPress policy was preserved while aborting this restore.') from None
+            if isinstance(failure,cookie_control.ControlError):raise failure
             raise RuntimeError('Restore failed; previous service configuration restored, cache may be empty' if installed
                                else 'Restore failed; service remains stopped and archive is retained') from None
     transaction.finish(service.STORE,filename='restore.json')

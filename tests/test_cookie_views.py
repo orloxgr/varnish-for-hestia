@@ -1,0 +1,46 @@
+"""Native editor reports profile/legacy precedence rather than a false choice."""
+from pathlib import Path
+import sys
+import unittest
+from unittest.mock import patch
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'src'))
+sys.path.insert(0,str(ROOT/'shared'))
+import cookie_views
+from test_cookie_admin import settings
+
+
+class CookieViews(unittest.TestCase):
+    def view(self,profile='basic',choices=None,bypass=None,central=False):
+        state={'owners':{'alice':{'sites':{'example.test':{'profile':profile,'aliases':[],
+            'cookie_policies':choices,'bypass_cookies':bypass or []}}}}}
+        with patch.object(cookie_views.cookie_recognition,'database',return_value={'records':[]}), \
+             patch.object(cookie_views.cookie_database,'directory',return_value=ROOT/'shared/cookie-recognition'):
+            return cookie_views.view(state,None if central else 'alice',None if central else 'example.test')
+
+    def test_basic_cart_rule_explains_private_precedence_over_shared_choice(self):
+        data=self.view(choices=settings('woocommerce_cart_hash','shared'))
+        row=next(row for row in data['cookie_policy_rows'] if row['id']=='custom:fixture')
+        self.assertEqual((row['action'],row['effective_action']),('shared','private'))
+        self.assertIn('woocommerce-cart-hash',row['core_precedence'])
+        self.assertIn('Basic passes',row['core_precedence'])
+
+    def test_ultracache_and_central_do_not_claim_cart_sharing_without_contract(self):
+        for central in (False,True):
+            with self.subTest(central=central):
+                data=self.view(profile='ultracache',central=central)
+                row=next(row for row in data['cookie_policy_rows'] if row['name']=='woocommerce_cart_hash')
+                self.assertEqual(row['effective_action'],'application-contract')
+                self.assertIn('without that application contract it also passes',row['core_precedence'])
+
+    def test_saved_rename_reset_preserves_actual_legacy_rule_explanation(self):
+        choice=settings('campaign_id','shared',identity='policy:woocommerce-cart-hash')
+        data=self.view(choices=choice,bypass=['woocommerce_*'])
+        row=next(row for row in data['cookie_policy_rows'] if row['id']=='policy:woocommerce-cart-hash')
+        self.assertEqual(row['effective_action'],'shared')
+        self.assertEqual(row['reset_metadata']['effective_action'],'private')
+        self.assertIn('additional bypass cookie rule woocommerce_*',row['reset_metadata']['core_precedence'])
+
+
+if __name__=='__main__':unittest.main()

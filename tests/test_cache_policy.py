@@ -2,6 +2,7 @@
 import concurrent.futures
 import http.client
 import http.server
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -173,7 +174,10 @@ class CachePolicy(unittest.TestCase):
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 source = compatibility.program(profile)
-                old = source.replace('hash_data("hvh-cache-policy-v6");', 'hash_data("hvh-cache-policy-v5");')
+                old, count = re.subn(r'hash_data\("hvh-cache-policy-v[0-9]+"\);',
+                                     'hash_data("hvh-previous-policy-fixture");', source)
+                self.assertEqual(count, 1)
+                self.assertNotEqual(old, source)
                 tail = ('varnish v1 -vcl {\n'+source+'\n}\nclient c2 {\n'+
                         compatibility.request('/page', 'new', cache='MISS')+'\n'+
                         compatibility.request('/page', 'new', cache='HIT')+'\n} -run')

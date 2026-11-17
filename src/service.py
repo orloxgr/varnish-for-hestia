@@ -22,6 +22,9 @@ import hosting_timeouts
 import profile_settings
 import progress
 import cookie_policy
+import cookie_admin
+import cookie_bridge
+import cookie_control
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -119,7 +122,7 @@ def prune(config, keep_names):
             file.unlink()
 
 
-def apply(state, previous, inventory, config, changes=None):
+def apply(state, previous, inventory, config, changes=None, cookie_ops=None, journal=None):
     if changes is None:
         progress.stage('Preparing managed proxy routes')
         changes = routing.plan(state, inventory, config)
@@ -135,9 +138,14 @@ def apply(state, previous, inventory, config, changes=None):
         name = base_name + '_' + secrets.token_hex(4)
     old_name = next(row['name'] for row in rows if row['status'] == 'active')
     active_bytes = ACTIVE.read_bytes()
-    acceptable_active = (old_name in ('boot', base_name, name) or old_name.startswith(base_name + '_') or
-                         old_name.startswith('hvh_reload_'))
-    needs_activation = active_bytes != program.encode() or not acceptable_active
+    # Our immutable generation names identify their complete source digest.
+    # Native boot/reload names do not: the active file may have been restored
+    # independently while a different program is still running. Read source
+    # privately in that case, never print it (it contains site purge tokens).
+    runtime_identified = old_name == base_name or old_name.startswith(base_name + '_')
+    needs_activation = not runtime_identified and admin(config, 'vcl.show', old_name).stdout != program.encode()
+    if not needs_activation:
+        name = old_name
     candidate = CONFIG / 'generations' / (name + '.vcl')
     if needs_activation and name not in {row['name'] for row in rows}:
         write(candidate, program, 0o640, grp.getgrnam('varnish').gr_gid)
@@ -149,6 +157,11 @@ def apply(state, previous, inventory, config, changes=None):
             raise ApplyRolledBack('VCL compilation failed; current service retained') from None
     routing_undo = None
     try:
+        if cookie_ops:
+            progress.stage('Applying connected WordPress cookie policies')
+            cookie_bridge.commit(cookie_ops, lambda: journal())
+        if journal:
+            journal(local_started=True)
         if needs_activation:
             progress.stage('Activating the compiled VCL')
             admin(config, 'vcl.use', name)
@@ -170,6 +183,10 @@ def apply(state, previous, inventory, config, changes=None):
                 old = old_sites.get(site['id'])
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
+                            any(operation['site_id'] == site['id'] and operation['base_digest'] != operation['target_digest']
+                                for operation in (cookie_ops or [])) or
+                            cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
+                            cookie_admin.executable(state.get('cookie_policies'), site.get('cookie_policies')) or
                             old.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) != site.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active') or
                             old_site_rules[site['id']] != new_rules[site['profile']]):
@@ -178,7 +195,7 @@ def apply(state, previous, inventory, config, changes=None):
             purge(config, old_sites[sid]); invalidated += 1
         if active_bytes != program.encode():
             write(ACTIVE, program, 0o640, grp.getgrnam('varnish').gr_gid)
-    except Exception:
+    except Exception as failure:
         try:
             if routing_undo is not None:
                 routing.rollback(*routing_undo)
@@ -187,7 +204,14 @@ def apply(state, previous, inventory, config, changes=None):
                 admin(config, 'vcl.use', old_name)
                 admin(config, 'vcl.discard', name, required=False)
             write(ACTIVE, active_bytes, 0o640, grp.getgrnam('varnish').gr_gid)
-        raise ApplyRolledBack('Apply failed; previous Varnish and web settings were restored') from None
+        # A failed route rollback must retain the native recovery phase. Only
+        # clear it after routes, runtime VCL and durable source were restored.
+        if journal:
+            journal(local_started=False)
+        error = ApplyRolledBack('Apply failed; previous Varnish and web settings were restored')
+        if isinstance(failure, cookie_control.ControlError):
+            error.cookie_control_error = failure
+        raise error from None
     progress.stage('Removing unused addon VCL generations')
     prune(config, [name, old_name])
     return dict(route_result, vcl_activated=needs_activation, invalidated_sites=invalidated, generation=digest)
@@ -197,25 +221,39 @@ def transaction_paths():
     return [ACTIVE, STORE/'desired.json', STORE/'applied.json']
 
 
-def recover_pending(config_override=None):
+def record_cookie_rollback(operations):
+    preserved=cookie_bridge.preserved_newer(operations)
+    if preserved:
+        write_json(STORE/'last-cookie-rollback.json',{'preserved':preserved,
+            'checked_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()})
+    return preserved
+
+
+def recover_pending(config_override=None, cookie_report=None):
     from cache_size import recover
     recover()
     record = transaction.read(STORE, transaction_paths())
     if record is None:
         return False
-    transaction.restore_files(record)
     extra = record['extra']
+    def persist():
+        write_json(STORE/'apply.json', record)
+    cookie_bridge.rollback(extra.get('cookie_operations', []), persist)
+    preserved=record_cookie_rollback(extra.get('cookie_operations', []))
+    if cookie_report is not None:cookie_report.extend(preserved)
+    transaction.restore_files(record)
     before = base64.b64decode(extra['apache']) if extra['apache'] is not None else None
-    routing.rollback(extra['routes'], before)
-    # After a reboot the old management generation name need not exist. The
-    # restored active.vcl is the durable source of truth in either case.
-    routing.run('systemctl', 'restart', 'varnish')
-    wait_healthy(settings() if config_override is None else config_override)
+    if extra.get('local_started', True):
+        routing.rollback(extra['routes'], before)
+        # A remote-only failure never requires restarting native services.
+        # After a reboot the old management generation name need not exist.
+        routing.run('systemctl', 'restart', 'varnish')
+        wait_healthy(settings() if config_override is None else config_override)
     transaction.finish(STORE)
     return True
 
 
-def reconcile(hestia, mutation=None, config_override=None):
+def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
     # Only root-side installation code supplies the override while the public
     # bridge remains unavailable until installation commits.
     recover_pending(config_override)
@@ -224,6 +262,7 @@ def reconcile(hestia, mutation=None, config_override=None):
     with locked_store(STORE) as desired_path:
         old = json.loads(desired_path.read_text()) if desired_path.exists() else None
         state = desired_state(old, inventory, 'varnish')
+        cookie_bridge.reconcile_inventory(state)
         progress.stage('Reading native Nginx timeout settings')
         hosting_timeouts.refresh(state)
         browser_cache.defaults(state)
@@ -234,21 +273,41 @@ def reconcile(hestia, mutation=None, config_override=None):
         progress.stage('Preparing managed proxy routes')
         changes = routing.plan(state, inventory, config)
         render(state, config)
+        force_sites = {state['owners'][owner]['sites'][domain]['id'] for owner, domain in (cookie_scope or [])} if cookie_scope != 'all' else set()
+        cookie_ops = cookie_bridge.plan(state, previous, force=cookie_scope == 'all', force_sites=force_sites)
+        cookie_bridge.inspect(cookie_ops)
         apache = routing.APACHE.read_bytes() if routing.APACHE.exists() else None
-        transaction.begin(STORE, transaction_paths(), {'routes': changes,
-                          'apache': base64.b64encode(apache).decode() if apache is not None else None})
+        extra = {'routes': changes, 'cookie_operations': cookie_ops, 'local_started': False,
+                 'apache': base64.b64encode(apache).decode() if apache is not None else None}
+        transaction.begin(STORE, transaction_paths(), extra)
+        def journal(**updates):
+            extra.update(updates)
+            record = transaction.read(STORE, transaction_paths())
+            record['extra'] = extra
+            write_json(STORE/'apply.json', record)
         try:
-            result = apply(state, previous, inventory, config, changes=changes)
+            cookie_bridge.prepare(cookie_ops, journal)
+            result = apply(state, previous, inventory, config, changes=changes, cookie_ops=cookie_ops, journal=journal)
             progress.stage('Committing desired and applied configuration')
             if old != state:
                 write_json(desired_path, state)
             if previous != state:
                 write_json(applied_path, state)
-        except ApplyRolledBack:
+        except ApplyRolledBack as failure:
+            cookie_bridge.rollback(cookie_ops, journal)
             transaction.finish(STORE)
+            if record_cookie_rollback(cookie_ops):
+                original=getattr(failure,'cookie_control_error',failure)
+                raise cookie_control.ControlError(str(original)+' A newer WordPress policy was preserved while aborting this change.') from None
+            if hasattr(failure, 'cookie_control_error'):
+                raise failure.cookie_control_error from None
             raise
-        except Exception:
-            recover_pending(config_override)
+        except Exception as failure:
+            preserved=[]
+            recover_pending(config_override,cookie_report=preserved)
+            if preserved:
+                cause=str(failure) if isinstance(failure,cookie_control.ControlError) else 'The change failed.'
+                raise cookie_control.ControlError(cause+' A newer WordPress policy was preserved while aborting this change.') from None
             raise
         transaction.finish(STORE)
         write_json(STORE / 'last-run.json', {'ok': True, 'checked_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(), **result})
@@ -284,19 +343,37 @@ def request(hestia, owner_name, action, payload):
         elif action == 'configure-cookie-delivery':
             owner['sites'][domain]['cookie_delivery'] = cookie_policy.normalize_delivery(
                 payload.get('cookie_delivery'), domain, owner['sites'])
+        elif action == 'configure-cookie-policies':
+            owner['sites'][domain]['cookie_policies'] = cookie_admin.normalize(payload.get('cookie_policies'))
+            if 'cookie_integration' in payload:
+                import cookie_control
+                site = owner['sites'][domain]
+                try:
+                    site['cookie_integration'] = cookie_control.integration(payload['cookie_integration'], domain, site.get('aliases', []))
+                    site.pop('cookie_integration_notice',None)
+                except ValueError as error:
+                    raise cookie_admin.CookieChoiceError(str(error)) from None
         elif action == 'token':
             value = payload.get('password')
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
                 raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-cookie-delivery', 'configure-browser-cache', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies') and not isinstance(domain, str):
         raise ValueError('Select a site')
-    state, config, result = reconcile(hestia, mutate)
+    if action == 'configure-cookie-policies':
+        state, config, result = reconcile(hestia, mutate, cookie_scope={(owner_name,domain)})
+    else:
+        state, config, result = reconcile(hestia, mutate)
     owner = state['owners'][owner_name]
     if domain is not None and domain not in owner['sites']:
         raise ValueError('Domain is not owned by this account')
+    if action in ('cookie-policies', 'configure-cookie-policies'):
+        from cookie_views import view
+        response = view(state, owner_name, domain)
+        response['cookie_policy_saved'] = action == 'configure-cookie-policies'
+        return response
     response = {'ok': True, 'owner': owner_name, 'enabled': owner['enabled'],
                 'allowed': owner['package'] not in config.get('denied_packages', []) and
                            (config.get('allowed_packages') is None or owner['package'] in config['allowed_packages']),

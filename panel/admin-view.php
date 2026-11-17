@@ -7,6 +7,7 @@ $profiles = ['basic' => 'Basic', 'ultracache' => 'UltraCache'];
 <div class="toolbar"><div class="toolbar-inner"><div class="toolbar-buttons"><a class="button button-secondary" href="/list/web/" title="Return to the Hestia website list."><i class="fas fa-arrow-left icon-blue"></i>Back</a></div></div></div>
 <div class="container"><div class="form-container form-container-wide">
     <h1 class="u-mb10"><?= $escape($meta['title']) ?></h1>
+    <p class="u-mb20"><a class="button button-secondary" href="?cookies=1" title="Edit central cookie cache policies for all websites. Account owners can override choices for their own sites.">Cookie policies · all websites</a></p>
     <p class="u-mb20">All accounts · <?= $escape($data['total_accounts'] ?? 0) ?> accounts · <?= $escape($data['total_sites'] ?? 0) ?> websites</p>
     <?php if ($pageError !== ''): ?><div class="alert alert-danger u-mb20" role="alert"><p><?= $escape($pageError) ?></p></div>
     <?php elseif (!empty($data['memory_size_saved'])): ?><div class="alert alert-success u-mb20" role="status"><p>Cache size: <?= $escape($data['memory_budget_mb']) ?> MiB. <?= !empty($data['service_restarted']) ? 'Varnish was restarted; the cache will refill as websites are visited.' : 'The size was unchanged; no restart was needed.' ?></p></div>

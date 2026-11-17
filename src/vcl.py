@@ -9,6 +9,8 @@ import cookie_policy
 import browser_cache
 import hosting_timeouts
 import profile_settings
+import cookie_admin
+import cookie_control
 
 PROFILES = profile_settings.PROFILES
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,8 +58,10 @@ def render(state, config):
             if origin not in backends:
                 backends[origin] = 'hvh_origin_' + str(len(backends))
             browser_cache.selected(site, state)
-            sites.append(dict(site, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
+            sites.append(dict(site, domain=domain, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
                               cookie_delivery=cookie_policy.normalize_delivery(site.get('cookie_delivery'), domain, owner['sites']),
+                              cookie_contract=cookie_control.cache_contract(site.get('cookie_integration'),domain,site['aliases'],
+                                  state.get('cookie_policies'),site.get('cookie_policies')),
                               owned_domains=list(owner['sites']),
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
                               response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
@@ -81,12 +85,16 @@ def render(state, config):
                             'set req.http.X-HVH-Profile = ' + quoted(site['profile']) + ';\n' +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
                             delivery + '\n' +
+                            ('set req.http.X-SCP-Cookie-Contract = ' + quoted(site['cookie_contract']) + ';\n') +
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
-    custom_recv, custom_response, cookie_bypass = [], [], []
+    custom_recv, custom_response, cookie_bypass, cookie_rules = [], [], [], []
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
+        rule = cookie_admin.compile_vcl(state.get('cookie_policies'), site.get('cookie_policies'))
+        if rule:
+            cookie_rules.append(condition + ' {\n' + rule + '\n}')
         purge.append(condition + ' { if (req.http.X-Hestia-Varnish-Token != ' + quoted(site['token']) +
                      ' && req.http.X-UltraCache-Token != ' + quoted(site['token']) +
                      ') { return (synth(403, "Purge token denied")); } }')
@@ -98,7 +106,10 @@ def render(state, config):
         if site['bypass_cookies']:
             cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
                 cookie_policy.vcl_pattern(site['bypass_cookies']) +
-                ') { set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
+                ') { set req.http.X-SCP-Cookie-Name = regsub(req.http.Cookie, {"^.*?' +
+                cookie_policy.pattern(site['bypass_cookies']) + '.*$"}, "\\2");' +
+                ' set req.http.X-SCP-Cookie-Role = "site-bypass";' +
+                ' set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
     text.append('''sub vcl_recv {
   call scp_init;''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
@@ -150,6 +161,7 @@ sub vcl_hash {
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
+  call scp_cookie_hash;
   hash_data("hvh-cache-policy-v7");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
@@ -194,6 +206,6 @@ sub vcl_deliver {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy())
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules)))
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'

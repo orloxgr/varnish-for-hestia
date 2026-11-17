@@ -1,0 +1,56 @@
+"""Native Hestia scope adapter; common cookie data never contains credentials."""
+import cookie_admin
+import cookie_database
+import cookie_recognition
+from cookie_catalogue import load_catalogue
+
+
+def view(state, owner=None, domain=None):
+    central = cookie_admin.normalize(state.get('cookie_policies'))
+    site = None
+    if owner is not None:
+        if domain not in state['owners'][owner]['sites']:
+            raise ValueError('Domain is not owned by this account')
+        site = cookie_admin.normalize(state['owners'][owner]['sites'][domain].get('cookie_policies'))
+    database = cookie_recognition.database(cookie_database.directory(), cookie_database.BUNDLED)
+    integration = None
+    if owner is not None:
+        import cookie_control
+        entry = state['owners'][owner]['sites'][domain]
+        integration = cookie_control.integration(entry.get('cookie_integration'), domain, entry.get('aliases', []))
+    catalogue = load_catalogue()
+    rows = cookie_admin.table(database, catalogue, central, site)
+    extra=[]
+    profile=None
+    if owner is not None:
+        import cookie_policy
+        extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
+        profile=state['owners'][owner]['sites'][domain]['profile']
+    def explain(metadata,match):
+        cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
+                   cookie_admin._matches(entry['match'],match)),None)
+        if cart:
+            metadata['core_precedence']='Reviewed WooCommerce rule '+cart['id']+' takes precedence over the table choice. '
+            if profile=='basic':
+                metadata['effective_action']='private'
+                metadata['core_precedence']+='Basic passes this cart/session request to the application.'
+            else:
+                metadata['effective_action']='application-contract'
+                metadata['core_precedence']+='Basic passes this cart/session request. UltraCache shares only an approved ESI parent with private fragments; without that application contract it also passes.'
+        for name in extra:
+            pattern={'kind':'prefix' if name.endswith('*') else 'exact','value':name.removesuffix('*')}
+            if cookie_admin._matches(pattern,match):
+                metadata['effective_action']='private'
+                metadata['core_precedence']='This website’s additional bypass cookie rule '+name+' takes precedence over the table choice.'
+                break
+    for row in rows:
+        explain(row,row['match'])
+        explain(row['reset_metadata'],row['reset_match'])
+    return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,
+            'cookie_scope': 'central' if owner is None else 'site', 'domain': domain,
+            'cookie_policies': central if owner is None else site,
+            'cookie_policy_rows': rows,
+            'cookie_policy_saved': False,
+            'cookie_integration': integration,
+            'cookie_integration_notice': None if owner is None else state['owners'][owner]['sites'][domain].get('cookie_integration_notice'),
+            'cookie_profile': None if owner is None else state['owners'][owner]['sites'][domain]['profile']}

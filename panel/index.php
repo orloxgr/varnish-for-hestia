@@ -47,6 +47,10 @@ if ($requestedOwner !== null) {
 }
 $adminOverview = $isAdmin && $requestedOwner === null;
 $action = $adminOverview ? 'admin-inventory' : 'inventory';
+$cookieView = ($_GET['cookies'] ?? '') === '1';
+if ($cookieView) {
+    $action = $adminOverview ? 'admin-cookie-policies' : 'cookie-policies';
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_string($_POST['token'] ?? null) ||
         !hash_equals($_SESSION['token'] ?? '', $_POST['token']) || !empty($read_only)) {
@@ -60,7 +64,7 @@ if (!is_string($action)) {
     $respond(400, ['ok' => false, 'error' => 'Invalid operation.']);
 }
 $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
-            'domain' => $_POST['domain'] ?? null,
+            'domain' => $_POST['domain'] ?? ($cookieView ? ($_GET['domain'] ?? null) : null),
             'enabled' => ($_POST['enabled'] ?? '') === '1',
             'profile' => $_POST['profile'] ?? null,
             'password' => $_POST['password'] ?? null,
@@ -71,8 +75,20 @@ $request = ['actor' => $actor, 'owner' => $owner, 'action' => $action,
                 'consent_value' => $_POST['fbp_consent_value'] ?? 'allow',
                 'domain' => $_POST['fbp_domain'] ?? '']],
             'custom_backend_response' => $_POST['custom_backend_response'] ?? ''];
+if (in_array($action, ['admin-cookie-policies-save', 'configure-cookie-policies'], true)) {
+    $rawChoices = $_POST['cookie_policies'] ?? '';
+    $request['cookie_policies'] = is_string($rawChoices) ? json_decode($rawChoices, true) : false;
+    if (!is_array($request['cookie_policies'])) {
+        $respond(400, ['ok' => false, 'error' => 'Cookie choices must be a JSON object.']);
+    }
+    $cookieView = true;
+    if ($action === 'configure-cookie-policies' && isset($_POST['cookie_integration_url'])) {
+        $request['cookie_integration'] = ['enabled' => ($_POST['cookie_integration_enabled'] ?? '') === '1',
+            'url' => $_POST['cookie_integration_url'] ?? ''];
+    }
+}
 if (str_starts_with((string)$action, 'admin-')) {
-    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update'], true)) {
+    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'], true)) {
         $respond(403, ['ok' => false, 'error' => 'Administrator access required.']);
     }
     $adminOverview = true;
@@ -139,7 +155,11 @@ $bridge = static function (array $payload) use ($root, $meta): array {
 [$code, $data] = $bridge($request);
 $pageError = '';
 if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
+    $cookieValidationError = is_array($data) && in_array($data['stage'] ?? '', ['validate-cookie-policies', 'wordpress-cookie-control'], true) ? (string)($data['error'] ?? '') : '';
     if ($jsonResponse) {
+        if ($cookieValidationError !== '') {
+            $respond(400, ['ok' => false, 'stage' => $data['stage'], 'error' => $cookieValidationError]);
+        }
         $respond(403, ['ok' => false, 'error' => 'Request refused or service unavailable.']);
     }
     // Hestia intercepts 4xx pages. Render form errors normally; JSON requests
@@ -161,7 +181,10 @@ if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
     if ($action === 'admin-memory-size') {
         $pageError = 'The cache size could not be applied. Check the current size below and the native Varnish service.';
     }
-    [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner, 'action' => $adminOverview ? 'admin-inventory' : 'inventory']);
+    if ($cookieValidationError !== '') $pageError = $cookieValidationError;
+    [$status, $current] = $bridge(['actor' => $actor, 'owner' => $owner,
+        'action' => $cookieView ? ($adminOverview ? 'admin-cookie-policies' : 'cookie-policies') : ($adminOverview ? 'admin-inventory' : 'inventory'),
+        'domain' => $request['domain']]);
     $data = $status === 0 && is_array($current) && !empty($current['ok']) ? $current : ['sites' => []];
 } elseif ($jsonResponse) {
     $respond(200, $data);
@@ -212,4 +235,4 @@ $formFields = static function (string $operation, ?string $domain = null) use ($
         echo '<input type="hidden" name="domain" value="' . $escape($domain) . '">';
     }
 };
-require $adminOverview ? '__INSTALL_ROOT__/panel/admin-view.php' : '__INSTALL_ROOT__/panel/view.php';
+require $cookieView ? '__INSTALL_ROOT__/panel/cookies-view.php' : ($adminOverview ? '__INSTALL_ROOT__/panel/admin-view.php' : '__INSTALL_ROOT__/panel/view.php');

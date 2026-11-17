@@ -9,6 +9,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
+sys.path.insert(0, str(ROOT / 'shared'))
+from cookie_admin import CookieChoiceError
+from cookie_control import ControlError
 META = json.loads((ROOT / 'addon.json').read_text())
 HESTIA = Path('/usr/local/hestia')
 ENV = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'HESTIA': str(HESTIA), 'LANG': 'C.UTF-8'}
@@ -38,7 +41,7 @@ def dispatch(request):
     actor_data = hestia('v-list-user', actor, 'json').get(actor)
     action = request.get('action', 'inventory')
     is_admin = bool(actor_data and actor_data.get('ROLE') == 'admin' and actor_data.get('SUSPENDED') != 'yes')
-    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update'):
+    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'):
         if not is_admin:
             raise RequestError('Administrator access required.')
         from administration import request as admin_request
@@ -117,6 +120,12 @@ def locked_main(raw=None):
             raise RequestError('Expected a JSON object.')
         result = dispatch(request)
         code = 0
+    except CookieChoiceError as error:
+        result = {'ok': False, 'stage': 'validate-cookie-policies', 'error': str(error)}
+        code = 1
+    except ControlError as error:
+        result = {'ok': False, 'stage': 'wordpress-cookie-control', 'error': str(error)}
+        code = 1
     except (RequestError, ValueError, KeyError, TypeError, RuntimeError, subprocess.SubprocessError, OSError):
         # Never echo raw CLI output, credentials or a caller-controlled value.
         result = {'ok': False, 'error': 'Request refused or Hestia unavailable.'}

@@ -5,6 +5,7 @@ import server_settings
 import browser_cache
 import profile_settings
 import cookie_database
+import cookie_admin
 
 
 def mutate(state, payload, kind):
@@ -92,8 +93,17 @@ def request(hestia, action, payload, kind):
             match = re.search(rb'Value is:\s*([0-9]+(?:\.[0-9]+)?)', native.stdout)
             result['service_first_byte_timeout_seconds'] = float(match[1]) if match else None
         return result
-    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update'):
+    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'):
         raise ValueError('Invalid administrator action')
+    if action in ('admin-cookie-policies', 'admin-cookie-policies-save'):
+        from cookie_views import view
+        def save(state, config):
+            state['cookie_policies'] = cookie_admin.normalize(payload.get('cookie_policies'))
+        state, _, _ = service.reconcile(hestia, save if action.endswith('-save') else None,
+                                      cookie_scope='all' if action.endswith('-save') else None)
+        result = view(state)
+        result['cookie_policy_saved'] = action.endswith('-save')
+        return result
     if action in ('admin-cookie-database-settings', 'admin-cookie-database-update'):
         config = service.settings()
         state = json.loads((service.STORE/'applied.json').read_text())

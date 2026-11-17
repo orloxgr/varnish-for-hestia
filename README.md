@@ -70,6 +70,33 @@ token with repository access at the password prompt, not your GitHub password.
 
 ## Cookies on cached pages
 
+**Cookie policies** opens the searchable editor. Administrators have central
+choices under **All accounts**; account owners edit only their own websites.
+The table shows stable IDs, literal cookie names/prefixes, descriptions, actual
+actions, separate proposals, confidence and precedence. You can add rows, paste
+tab-separated rows from Excel, select rows for bulk changes, and reset local
+choices to the inherited policy. Save validates and compiles the actual VCL.
+
+- **Automatic:** retain the existing handling for this match.
+- **Shared HTML:** omit this value from Cookie variation, preserving the real
+  cookie in the browser and origin request.
+- **Public variant:** include the selected cookie pairs in lookup even without
+  origin `Vary: Cookie`; tell downstream caches about Cookie variation too.
+- **Private:** pass the request to the application and deliver it as no-store.
+
+Site choices precede central choices; exact names precede longer-to-shorter
+prefixes within each scope. Core login/session/cart and origin privacy still
+apply. Database-derived estimates are labeled as inferred and require an
+explicit choice; category labels never activate a policy. Upstream updates do
+not overwrite saved choices. Only executable changes invalidate the affected
+website cache; editing a description does not purge pages.
+
+Basic remains independent of WordPress. The optional per-site **WordPress
+integration** targets an explicitly configured compatible UltraCache control
+endpoint using the existing site token. Its cross-engine PHP/drop-in/Apache
+Static integration and recovery validation are in progress; it is not a generic
+cookie issuer or a substitute for the actual application/provider integration.
+
 Under each website, **Cookies on cached pages** can deliver a missing Meta
 `_fbp` separately from public cached HTML. Enable it only for an existing Meta
 integration and enter the exact cookie/value that expresses the visitor's
@@ -97,6 +124,15 @@ The reviewed cookie catalogue is local, versioned, and shared with Webuzo and
 UltraCache. The separately attributed Open Cookie Database snapshot is for
 recognition; its categories do not automatically authorize caching or issuing
 cookies. Unknown cookies do not gain a new automatic bypass rule.
+
+The bundled assessment file covers 2,288 source records: 46 match existing
+reviewed policies and 2,242 are explicitly labeled low-confidence inferences.
+These estimates describe possible initial server HTML effects; they are not
+independent verification of each provider or a source of automatic new rules.
+Maintainers can reproduce the editorial file with
+`tools/build-cookie-assessments.py --source open-cookie-database.csv --revision <upstream-commit> --output assessments.json`.
+The tool records the source SHA-256, revision, reasons and confidence. It does
+not download data, change installed settings or activate its suggestions.
 
 ### Automatic recognition database updates
 
