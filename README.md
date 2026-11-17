@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.18.2** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.19.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -72,12 +72,12 @@ token with repository access at the password prompt, not your GitHub password.
 
 **Cookie policies** opens the searchable editor. Administrators have central
 choices under **All accounts**; account owners edit only their own websites.
-The table shows stable IDs, literal cookie names/prefixes, descriptions, actual
-actions, separate proposals, confidence and precedence. You can add rows, paste
+The table shows literal cookie names/prefixes, descriptions and concrete cache
+actions. Internal IDs stay hidden. Equal-height fields keep rows compact; the
+Why / precedence button opens the full-width behavior, evidence and priority. You can add rows, paste
 tab-separated rows from Excel, select rows for bulk changes, and reset local
 choices to the inherited policy. Save validates and compiles the actual VCL.
 
-- **Automatic:** retain the existing handling for this match.
 - **Shared HTML:** omit this value from Cookie variation, preserving the real
   cookie in the browser and origin request.
 - **Public variant:** include the selected cookie pairs in lookup even without
@@ -86,8 +86,10 @@ choices to the inherited policy. Save validates and compiles the actual VCL.
 
 Site choices precede central choices; exact names precede longer-to-shorter
 prefixes within each scope. Core login/session/cart and origin privacy still
-apply. Database-derived estimates are labeled as inferred and require an
-explicit choice; category labels never activate a policy. Upstream updates do
+apply. Every bundled cookie has our prefilled, executable decision. Estimates
+are labeled as inferred; categories never select an action. Legacy Automatic
+choices resolve to the matching bundled decision, or Public variant when none
+exists. A prefix never borrows the decision of its first child. Upstream updates do
 not overwrite saved choices. Only executable changes invalidate the affected
 website cache; editing a description does not purge pages.
 
@@ -139,14 +141,30 @@ UltraCache. The separately attributed Open Cookie Database snapshot is for
 recognition; its categories do not automatically authorize caching or issuing
 cookies. Unknown cookies do not gain a new automatic bypass rule.
 
-The bundled assessment file covers 2,288 source records: 46 match existing
-reviewed policies and 2,242 are explicitly labeled low-confidence inferences.
-These estimates describe possible initial server HTML effects; they are not
-independent verification of each provider or a source of automatic new rules.
-Maintainers can reproduce the editorial file with
-`tools/build-cookie-assessments.py --source open-cookie-database.csv --revision <upstream-commit> --output assessments.json`.
-The tool records the source SHA-256, revision, reasons and confidence. It does
-not download data, change installed settings or activate its suggestions.
+The bundled assessment covers 2,288 source records, with 2,293 editable rows
+including the additional reviewed rules. Every row has Shared HTML, Public
+variant or Private handling. The evidence distinguishes reviewed rules from
+inferences; an inference is not a claim of site-specific verification. Where
+the source does not establish identical initial HTML, our concrete decision is
+a Public variant, without forcing a bypass. Original cookies, consent, core
+privacy and the verified WooCommerce/ESI contract remain authoritative.
+
+The daily upstream download updates recognition metadata, not executable
+choices. Versioned editorial defaults are shipped with plugin updates; user
+snapshots survive both kinds of update. Deleted upstream entries remain visible
+while their bundled rule is active. Newly recognized names outside the bundle
+show a concrete proposal labelled recognition-only; choosing it and saving
+activates it without silently changing site behavior during a data download. Maintainers rebuild the pinned source:
+`python3 tools/build-cookie-assessments.py --source open-cookie-database.csv --revision <full-upstream-commit> --output shared/cookie-assessments.json`.
+This writes both assessments and the exact generated `cookie-defaults.json`
+snapshot. It records source SHA-256, revision, reasons and confidence. It never
+contacts installed websites. A connected WordPress installation receives that
+same flattened default/admin snapshot plus its site overrides through the
+existing signed prepare/commit protocol. Its committed snapshot remains frozen
+until the next successful synchronization. Disconnect sends an empty signed
+clear and returns the application runtime to its standalone bundled defaults.
+The signed empty snapshot identity remains separate from its actual runtime
+digest, so recovery can restore the previous managed ownership and choices.
 
 ### Automatic recognition database updates
 

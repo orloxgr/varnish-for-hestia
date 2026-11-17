@@ -14,7 +14,7 @@ class CookieVaryContract(unittest.TestCase):
     run_policy=test_cache_policy.CachePolicy.run_policy
 
     def headers(self,choices,marker='policy-only',digest=None):
-        digest=digest or cookie_control.effective_digest('example.test',cookie_control.snapshot(choices))
+        digest=digest or cookie_control.effective_digest('example.test',cookie_control.materialized_snapshot(choices))
         return ['Vary: Cookie','X-UltraCache-Cookie-Settings: '+digest,'X-UltraCache-Cookie-Vary: '+marker]
 
     def test_matching_policy_shares_unknown_automatic_ids_without_losing_variants(self):
@@ -36,6 +36,23 @@ class CookieVaryContract(unittest.TestCase):
                          http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=dave'],cache='HIT' if connected else 'MISS')],
                         program=program(profile,choices,connected=connected))
 
+    def test_matching_contract_diagnostics_do_not_call_unrelated_ids_variants(self):
+        choices=settings('currency','variant')
+        self.run_policy('basic',[http.response('/page','EUR',headers=self.headers(choices))],
+            [http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=alice'],cache='MISS')+
+             '\nexpect resp.http.X-Cache-Cookie-Names == "currency"',
+             http.request('/page','EUR',headers=['Cookie: currency=EUR; vendor_id=bob'],cache='HIT')+
+             '\nexpect resp.http.X-Cache-Cookie-Names == "currency"'],
+            program=program('basic',choices,connected=True))
+
+    def test_empty_origin_settings_cannot_approve_an_unconnected_policy(self):
+        choices=settings('preference','shared')
+        self.run_policy('basic',
+            [http.response('/empty',visitor,headers=['Vary: Cookie','X-UltraCache-Cookie-Settings:',
+                'X-UltraCache-Cookie-Vary: policy-only']) for visitor in ('alice','bob')],
+            [http.request('/empty',visitor,headers=['Cookie: vendor_id='+visitor],cache='MISS') for visitor in ('alice','bob')],
+            program=program('basic',choices,connected=False))
+
     def test_mixed_or_mismatched_or_unconnected_origin_vary_remains_authoritative(self):
         choices=settings('currency','variant')
         for profile in http.PROFILES:
@@ -55,7 +72,7 @@ class CookieVaryContract(unittest.TestCase):
 
     def test_browser_cannot_supply_origin_provenance(self):
         choices=settings('currency','variant')
-        digest=cookie_control.effective_digest('example.test',cookie_control.snapshot(choices))
+        digest=cookie_control.effective_digest('example.test',cookie_control.materialized_snapshot(choices))
         forged=['X-UltraCache-Cookie-Settings: '+digest,'X-UltraCache-Cookie-Vary: policy-only','X-SCP-Cookie-Contract: forged']
         self.run_policy('basic',
             [http.response('/page',visitor,headers=['Vary: Cookie'],expect=[

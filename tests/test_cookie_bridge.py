@@ -19,6 +19,15 @@ def fixture():
 
 
 class CookieBridge(unittest.TestCase):
+    def test_default_execution_upgrade_syncs_but_editorial_version_does_not(self):
+        before=fixture();bridge.reconcile_inventory(before)
+        after=copy.deepcopy(before);after['cookie_defaults_version']='editorial-only'
+        self.assertEqual(bridge.plan(after,before),[])
+        after['cookie_defaults_digest']='new-execution'
+        planned=bridge.plan(after,before)
+        self.assertEqual(len(planned),1)
+        self.assertEqual(planned[0]['policy'],control.materialized_snapshot())
+
     def test_lost_alias_ownership_disables_connection_without_contacting_new_owner(self):
         before=fixture();entry=before['owners']['alice']['sites']['one.example']
         entry['aliases']=['old.example'];entry['cookie_integration']['url']='https://old.example'+control.PATH
@@ -138,7 +147,7 @@ class CookieBridge(unittest.TestCase):
             bridge.prepare(operations,persist)
             self.assertEqual(operations[1]['phase'],'deferred')
             bridge.commit(operations,persist)
-            self.assertEqual(current,control.effective_digest('one.example',control.snapshot(after['cookie_policies'])))
+            self.assertEqual(current,control.effective_digest('one.example',control.materialized_snapshot(after['cookie_policies'])))
             bridge.rollback(operations,persist)
         self.assertEqual(current,original)
         self.assertEqual(sequence,['status','status','prepare','commit','status','prepare','commit','rollback','rollback'])

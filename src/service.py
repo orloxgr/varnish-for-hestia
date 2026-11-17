@@ -185,6 +185,7 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
                             any(operation['site_id'] == site['id'] and operation['base_digest'] != operation['target_digest']
                                 for operation in (cookie_ops or [])) or
+                            state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
                             cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
                             cookie_admin.executable(state.get('cookie_policies'), site.get('cookie_policies')) or
                             old.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) != site.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) or

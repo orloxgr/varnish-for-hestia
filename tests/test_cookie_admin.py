@@ -33,7 +33,7 @@ class CookieAdmin(unittest.TestCase):
         self.assertEqual(value, before)
 
     def test_untrusted_metadata_never_becomes_source(self):
-        for name in ['x"};return(pass);#', 'x\ninclude', '../secrets', 'a;b']:
+        for name in ['x"};return(pass);#', 'x\ninclude', 'a=b', 'a;b']:
             with self.subTest(name=name), self.assertRaises(ValueError):
                 admin.compile_vcl(settings(name, 'private'))
         value = settings('literal.+name', 'shared')
@@ -48,18 +48,20 @@ class CookieAdmin(unittest.TestCase):
         choices = settings('custom_cookie', 'variant', identity='ocd:fixture')
         rows = admin.table(database, catalogue, site=choices)
         row = next(r for r in rows if r['id'] == 'ocd:fixture')
-        self.assertEqual((row['action'], row['scope'], row['proposal']), ('variant', 'site', 'automatic'))
+        self.assertEqual((row['action'], row['scope'], row['proposal']), ('variant', 'site', 'variant'))
         self.assertTrue(row['override'])
         database['records'][0]['category'] = 'Security'
-        self.assertEqual(admin.executable(site=choices), [('site', 'exact', 'custom_cookie', 'variant')])
+        self.assertIn(('site', 'exact', 'custom_cookie', 'variant'), admin.executable(site=choices))
         self.assertEqual(next(r for r in admin.table(database, catalogue, site=choices) if r['id'] == 'ocd:fixture')['action'], 'variant')
 
-    def test_only_explicit_actions_compile_and_metadata_edits_do_not_purge(self):
+    def test_bundled_actions_compile_and_metadata_edits_do_not_purge(self):
         value = settings('currency', 'variant')
         before = admin.executable(value)
         value['rules'][0].update(description='A better description', id='custom:renamed')
         self.assertEqual(before, admin.executable(value))
-        self.assertEqual(admin.compile_vcl(), '')
+        self.assertIn('bundled:shared', admin.compile_vcl())
+        self.assertIn('bundled:variant', admin.compile_vcl())
+        self.assertIn('bundled:private', admin.compile_vcl())
 
     def test_shadowed_central_changes_do_not_invalidate_site(self):
         site = settings('foo', 'shared')
@@ -74,7 +76,7 @@ class CookieAdmin(unittest.TestCase):
         rule = settings('campaign_id', 'shared', identity='policy:' + private['id'])
         row = next(row for row in admin.table({'records': []}, catalogue, site=rule)
                    if row['id'] == 'policy:' + private['id'])
-        self.assertEqual((row['action'], row['effective_action'], row['proposal']), ('shared', 'shared', 'automatic'))
+        self.assertEqual((row['action'], row['effective_action'], row['proposal']), ('shared', 'shared', 'variant'))
         self.assertEqual(row['provider'], '')
         self.assertEqual(row['reset_match'], private['match'])
         self.assertNotIn('requires private handling', row['core_precedence'])

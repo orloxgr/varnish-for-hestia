@@ -1,5 +1,6 @@
 """Render shared Varnish policy with immutable site/host/backend boundaries."""
 import ipaddress
+import json
 from pathlib import Path
 import re
 
@@ -90,11 +91,13 @@ def render(state, config):
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
     custom_recv, custom_response, cookie_bypass, cookie_rules = [], [], [], []
+    cookie_groups={}
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
-        rule = cookie_admin.compile_vcl(state.get('cookie_policies'), site.get('cookie_policies'))
-        if rule:
-            cookie_rules.append(condition + ' {\n' + rule + '\n}')
+        # Identical effective rules are emitted once, irrespective of the
+        # number of hosted domains. IDs/descriptions do not multiply VCL.
+        key=json.dumps(cookie_admin.concrete(site.get('cookie_policies')),sort_keys=True)
+        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'ids':[]})['ids'].append(site['id'])
         purge.append(condition + ' { if (req.http.X-Hestia-Varnish-Token != ' + quoted(site['token']) +
                      ' && req.http.X-UltraCache-Token != ' + quoted(site['token']) +
                      ') { return (synth(403, "Purge token denied")); } }')
@@ -110,6 +113,9 @@ def render(state, config):
                 cookie_policy.pattern(site['bypass_cookies']) + '.*$"}, "\\2");' +
                 ' set req.http.X-SCP-Cookie-Role = "site-bypass";' +
                 ' set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
+    for group in cookie_groups.values():
+        condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
+        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True)+'\n}')
     text.append('''sub vcl_recv {
   call scp_init;''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
@@ -162,7 +168,7 @@ sub vcl_hash {
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
   call scp_cookie_hash;
-  hash_data("hvh-cache-policy-v7");
+  hash_data("hvh-cache-policy-v8");
   hash_data(req.http.X-HVH-Site);
   hash_data(req.http.host);
   hash_data(req.http.X-SCP-Key-URL);
@@ -207,5 +213,7 @@ sub vcl_deliver {
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
     text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules)))
+    if cookie_groups:
+        text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
     return '\n'.join(text) + '\n'

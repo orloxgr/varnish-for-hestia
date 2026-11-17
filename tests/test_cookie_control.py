@@ -19,13 +19,13 @@ class CookieControl(unittest.TestCase):
         connection={'enabled':True,'url':'https://example.test'+control.PATH}
         central=settings('membership','private')
         self.assertEqual(control.cache_contract(connection,'example.test',central=central),
-            control.effective_digest('example.test',control.snapshot(central)))
+            control.effective_digest('example.test',control.materialized_snapshot(central)))
         for action in ('automatic','shared','variant','private'):
             site=settings('membership',action)
             self.assertEqual(control.cache_contract(connection,'example.test',central=central,site=site),
-                control.effective_digest('example.test',control.snapshot(central,site)))
+                control.effective_digest('example.test',control.materialized_snapshot(central,site)))
         self.assertEqual(control.cache_contract(connection,'example.test'),
-            control.effective_digest('example.test',control.snapshot()))
+            control.effective_digest('example.test',control.materialized_snapshot()))
         self.assertEqual(control.cache_contract(dict(connection,enabled=False),'example.test',central=central),'')
 
     def test_inactive_url_does_not_block_work_but_enabling_checks_ownership(self):

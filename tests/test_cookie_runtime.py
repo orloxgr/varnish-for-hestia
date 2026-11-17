@@ -1,5 +1,7 @@
 """Actual native boot/reload source, independently restored disk configuration."""
 import hashlib
+import http.client
+import http.server
 import os
 from pathlib import Path
 import shutil
@@ -8,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -53,14 +56,17 @@ class CookieRuntime(unittest.TestCase):
                 try:process.wait(timeout=10)
                 except subprocess.TimeoutExpired:process.kill();process.wait()
         self.addCleanup(stop)
-        for _ in range(100):
+        # Native compilation precedes CLI readiness. A large valid policy is
+        # already slower than the old 100 * 50ms fixture window on this VM.
+        deadline=time.monotonic()+60
+        while time.monotonic()<deadline:
             if process.poll() is not None:
                 self.fail('Native startup failed: '+(self.root/'native.log').read_text())
             try:
                 service.admin(self.config,'status')
                 return process
             except (OSError,RuntimeError,subprocess.SubprocessError):time.sleep(.05)
-        self.fail('Native test startup did not expose its CLI')
+        self.fail('Native test startup did not expose its CLI: '+(self.root/'native.log').read_text())
 
     def apply(self):
         with patch.object(service.routing,'apply',return_value=({},None)), \
@@ -69,6 +75,59 @@ class CookieRuntime(unittest.TestCase):
             result=service.apply(self.state,self.state,{},self.config,changes=[])
         purge.assert_not_called()
         return result
+
+    def runtime_marker(self):
+        # Exercise the active program without a backend or a truncated source
+        # dump. This hostname is deliberately outside the owned inventory.
+        connection=http.client.HTTPConnection('127.0.0.1',self.config['listen_port'],timeout=10)
+        try:
+            connection.request('GET','/runtime-proof',headers={'Host':'unowned.invalid'})
+            response=connection.getresponse();response.read()
+            self.assertEqual(response.status,421)
+            return response.getheader('X-Owned-Runtime')
+        finally:connection.close()
+
+    def test_warm_legacy_merged_object_is_unreachable_after_namespace_upgrade(self):
+        class Origin(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                body=self.headers.get('Cookie','').split('=',1)[-1].encode()
+                self.send_response(200)
+                for key,value in [('Content-Type','text/html'),('Content-Length',str(len(body))),
+                    ('Cache-Control','public,max-age=180'),('Vary','Cookie'),
+                    ('X-UltraCache-Cookie-Settings',''),('X-UltraCache-Cookie-Vary','policy-only')]:
+                    self.send_header(key,value)
+                self.end_headers();self.wfile.write(body)
+            def log_message(self,*args):pass
+        origin=http.server.ThreadingHTTPServer(('127.0.0.1',0),Origin)
+        thread=threading.Thread(target=origin.serve_forever,daemon=True);thread.start()
+        def close_origin():origin.shutdown();origin.server_close();thread.join(timeout=10)
+        self.addCleanup(close_origin)
+        self.config['origin_port']=origin.server_address[1]
+        for owner in self.state['owners'].values():
+            for site in owner['sites'].values():site['origin_ip']='127.0.0.1'
+        host=next(iter(next(iter(self.state['owners'].values()))['sites']))
+        self.program=service.render(self.state,self.config).encode()
+        guard_only=self.program.replace(b'hvh-cache-policy-v8',b'hvh-cache-policy-v7')
+        legacy=guard_only.replace(b'bereq.http.X-SCP-Cookie-Contract ~ "^[0-9a-f]{64}$" &&',
+                                  b'bereq.http.X-SCP-Cookie-Contract &&')
+        def visit(visitor):
+            connection=http.client.HTTPConnection('127.0.0.1',self.config['listen_port'],timeout=10)
+            try:
+                connection.request('GET','/warm',headers={'Host':host,'Cookie':'vendor_id='+visitor})
+                response=connection.getresponse();return response.read().decode(),response.getheader('X-Hestia-Varnish')
+            finally:connection.close()
+        with patch.object(service,'CONFIG',self.root),patch.object(service,'ACTIVE',self.active):
+            process=self.start(legacy);self.active.write_bytes(legacy)
+            self.assertEqual(visit('alice'),('alice','MISS'))
+            self.assertEqual(visit('bob'),('alice','HIT'))  # Reproduced old admission defect.
+            candidate=self.root/'guard-only.vcl';candidate.write_bytes(guard_only)
+            service.admin(self.config,'vcl.load','guard_only',str(candidate));service.admin(self.config,'vcl.use','guard_only')
+            self.assertEqual(visit('bob'),('alice','HIT'))  # Header fix alone cannot retire it.
+            self.assertTrue(self.apply()['vcl_activated'])  # apply() forbids explicit purge.
+            self.assertEqual(visit('bob'),('bob','MISS'))
+            self.assertEqual(visit('alice'),('alice','MISS'))
+            self.assertEqual(visit('bob'),('bob','HIT'))
+            self.assertIsNone(process.poll())
 
     def test_matching_boot_source_is_adopted_once_without_restart(self):
         with patch.object(service,'CONFIG',self.root),patch.object(service,'ACTIVE',self.active):
@@ -84,18 +143,22 @@ class CookieRuntime(unittest.TestCase):
 
     def test_restored_disk_does_not_hide_different_active_boot_or_reload_source(self):
         with patch.object(service,'CONFIG',self.root),patch.object(service,'ACTIVE',self.active):
-            old=b'# Earlier actual runtime\n'+self.program
+            old=self.program+b'\nsub vcl_synth { set resp.http.X-Owned-Runtime = "previous"; }\n'
             process=self.start(old)
+            self.assertEqual(self.runtime_marker(),'previous')
             self.active.write_bytes(self.program)
             result=self.apply()
             self.assertTrue(result['vcl_activated'])
             name=next(row['name'] for row in service.vcls(self.config) if row['status']=='active')
-            self.assertEqual(service.admin(self.config,'vcl.show',name).stdout,self.program)
+            self.assertTrue(name.startswith('hvh_gen_'+hashlib.sha256(self.program).hexdigest()[:32]))
+            self.assertIsNone(self.runtime_marker())
             # Repeat the same mismatch under the normal external reload prefix.
             runtime=self.root/'reload.vcl';runtime.write_bytes(old)
             service.admin(self.config,'vcl.load','hvh_reload_external_fixture',str(runtime))
             service.admin(self.config,'vcl.use','hvh_reload_external_fixture')
+            self.assertEqual(self.runtime_marker(),'previous')
             self.assertTrue(self.apply()['vcl_activated'])
+            self.assertIsNone(self.runtime_marker())
             self.assertEqual(self.active.read_bytes(),self.program)
             self.assertIsNone(process.poll())
 
@@ -185,5 +248,6 @@ class CookieRuntime(unittest.TestCase):
             # needing any files from the generating code checkout.
             process.terminate();process.wait(timeout=10)
             restarted=self.start(published)
-            self.assertEqual(service.admin(self.config,'vcl.show','boot').stdout,published)
+            self.assertEqual(next(row['name'] for row in service.vcls(self.config) if row['status']=='active'),'boot')
+            self.assertIsNone(self.runtime_marker())
             self.assertIsNone(restarted.poll())

@@ -1,8 +1,10 @@
 """Real Varnish choices: shared IDs, explicit variants, precedence and privacy."""
 import shutil
 import unittest
+from unittest.mock import patch
 
 from test_cookie_admin import settings
+import cookie_admin
 import test_profile_compatibility as compatibility
 import test_cache_policy
 from vcl import render
@@ -20,6 +22,78 @@ def program(profile, central=None, site=None, *, connected=False):
 @unittest.skipUnless(shutil.which('varnishtest'), 'native varnishtest is required')
 class CookieAdminNative(unittest.TestCase):
     run_policy = test_cache_policy.CachePolicy.run_policy
+
+    def test_grouped_defaults_preserve_nested_prefixes_exact_exceptions_and_overrides(self):
+        defaults={'schemaVersion':1,'rules':[]}
+        for identity,name,action,kind in (
+            ('root','app_','shared','prefix'),('private','app_secret_','private','prefix'),
+            ('public','app_secret_public_','shared','prefix'),
+            ('variant','app_secret_public_lang_','variant','prefix'),
+            ('exact-public','app_secret_exact','shared','exact'),
+            ('exact-private','app_public_account','private','exact')):
+            defaults['rules']+=settings(name,action,kind=kind,identity='bundled:'+identity)['rules']
+        with patch.object(cookie_admin,'defaults',return_value=defaults):
+            for profile in compatibility.PROFILES:
+                with self.subTest(profile=profile):
+                    self.run_policy(profile,
+                        [compatibility.response('/nested','public'),compatibility.response('/nested','private'),
+                         compatibility.response('/nested','private-exact'),compatibility.response('/nested','EUR'),
+                         compatibility.response('/nested','USD')],
+                        [compatibility.request('/nested','public',headers=['Cookie: app_secret_public_id=A; app_other=A'],cache='MISS'),
+                         compatibility.request('/nested','public',headers=['Cookie: app_secret_public_id=B; app_other=B'],cache='HIT'),
+                         compatibility.request('/nested','private',headers=['Cookie: app_secret_token=A'],cache='PASS'),
+                         compatibility.request('/nested','public',headers=['Cookie: app_secret_exact=A'],cache='HIT'),
+                         compatibility.request('/nested','private-exact',headers=['Cookie: app_public_account=A'],cache='PASS'),
+                         compatibility.request('/nested','EUR',headers=['Cookie: app_secret_public_lang_currency=EUR'],cache='MISS'),
+                         compatibility.request('/nested','USD',headers=['Cookie: app_secret_public_lang_currency=USD'],cache='MISS'),
+                         compatibility.request('/nested','EUR',headers=['Cookie: app_secret_public_lang_currency=EUR'],cache='HIT')],
+                        program=program(profile))
+                    self.run_policy(profile,[compatibility.response('/override','public')],
+                        [compatibility.request('/override','public',headers=['Cookie: app_secret_token=A'],cache='MISS'),
+                         compatibility.request('/override','public',headers=['Cookie: app_secret_token=B'],cache='HIT')],
+                        program=program(profile,site=settings('app_secret_','shared',kind='prefix')))
+
+    def test_bundled_tracker_hits_without_an_explicit_admin_choice(self):
+        for profile in compatibility.PROFILES:
+            with self.subTest(profile=profile):
+                self.run_policy(profile,
+                    [compatibility.response('/default','public',headers=['Vary: Cookie'],
+                     expect=['expect req.http.Cookie == "__hstc=alice"'])],
+                    [compatibility.request('/default','public',headers=['Cookie: __hstc=alice'],cache='MISS'),
+                     compatibility.request('/default','public',headers=['Cookie: __hstc=bob'],cache='HIT')+
+                     '\nexpect resp.http.X-Cache-Cookie-Scope == "bundled"\nexpect resp.http.X-Cache-Cookie-Action == "shared"'],
+                    program=program(profile))
+
+    def test_absent_and_shared_only_cookies_reuse_the_same_object(self):
+        for profile in compatibility.PROFILES:
+            with self.subTest(profile=profile):
+                self.run_policy(profile,[compatibility.response('/same','public',headers=['Vary: Cookie'])],
+                    [compatibility.request('/same','public',cache='MISS'),
+                     compatibility.request('/same','public',headers=['Cookie: __hstc=alice'],cache='HIT'),
+                     compatibility.request('/same','public',headers=['Cookie: __hstc=bob'],cache='HIT')],
+                    program=program(profile))
+
+    def test_bundled_public_currency_varies_without_origin_vary(self):
+        self.run_policy('basic',
+            [compatibility.response('/default','EUR'),compatibility.response('/default','USD')],
+            [compatibility.request('/default','EUR',headers=['Cookie: cart_currency=EUR'],cache='MISS'),
+             compatibility.request('/default','USD',headers=['Cookie: cart_currency=USD'],cache='MISS'),
+             compatibility.request('/default','EUR',headers=['Cookie: cart_currency=EUR'],cache='HIT')],
+            program=program('basic'))
+
+    def test_bundled_auth0_literal_colon_is_private(self):
+        self.run_policy('basic',[compatibility.response('/default','personal')],
+            [compatibility.request('/default','personal',headers=['Cookie: a0_users:sess=private'],cache='PASS')+
+             '\nexpect resp.http.X-Cache-Cookie-Action == "private"'],program=program('basic'))
+
+    def test_literal_space_name_preserves_every_pair_and_variant(self):
+        self.run_policy('basic',
+            [compatibility.response('/literal','A',expect=['expect req.http.Cookie == "Site History=A; __hstc=one"']),
+             compatibility.response('/literal','B')],
+            [compatibility.request('/literal','A',headers=['Cookie: Site History=A; __hstc=one'],cache='MISS'),
+             compatibility.request('/literal','B',headers=['Cookie: Site History=B; __hstc=two'],cache='MISS'),
+             compatibility.request('/literal','A',headers=['Cookie: Site History=A; __hstc=three'],cache='HIT')],
+            program=program('basic',settings('Site History','variant')))
 
     def test_shared_unknown_cookie_hits_with_vary_and_reaches_origin_unchanged(self):
         for profile in compatibility.PROFILES:

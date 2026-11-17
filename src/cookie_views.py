@@ -51,9 +51,10 @@ def view(state, owner=None, domain=None):
         explain(row['reset_metadata'],row['reset_match'],row['inherited_action'])
     return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,
             'cookie_scope': 'central' if owner is None else 'site', 'domain': domain,
-            'cookie_policies': central if owner is None else site,
+            'cookie_policies': cookie_admin.concrete(central if owner is None else site),
             'cookie_policy_rows': rows,
             'cookie_policy_saved': False,
+            'cookie_legacy_choices': sum(rule['action']=='automatic' for rule in (site if owner is not None else central)['rules']),
             'cookie_integration': integration,
             'cookie_integration_notice': None if owner is None else state['owners'][owner]['sites'][domain].get('cookie_integration_notice'),
             'cookie_profile': None if owner is None else state['owners'][owner]['sites'][domain]['profile']}

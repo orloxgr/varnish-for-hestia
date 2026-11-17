@@ -18,6 +18,9 @@ def validate(state):
 
 
 def reconcile_inventory(state):
+    from cookie_defaults import bundle, fingerprint
+    state['cookie_defaults_version']=bundle()[1]['version']
+    state['cookie_defaults_digest']=fingerprint()
     for owner in state['owners'].values():
         for domain,site in owner['sites'].items():
             if 'cookie_integration' not in site:
@@ -46,10 +49,11 @@ def plan(state, previous, *, force=False, force_sites=()):
                            'phase': 'planned'})
         if switched:
             operation(old, old_config, cookie_control.snapshot(), 'disconnect')
-        changed = (not old or cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
+        changed = (state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
+                   not old or cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
                    cookie_admin.executable(state.get('cookie_policies'), site.get('cookie_policies')))
         if config['enabled'] and (force or sid in force_sites or switched or not old_config or not old_config['enabled'] or changed):
-            operation(site, config, cookie_control.snapshot(state.get('cookie_policies'), site.get('cookie_policies')), 'apply')
+            operation(site, config, cookie_control.materialized_snapshot(state.get('cookie_policies'), site.get('cookie_policies')), 'apply')
     # A deleted native domain has no managed route left to synchronize. We never
     # block unrelated inventory by trying to contact an already removed website.
     return result
