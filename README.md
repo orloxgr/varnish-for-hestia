@@ -116,9 +116,13 @@ does not provide a generic cookie issuer or replace the actual provider integrat
 Every cookie, including Meta `_fbp`, uses the same cookie-policy editor.
 The proxy does not mint provider-specific identifiers. Applications/providers
 create, renew and delete their own cookies under their actual consent rules.
-Shared HTML changes variation, not issuance or consent. Original Set-Cookie
-fields retain normal uncached delivery and are never replayed from a shared
-object. Old per-site `cookie_delivery` settings are retired on reconciliation.
+Shared HTML applies to both request variation and response storage. When every
+Set-Cookie field has a Shared action, an otherwise public response stores its
+HTML without those fields and delivers the original fields only to the visitor
+who caused the fetch. Duplicate fields, attributes, renewal and deletion remain
+unchanged. A later HIT never replays another visitor’s cookies. Providers use
+their existing browser or private application delivery path to issue cookies
+on a HIT; this mechanism does not invent identifiers or grant consent. Old per-site `cookie_delivery` settings are retired on reconciliation.
 
 The bundled assessment covers 2,288 source records, with 2,293 editable rows
 including the additional reviewed rules. Every row has Shared HTML, Public
@@ -128,12 +132,10 @@ the source does not establish identical initial HTML, our concrete decision is
 a Public variant, without forcing a bypass. Original cookies, consent, core
 privacy and the verified WooCommerce/ESI contract remain authoritative.
 
-The daily upstream download updates recognition metadata, not executable
-choices. Versioned editorial defaults are shipped with plugin updates; user
-snapshots survive both kinds of update. Deleted upstream entries remain visible
-while their bundled rule is active. Newly recognized names outside the bundle
-show a concrete proposal labelled recognition-only; choosing it and saving
-activates it without silently changing site behavior during a data download. Maintainers rebuild the pinned source:
+Recognition descriptions and executable defaults ship together in a reviewed
+plugin version. Central/site choices survive updates and retain precedence.
+There is no separate daily download of descriptions without corresponding rules.
+Maintainers rebuild the pinned source:
 `python3 tools/build-cookie-assessments.py --source open-cookie-database.csv --revision <full-upstream-commit> --output shared/cookie-assessments.json`.
 This writes both assessments and the exact generated `cookie-defaults.json`
 snapshot. It records source SHA-256, revision, reasons and confidence. It never
@@ -145,40 +147,24 @@ clear and returns the application runtime to its standalone bundled defaults.
 The signed empty snapshot identity remains separate from its actual runtime
 digest, so recovery can restore the previous managed ownership and choices.
 
-### Automatic recognition database updates
+### Cookie database updates
 
-Administrators: **All accounts → Cookie recognition database**. Daily updates
-are enabled by default. **Update now** checks immediately, even when automatic
-updates are disabled. The panel shows the upstream revision, record count, last
-attempt, successful check, database update and any failure. Opening the panel or
-saving the switch does not download anything.
+**All accounts → Cookie database · reviewed rules** shows the bundled source
+revision, record count, executable rule count and rules version. Updating this
+plugin installs the reviewed descriptions and functional choices together.
+Existing downloaded-only snapshots are preserved for rollback but no longer
+supply extra undecided rows. Central and website choices remain authoritative.
+The old `update-cookie-database` command reports this lifecycle without fetching
+or claiming that a download updated cache behavior.
 
-Updates fetch the original Open Cookie Database repository directly: read its
-current commit, then download that exact revision's CSV and Apache-2.0 license.
-The snapshot and preference live under
-`/var/lib/varnish-for-hestia/cookie-recognition/`, independently of installed code,
-and survive plugin updates. A host-specific minute in the 03:00 local-server
-hour spreads daily checks across installations, using the existing managed cron
-file. Root can also run `v-varnish-hestia update-cookie-database` to execute the
-scheduled operation, which respects the automatic-update switch.
-
-Downloads use verified HTTPS, fixed endpoints and no redirects. Untrusted input
-has explicit safety bounds: 32 MiB CSV, 1 MiB revision/license responses, 100,000
-records, 128 columns per row and 256 KiB characters per field. The column count
-is checked before allocating CSV field arrays. UTF-8, CSV structure, columns, wildcard
-values and control characters are validated. Valid Unicode and optional empty
-provider metadata are retained. The download SHA256 records byte identity; it
-is not an independent upstream signature. The last valid snapshot remains on
-download/validation failure, with a visible error. Status reads do not wait on
-the download lock; downloads never hold the Varnish operation lock.
-
-This updates **recognition metadata only**, for both presets. It does not change
-reviewed executable policies, site cookie overrides, consent or provider issuance;
-it does not reload VCL, restart services, purge or warm pages. Runtime visitor
-requests do not contact GitHub and no visitor cookie values are uploaded.
+The request-owned native helper is built locally using `varnish-dev` matching
+the installed engine. Installation does not upgrade or restart Varnish. The
+package dependency keeps those headers aligned during future APT upgrades;
+a systemd pre-start step rebuilds the helper if the engine ABI changed. Running
+visitor requests never read a database or contact GitHub.
 
 Inspect `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,
-`X-Cache-Cookie-Policy` and `X-Cache-Cookie-Delivery` beside `X-Cache` to see the
+`X-Cache-Cookie-Policy` beside `X-Cache` to see the
 applied policy. These diagnostics contain names and decisions, never cookie
 values. See [the common contract](shared/CONTRACT.md) for the wire protocol.
 
@@ -232,8 +218,10 @@ extra protection switches are required.
 There is no addon TTL cap or forced grace/keep duration. Freshness follows the
 origin and native Varnish, with explicit central/site VCL additions retained.
 Uncacheable-response markers use the running Varnish's `uncacheable_ttl` setting.
-Ordinary Set-Cookie responses remain uncacheable in Varnish without rewriting
-the origin's Cache-Control. Personal ESI/session responses retain their privacy
+Otherwise public responses whose Set-Cookie names are all Shared can cache
+without storing personal cookie fields. Mixed Private/Variant/unknown response
+cookies retain uncached delivery. Origin private/no-store is never rewritten
+to public. Personal ESI/session responses retain their privacy
 headers. The native freshness of errors is retained; a positive administrator
 TTL is not vetoed merely because a response is HTTP 400 or above. Incomplete
 standalone responses are not stored as complete pages.
@@ -246,7 +234,7 @@ Different tracking IDs can reuse the same page. Functional parameters, including
 search, language, currency and `ref`, remain distinct. Browser analytics still
 see the original landing URL; PHP tracking on every landing needs a separate
 tracking request/integration because PHP does not run on a cache HIT.
-Set-Cookie and private/no-store responses
+Private/no-store responses and response cookies without Shared approval
 are delivered without sharing their bodies. Account/cart/checkout routes, cart
 mutations, authentication/nonces, login and private session cookies remain private.
 Store API cart/checkout reads are private too; public product REST reads can cache.

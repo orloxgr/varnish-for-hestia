@@ -1,7 +1,6 @@
 """Native Hestia scope adapter; common cookie data never contains credentials."""
 import cookie_admin
 import cookie_database
-import cookie_recognition
 from cookie_catalogue import load_catalogue
 
 
@@ -12,7 +11,7 @@ def view(state, owner=None, domain=None):
         if domain not in state['owners'][owner]['sites']:
             raise ValueError('Domain is not owned by this account')
         site = cookie_admin.normalize(state['owners'][owner]['sites'][domain].get('cookie_policies'))
-    database = cookie_recognition.database(cookie_database.directory(), cookie_database.BUNDLED)
+    database = cookie_database.database()
     integration = None
     if owner is not None:
         import cookie_control

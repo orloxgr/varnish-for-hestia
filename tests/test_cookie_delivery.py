@@ -88,6 +88,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None):
                     finally:
                         connection.close()
 
+                get.endpoint = ('127.0.0.1', port)
                 try:
                     yield get
                 finally:

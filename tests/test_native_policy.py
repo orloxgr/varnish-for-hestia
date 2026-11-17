@@ -72,22 +72,22 @@ class NativePolicy(unittest.TestCase):
                     source = http.program(profile, backend_response='set beresp.ttl = 1800s;' if override else '')
                     self.run_policy(profile, responses, requests, program=source)
 
-    def test_set_cookie_preserves_origin_headers_but_is_never_shared(self):
+    def test_unknown_response_cookie_remains_uncached_and_downstream_private(self):
         for profile in http.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
                 for number, control in enumerate(('public, max-age=1800', 'no-cache', None)):
                     path = '/cookie-' + str(number)
                     for visitor in ('A', 'B'):
-                        # Missing Cache-Control must remain missing as well.
+                        # Unknown fields cannot receive Shared admission.
                         response = http.response(path, visitor, policy=control or '',
-                            headers=['Set-Cookie: visitor=' + visitor + '; Path=/'])
+                            headers=['Set-Cookie: unknown_provider_cookie=' + visitor + '; Path=/'])
                         if control is None:
                             response = response.replace(' -hdr "Cache-Control: "', '')
                         responses.append(response)
                         requests.extend([http.request(path, visitor, cache='PASS'),
-                            'expect resp.http.Set-Cookie == "visitor=' + visitor + '; Path=/"',
-                            'expect resp.http.Cache-Control == ' + ('"' + control + '"' if control else '<undef>')])
+                            'expect resp.http.Set-Cookie == "unknown_provider_cookie=' + visitor + '; Path=/"',
+                            'expect resp.http.Cache-Control == "private, no-store"'])
                 self.run_policy(profile, responses, requests)
 
 

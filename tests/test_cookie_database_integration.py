@@ -1,4 +1,4 @@
-"""Hestia recognition controls do not reconcile VCL or call upstream on reads."""
+"""Retired metadata-only updates report the bundled lifecycle without fetching."""
 import json
 import os
 from pathlib import Path
@@ -17,17 +17,19 @@ from test_administration import fixture
 
 
 class CookieDatabaseIntegration(unittest.TestCase):
-    def test_manual_update_and_toggle_do_not_reconcile_or_reload_varnish(self):
+    def test_legacy_update_calls_report_bundle_without_reconcile_or_fake_update(self):
         with tempfile.TemporaryDirectory() as directory:
             store = Path(directory)
             (store/'applied.json').write_text(json.dumps(fixture()))
             for action in ('admin-cookie-database-settings','admin-cookie-database-update'):
                 with patch.object(service,'STORE',store), patch.object(service,'settings',return_value={}), \
                      patch.object(service,'reconcile') as reconcile, patch.object(cookie_database,'configure') as configure, \
-                     patch.object(cookie_database,'update') as update, \
-                     patch.object(cookie_database,'status',return_value={'automatic':True,'records':2288}):
+                     patch.object(cookie_database,'update') as update:
                     result = administration.request(None,action,{'cookie_database_automatic':False},'varnish')
                     self.assertTrue(result['ok'])
+                    self.assertIn('Update the plugin',result['cookie_database_notice'])
+                    self.assertNotIn('cookie_database_updated',result)
+                    self.assertFalse(result['cookie_database']['automatic'])
                     reconcile.assert_not_called()
                     if action.endswith('-settings'):
                         configure.assert_called_once_with(False)
@@ -37,17 +39,19 @@ class CookieDatabaseIntegration(unittest.TestCase):
                         configure.assert_not_called()
 
     @unittest.skipUnless(sys.platform == 'linux' and os.geteuid() == 0, 'Native owned cron file')
-    def test_daily_cron_keeps_discovery_and_is_idempotent(self):
+    def test_upgrade_removes_daily_download_keeps_reconciliation_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/'addon-cron'
+            path.write_text(maintenance.MARKER+'\n17 3 * * * root v-varnish-hestia update-cookie-database\n')
             with patch.object(maintenance,'CRON',path):
                 maintenance.install_cron()
                 original = path.read_bytes()
                 maintenance.install_cron()
                 self.assertEqual(path.read_bytes(),original)
                 self.assertIn(b'reconcile',original)
-                self.assertIn(b' 3 * * * root ',original)
-                self.assertEqual(original.count(b'update-cookie-database'),1)
+                self.assertNotIn(b' 3 * * * root ',original)
+                self.assertNotIn(b'update-cookie-database',original)
+                self.assertEqual(original.count(b'reconcile'),1)
                 path.write_text('unmanaged')
                 with self.assertRaises(ValueError):
                     maintenance.install_cron()

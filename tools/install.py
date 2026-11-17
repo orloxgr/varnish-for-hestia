@@ -141,6 +141,24 @@ def ensure_cookie_modules():
         raise ValueError('Installed native modules cannot compile the required cookie/header APIs')
 
 
+def ensure_cookie_handoff():
+    engine = native_version()
+    development = subprocess.run(['dpkg-query','-W','-f=${Version} ${db:Status-Status}',
+                                  'varnish-dev'],capture_output=True,text=True)
+    if development.stdout.strip() != engine+' installed':
+        progress.stage('Installing development headers for the existing native Varnish ABI')
+        env=dict(os.environ,DEBIAN_FRONTEND='noninteractive',NEEDRESTART_MODE='l')
+        packages=('varnish='+engine,'varnish-dev='+engine)
+        preview=run('apt-get','-s','--no-remove','install',*packages,env=env).stdout.decode()
+        if any(line.startswith('Remv ') or re.match(r'Inst varnish(?::[^ ]+)? ',line)
+               for line in preview.splitlines()):
+            raise ValueError('Install development headers matching the existing Varnish engine')
+        run('apt-get','install','-y','--no-remove',*packages,env=env)
+    progress.stage('Building the request-owned cookie handoff for native Varnish')
+    from native_build import build
+    build()
+
+
 def private_manifest(path):
     path = Path(path)
     info = path.stat()
@@ -262,6 +280,7 @@ def install(args):
         progress.stage('Existing installation found; retaining credentials, site choices and cache size')
         native_version()
         ensure_cookie_modules()
+        ensure_cookie_handoff()
         existing = service.settings()
         if args.memory_mb is not None and args.memory_mb != existing['memory_mb']:
             raise ValueError('Existing memory budget is retained; change Varnish cache size in Hestia Plugins > Varnish > All accounts')
@@ -275,7 +294,7 @@ def install(args):
             _, _, result = service.reconcile(hestia)
             progress.stage('Enabling native ESI attribute processing without restarting Varnish')
             maintenance.configure_esi(existing)
-            progress.stage('Scheduling daily upstream cookie recognition updates')
+            progress.stage('Scheduling reconciliation with the bundled reviewed cookie rules')
             maintenance.install_cron()
         except Exception:
             write(service.CONFIG / 'settings.json', before)
@@ -317,6 +336,7 @@ def install(args):
             install_package()
         native_version()
         ensure_cookie_modules()
+        ensure_cookie_handoff()
         gid = grp.getgrnam('varnish').gr_gid
         os.chown(service.CONFIG, 0, gid); service.CONFIG.chmod(0o750)
         generations = service.CONFIG / 'generations'; generations.mkdir(mode=0o750, exist_ok=True)

@@ -112,7 +112,7 @@ def request(hestia, action, payload, kind):
         else:
             cookie_database.update(force=True)
         result = overview(state, config, kind)
-        result['cookie_database_saved' if action.endswith('-settings') else 'cookie_database_updated'] = True
+        result['cookie_database_notice'] = cookie_database.status()['message']
         return result
     if action in ('admin-memory', 'admin-memory-size'):
         restarted = False

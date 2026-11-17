@@ -37,29 +37,13 @@ $profiles = ['basic' => 'Basic', 'ultracache' => 'UltraCache'];
         <?php endif; ?>
     </section>
     <?php $cookieDb = $data['cookie_database'] ?? []; ?>
-    <details class="box-collapse u-mb20" open>
-        <summary class="box-collapse-header" title="Keep cookie recognition metadata current directly from the original Open Cookie Database repository. Applies to both Basic and UltraCache.">Cookie recognition database</summary>
+    <details class="box-collapse u-mb20">
+        <summary class="box-collapse-header" title="Cookie descriptions and executable defaults ship together in a reviewed plugin version.">Cookie database · reviewed rules</summary>
         <div class="box-collapse-content">
-            <?php if (!empty($cookieDb['error'])): ?>
-                <div class="alert alert-danger u-mb20" role="alert"><p><?= $escape($cookieDb['error']) ?>. The last valid database remains available.</p></div>
-            <?php elseif (!empty($data['cookie_database_updated'])): ?>
-                <div class="alert alert-success u-mb20" role="status"><p><?= ($cookieDb['result'] ?? '') === 'updated' ? 'The recognition database was updated.' : 'The recognition database is up to date.' ?></p></div>
-            <?php elseif (!empty($data['cookie_database_saved'])): ?>
-                <div class="alert alert-success u-mb20" role="status"><p>The automatic update setting was saved.</p></div>
-            <?php endif; ?>
-            <p class="u-mb10"><a href="https://github.com/jkwakman/Open-Cookie-Database" target="_blank" rel="noopener noreferrer" title="Open the original database repository. Updates download its CSV and license from a pinned upstream commit.">Open Cookie Database</a> · Apache-2.0 · <?= $escape($cookieDb['records'] ?? 0) ?> recognition records · <?= !empty($cookieDb['bundled']) ? 'Bundled snapshot' : 'Downloaded snapshot' ?></p>
-            <p class="u-mb10">Revision: <code><?= $escape($cookieDb['revision'] ?? '') ?></code></p>
-            <p class="u-mb10">Last check (UTC): <?= $escape($cookieDb['last_check'] ?? 'Not checked yet') ?><br>Last successful check (UTC): <?= $escape($cookieDb['last_success'] ?? 'Not checked yet') ?><br>Last database update (UTC): <?= $escape($cookieDb['updated_at'] ?? 'Bundled with the plugin') ?></p>
-            <p class="u-mb20">Recognition identifies cookie names, providers and categories. Cache sharing, consent and cookie delivery continue to use the reviewed policies. Updates do not restart Varnish, purge pages or change website overrides. No visitor cookie values are sent to GitHub.</p>
-            <form method="post" class="u-mb20">
-                <?php $formFields('admin-cookie-database-settings'); ?>
-                <label class="form-label u-block u-mb10"><input type="checkbox" name="cookie_database_automatic" value="1" <?= !empty($cookieDb['automatic']) ? 'checked' : '' ?> title="Check the original GitHub repository daily in the background. Keep the last valid snapshot if a download or validation fails."> Update automatically every day</label>
-                <button class="button" type="submit" title="Save the daily background update preference. Saving does not download data or change cache rules.">Save update setting</button>
-            </form>
-            <form method="post">
-                <?php $formFields('admin-cookie-database-update'); ?>
-                <button class="button button-secondary" type="submit" title="Check GitHub now and install the latest valid recognition snapshot, including when automatic updates are disabled. This does not update plugin code or change VCL.">Update now</button>
-            </form>
+            <?php if (!empty($data['cookie_database_notice'])): ?><p role="status"><?= $escape($data['cookie_database_notice']) ?></p><?php endif; ?>
+            <p class="u-mb10"><strong><?= $escape($cookieDb['version'] ?? '') ?></strong> · <?= $escape($cookieDb['records'] ?? 0) ?> recognition records · <?= $escape($cookieDb['rules'] ?? 0) ?> executable default rules</p>
+            <p class="u-mb10">Descriptions and reviewed cache actions update together when you update this plugin. Your central and website choices keep precedence. There is no separate daily database download.</p>
+            <p><a href="https://github.com/jkwakman/Open-Cookie-Database" target="_blank" rel="noopener noreferrer" title="Attribution for the bundled recognition data.">Open Cookie Database</a> · Apache-2.0 · Source revision: <code><?= $escape($cookieDb['revision'] ?? '') ?></code></p>
         </div>
     </details>
     <section class="u-mb20">

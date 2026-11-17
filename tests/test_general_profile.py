@@ -15,7 +15,7 @@ class BasicProfile(unittest.TestCase):
         for path, mime, body in [('/index.html', 'text/html', '<html>public</html>'),
                                  ('/assets/site.css', 'text/css', 'body {color: green}'),
                                  ('/catalog/', 'text/html', '<html>generic directory</html>')]:
-            cookie='sbjs_migrations=one; cmplz_banner-status=dismissed; unknown_vendor=one'
+            cookie='sbjs_migrations=one; unknown_vendor=one'
             responses.append(compatibility.response(path, body,
                 headers=['Content-Type: '+mime], expect=['expect req.http.Cookie == "'+cookie+'"']))
             requests.extend([compatibility.request(path, body, headers=['Cookie: '+cookie], cache='MISS'),
@@ -37,11 +37,10 @@ class BasicProfile(unittest.TestCase):
 
     def test_response_cookie_is_delivered_once_and_never_replayed_from_cache(self):
         self.run_policy('basic',
-            [compatibility.response('/page', 'first', headers=['Set-Cookie: _fbp=fixture; Path=/']),
-             compatibility.response('/page', 'public', expect=['expect req.http.Cookie == "_fbp=fixture"'])],
-            [compatibility.request('/page', 'first', cache='PASS'),
+            [compatibility.response('/page', 'public', headers=['Set-Cookie: _fbp=fixture; Path=/'])],
+            [compatibility.request('/page', 'public', cache='MISS'),
              'expect resp.http.Set-Cookie == "_fbp=fixture; Path=/"',
-             compatibility.request('/page', 'public', headers=['Cookie: _fbp=fixture'], cache='MISS'),
+             compatibility.request('/page', 'public', headers=['Cookie: _fbp=fixture'], cache='HIT'),
              'expect resp.http.Set-Cookie == <undef>',
              compatibility.request('/page', 'public', headers=['Cookie: _fbp=other'], cache='HIT'),
              'expect resp.http.Set-Cookie == <undef>'])

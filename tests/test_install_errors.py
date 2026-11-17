@@ -35,6 +35,29 @@ def installer_function(name, namespace):
 
 
 class InstallerErrors(unittest.TestCase):
+    def test_handoff_reuses_matching_development_package_without_apt(self):
+        native=Mock(build=Mock())
+        process=Mock()
+        process.run.return_value=Mock(stdout='9.1.0-2 installed')
+        namespace=dict(native_version=Mock(return_value='9.1.0-2'),subprocess=process,
+                       run=Mock(),progress=Mock())
+        with patch.dict(sys.modules,{'native_build':native}):
+            installer_function('ensure_cookie_handoff',namespace)()
+        namespace['run'].assert_not_called()
+        native.build.assert_called_once_with()
+
+    def test_handoff_dependency_transaction_cannot_upgrade_the_engine(self):
+        process=Mock()
+        process.run.return_value=Mock(stdout='')
+        run=Mock(return_value=Mock(stdout=b'Inst varnish (9.2.0 official [amd64])'))
+        namespace=dict(native_version=Mock(return_value='9.1.0-2'),subprocess=process,
+                       run=run,progress=Mock(),os=Mock(environ={}),re=__import__('re'))
+        with self.assertRaisesRegex(ValueError,'matching the existing'):
+            installer_function('ensure_cookie_handoff',namespace)()
+        self.assertEqual(run.call_count,1)
+        self.assertIn('varnish=9.1.0-2',run.call_args.args)
+        self.assertIn('varnish-dev=9.1.0-2',run.call_args.args)
+
     def test_fresh_install_uses_signed_apt_candidate_without_a_version_pin(self):
         run = Mock(return_value=subprocess.CompletedProcess([], 0, b'Inst varnish (9.2.0 official [amd64])', b''))
         path = Mock(return_value=Mock(read_text=Mock(return_value='ID=ubuntu\nVERSION_CODENAME=resolute\n')))

@@ -54,5 +54,7 @@ class AsyncCart(unittest.TestCase):
                  get('/parent','private',['Cookie: wp_woocommerce_session_demo=A; ultracache_esi_optin=1'],cache='PASS')])
         self.run_policy('ultracache',
             [origin('/parent','anonymous',['X-UltraCache-Woo-Async-Parent: 1','Vary: Cookie']),origin('/parent','private')],
-            [get('/parent','anonymous',cache='MISS'),
-             get('/parent','private',['Cookie: wp_woocommerce_session_demo=A; ultracache_esi_optin=1'],cache='PASS')])
+            # Approved async parents omit their private cart carrier. Functional
+            # cookies still vary; a different currency must reach its origin.
+            [get('/parent','anonymous',['Cookie: test_currency=EUR'],cache='MISS'),
+             get('/parent','private',['Cookie: test_currency=USD; wp_woocommerce_session_demo=A; ultracache_esi_optin=1'],cache='PASS')])

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.0 · 2026-11-17
+
+- Apply the common Shared HTML choice to real response cookies as well as request variation. Detach complete original Set-Cookie fields into client-task-owned native memory before storing otherwise public HTML; deliver them only to their original visitor, never through a shared object. Keep duplicate fields, attributes, renewal/deletion and original application/consent ownership.
+- Clean discarded cookies on backend retry/error, client restart and abort. Compile the small shared helper for the installed native ABI without upgrading/restarting the engine; rebuild before native startup after APT ABI changes. Native-source-only changes activate a new VCL generation.
+- Ship recognition descriptions and reviewed executable defaults together with plugin updates; remove daily metadata-only downloads and their controls. Preserve saved central/site choices and old snapshots for rollback. Retire the stale native Meta-issuer capability declaration.
+- Verify concurrent native delivery, private/unknown/variant boundaries and actual Meta/WooCommerce/RCB browser consent lifecycle against both generated presets.
+
 ## 0.19.1 · 2026-11-17
 
 - Remove native Meta `_fbp` issuance, its per-site form/action and provider-specific VCL compiler. Retire old issuer settings during inventory. All cookie cache choices use the common sheet; applications/providers own identifier creation and actual consent. Preserve original provider fields, generic downstream privacy and private/public ESI behavior.

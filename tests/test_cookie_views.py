@@ -15,7 +15,7 @@ class CookieViews(unittest.TestCase):
     def view(self,profile='basic',choices=None,bypass=None,central=False):
         state={'owners':{'alice':{'sites':{'example.test':{'profile':profile,'aliases':[],
             'cookie_policies':choices,'bypass_cookies':bypass or []}}}}}
-        with patch.object(cookie_views.cookie_recognition,'database',return_value={'records':[]}), \
+        with patch.object(cookie_views.cookie_database,'database',return_value={'records':[]}), \
              patch.object(cookie_views.cookie_database,'directory',return_value=ROOT/'shared/cookie-recognition'):
             return cookie_views.view(state,None if central else 'alice',None if central else 'example.test')
 

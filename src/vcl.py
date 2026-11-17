@@ -66,7 +66,7 @@ def render(state, config):
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
                               response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
                               bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
-    text = ['vcl 4.1;', 'import std; import purge; import header;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
+    text = ['vcl 4.1;', 'import std; import purge; import header; import cookie_handoff;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
     dispatch = []
@@ -85,7 +85,7 @@ def render(state, config):
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
-    custom_recv, custom_response, cookie_bypass, cookie_rules = [], [], [], []
+    custom_recv, custom_response, cookie_bypass, cookie_rules, response_rules = [], [], [], [], []
     cookie_groups={}
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
@@ -111,6 +111,9 @@ def render(state, config):
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
         cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True)+'\n}')
+        backend_condition = condition.replace('req.http.', 'bereq.http.')
+        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'])
+        response_rules.append('if ('+backend_condition+') {\nif (cookie_handoff.detach({"'+rules+'"}, bereq.is_bgfetch)) {}\n}')
     text.append('''sub vcl_recv {
   call scp_init;''' + hosting_timeouts.session(state) + '''
   unset req.http.X-HVH-ESI-Parent;
@@ -174,6 +177,7 @@ sub vcl_hit {
   call scp_hit;
 }
 sub vcl_miss {
+  call scp_cookie_miss;
   if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
 }
 sub hvh_soft_purge {
@@ -191,6 +195,9 @@ sub vcl_backend_response {
   call scp_backend_response;
   return (deliver);
 }
+sub vcl_backend_error {
+  cookie_handoff.discard();
+}
 sub vcl_deliver {
   call scp_deliver;
   set resp.http.X-Hestia-Varnish = resp.http.X-SCP-Result;
@@ -207,7 +214,7 @@ sub vcl_deliver {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules)))
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules)))
     if cookie_groups:
         text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
