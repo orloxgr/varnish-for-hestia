@@ -2,6 +2,7 @@
 import copy
 import cookie_admin
 import cookie_control
+import cookie_execution
 
 
 def _sites(state):
@@ -34,6 +35,7 @@ def reconcile_inventory(state):
 def plan(state, previous, *, force=False, force_sites=()):
     before = _sites(previous)
     result = []
+    execution = cookie_execution.projections()
     for sid, site in sorted(_sites(state).items()):
         old = before.get(sid)
         config = cookie_control.integration(site.get('cookie_integration'), site['domain'], site.get('aliases', []))
@@ -49,10 +51,12 @@ def plan(state, previous, *, force=False, force_sites=()):
                            'phase': 'planned'})
         if switched:
             operation(old, old_config, cookie_control.snapshot(), 'disconnect')
+        if not config['enabled']:
+            continue
         changed = (state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
-                   not old or cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
-                   cookie_admin.executable(state.get('cookie_policies'), site.get('cookie_policies')))
-        if config['enabled'] and (force or sid in force_sites or switched or not old_config or not old_config['enabled'] or changed):
+                   not old or execution((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
+                   execution(state.get('cookie_policies'), site.get('cookie_policies')))
+        if force or sid in force_sites or switched or not old_config or not old_config['enabled'] or changed:
             operation(site, config, cookie_control.materialized_snapshot(state.get('cookie_policies'), site.get('cookie_policies')), 'apply')
     # A deleted native domain has no managed route left to synchronize. We never
     # block unrelated inventory by trying to contact an already removed website.

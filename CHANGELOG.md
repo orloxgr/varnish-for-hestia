@@ -2,6 +2,7 @@
 
 ## 0.19.0 · 2026-11-17
 
+- Reuse identical cookie execution projections within each reconciliation stage instead of expanding the full defaults twice per hosted site. Avoid projection work for disconnected WordPress integrations while retaining signed disconnect operations, scoped change detection and cache invalidation.
 - Give every bundled cookie a concrete, editable Shared/Variant/Private default. Compile these decisions into both presets and materialize the same versioned snapshot for connected WordPress consumers. Keep site > admin > bundled priority, core privacy, original cookies, consent and the approved WooCommerce/ESI contract.
 - Replace the cramped cookie sheet with hidden internal IDs, equal-height controls and a clear Why / precedence button that expands a full-width explanation of actual behavior, evidence and priority. Offer only concrete actions; resolve legacy Automatic snapshots reproducibly without discarding saved choices.
 - Escape legacy literal cookie names, use UTF-8 byte ordering across consumers, index prefix resolution, compile the bundle into guarded action groups once even for distinct site overrides. Preserve empty disconnect/rollback snapshots and synchronize/invalidate transactionally when executable bundled rules change; editorial-only updates do not invalidate caches.

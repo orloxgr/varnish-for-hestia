@@ -25,6 +25,7 @@ import cookie_policy
 import cookie_admin
 import cookie_bridge
 import cookie_control
+import cookie_execution
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -177,6 +178,7 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
         progress.stage('Checking which site caches need invalidation')
         current_ids = set()
         invalidated = 0
+        execution = cookie_execution.projections()
         for owner in state['owners'].values():
             for site in owner['sites'].values():
                 current_ids.add(site['id'])
@@ -186,8 +188,8 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
                             any(operation['site_id'] == site['id'] and operation['base_digest'] != operation['target_digest']
                                 for operation in (cookie_ops or [])) or
                             state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
-                            cookie_admin.executable((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
-                            cookie_admin.executable(state.get('cookie_policies'), site.get('cookie_policies')) or
+                            execution((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
+                            execution(state.get('cookie_policies'), site.get('cookie_policies')) or
                             old.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) != site.get('cookie_delivery', cookie_policy.normalize_delivery(None, site['domain'])) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active') or
                             old_site_rules[site['id']] != new_rules[site['profile']]):
