@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.2 · 2026-11-17
+
+- Add the scoped cookie-policy spreadsheet, separate recognition/assessment proposals, native site overrides and optional signed UltraCache WordPress integration. Publish the common policy from six explicit source modules as a complete immutable runtime VCL.
+- Fix upgrades of large multi-site configurations: native `vcl.show` can return `201` with truncated source. Runtime identity now uses the complete program's managed digest name; boot/external reload programs are adopted once through native compilation and activation, without dumping source, changing CLI output limits or restarting Varnish. Repeated reconciliation reuses the active managed generation.
+- Reproduce the failure on actual native Varnish, then verify large-policy upgrades, independent runtime/disk restoration, one-time boot adoption, module-only changes, failed-candidate retention and recovery regressions.
+
 ## 0.18.1 · 2026-11-16
 
 - Check upstream CSV column count before the CSV parser allocates field arrays. This prevents memory amplification from many tiny columns inside an otherwise size-bounded download. Preserve quoted commas, escaped quotes, multiline fields and legitimate Unicode; the current upstream database has ten columns.

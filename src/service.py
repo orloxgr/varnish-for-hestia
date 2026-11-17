@@ -138,12 +138,12 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
         name = base_name + '_' + secrets.token_hex(4)
     old_name = next(row['name'] for row in rows if row['status'] == 'active')
     active_bytes = ACTIVE.read_bytes()
-    # Our immutable generation names identify their complete source digest.
-    # Native boot/reload names do not: the active file may have been restored
-    # independently while a different program is still running. Read source
-    # privately in that case, never print it (it contains site purge tokens).
-    runtime_identified = old_name == base_name or old_name.startswith(base_name + '_')
-    needs_activation = not runtime_identified and admin(config, 'vcl.show', old_name).stdout != program.encode()
+    # Our immutable generation names identify the complete rendered program.
+    # A boot/external reload name has no such identity, and restored disk bytes
+    # cannot prove what is running. Adopt the compiled managed generation once;
+    # subsequent reconciliations reuse its digest name. Do not dump runtime VCL:
+    # native vcl.show can truncate a valid multi-site program (CLIS_TRUNCATED).
+    needs_activation = not (old_name == base_name or old_name.startswith(base_name + '_'))
     if not needs_activation:
         name = old_name
     candidate = CONFIG / 'generations' / (name + '.vcl')

@@ -70,13 +70,14 @@ class CookieRuntime(unittest.TestCase):
         purge.assert_not_called()
         return result
 
-    def test_matching_boot_source_skips_reload_and_repairs_disk_without_restart(self):
+    def test_matching_boot_source_is_adopted_once_without_restart(self):
         with patch.object(service,'CONFIG',self.root),patch.object(service,'ACTIVE',self.active):
             process=self.start(self.program)
             self.active.write_bytes(b'outdated durable file')
-            before=service.vcls(self.config)
             result=self.apply()
-            self.assertFalse(result['vcl_activated'])
+            self.assertTrue(result['vcl_activated'])
+            before=service.vcls(self.config)
+            self.assertFalse(self.apply()['vcl_activated'])
             self.assertEqual(service.vcls(self.config),before)
             self.assertEqual(self.active.read_bytes(),self.program)
             self.assertIsNone(process.poll())
@@ -96,6 +97,40 @@ class CookieRuntime(unittest.TestCase):
             service.admin(self.config,'vcl.use','hvh_reload_external_fixture')
             self.assertTrue(self.apply()['vcl_activated'])
             self.assertEqual(self.active.read_bytes(),self.program)
+            self.assertIsNone(process.poll())
+
+    def test_large_active_policy_upgrades_without_a_cli_source_dump(self):
+        with patch.object(service,'CONFIG',self.root),patch.object(service,'ACTIVE',self.active):
+            # Native vcl.show truncates an otherwise valid large program. A
+            # multi-site upgrade must not depend on dumping that whole source.
+            old=(b'# Existing multi-site policy source '+b'x'*80+b'\n')*4096+self.program
+            process=self.start(old)
+            self.active.write_bytes(old)
+            import cli
+            statuses=[]
+            read_response=cli.response
+            def record_response(stream):
+                status,body=read_response(stream)
+                statuses.append(status)
+                return status,body
+            with patch.object(cli,'response',side_effect=record_response):
+                shown=service.admin(self.config,'vcl.show','boot',required=False)
+            self.assertNotEqual(shown.returncode,0)
+            self.assertEqual(statuses[-1],201)  # Native CLIS_TRUNCATED.
+            self.assertLess(len(shown.stdout),len(old))
+            result=self.apply()
+            self.assertTrue(result['vcl_activated'])
+            self.assertEqual(self.active.read_bytes(),self.program)
+            self.assertFalse(self.apply()['vcl_activated'])
+            # Upgrades also encounter an older managed digest name, rather
+            # than boot: neither path should retrieve the large source.
+            old_name='hvh_gen_'+hashlib.sha256(old).hexdigest()[:32]+'_12345678'
+            service.admin(self.config,'vcl.load',old_name,str(self.root/'boot.vcl'))
+            service.admin(self.config,'vcl.use',old_name)
+            with patch.object(service,'admin',wraps=service.admin) as native:
+                self.assertTrue(self.apply()['vcl_activated'])
+                self.assertFalse(any(call.args[1]=='vcl.show' for call in native.call_args_list))
+            self.assertFalse(self.apply()['vcl_activated'])
             self.assertIsNone(process.poll())
 
     def test_failed_route_rollback_retains_native_recovery_phase(self):
