@@ -15,13 +15,18 @@ from test_cookie_admin import settings
 
 
 class CookieControl(unittest.TestCase):
-    def test_contract_covers_private_selectors_but_not_shadowed_private_rules(self):
+    def test_contract_covers_every_connected_effective_policy(self):
         connection={'enabled':True,'url':'https://example.test'+control.PATH}
         central=settings('membership','private')
         self.assertEqual(control.cache_contract(connection,'example.test',central=central),
             control.effective_digest('example.test',control.snapshot(central)))
-        self.assertEqual(control.cache_contract(connection,'example.test',central=central,
-            site=settings('membership','automatic')),'')
+        for action in ('automatic','shared','variant','private'):
+            site=settings('membership',action)
+            self.assertEqual(control.cache_contract(connection,'example.test',central=central,site=site),
+                control.effective_digest('example.test',control.snapshot(central,site)))
+        self.assertEqual(control.cache_contract(connection,'example.test'),
+            control.effective_digest('example.test',control.snapshot()))
+        self.assertEqual(control.cache_contract(dict(connection,enabled=False),'example.test',central=central),'')
 
     def test_inactive_url_does_not_block_work_but_enabling_checks_ownership(self):
         value={'enabled':False,'url':'https://old.example'+control.PATH}

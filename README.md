@@ -93,9 +93,23 @@ website cache; editing a description does not purge pages.
 
 Basic remains independent of WordPress. The optional per-site **WordPress
 integration** targets an explicitly configured compatible UltraCache control
-endpoint using the existing site token. Its cross-engine PHP/drop-in/Apache
-Static integration and recovery validation are in progress; it is not a generic
-cookie issuer or a substitute for the actual application/provider integration.
+endpoint using the existing site token. A compatible UltraCache installation
+applies the same scoped policy in its PHP/drop-in and Apache Static delivery.
+The native transaction prepares, commits and recovers the application snapshot
+alongside the VCL; an authenticated application failure reports its specific
+stage and cause. An owner can inspect or reset the managed WordPress snapshot
+with `wp ultracache cookie-policy status --format=json` or
+`wp ultracache cookie-policy reset --format=json`. Reset invalidates the configured
+native Varnish site and keeps panel choices, which an explicit Save can reapply.
+An actually selected unsupported native consumer, currently LiteSpeed with
+managed Variant/Private rules, reports that concrete capability limitation.
+An inactive engine preference does not block working PHP/Apache consumers.
+
+Matching connected origin policies avoid unnecessary tracking-ID variation.
+If the application reports a different effective policy and `Vary: Cookie`,
+Varnish retains that complete variation and still caches each representation;
+an older Shared choice cannot collapse newer application variants. Connection
+does not provide a generic cookie issuer or replace the actual provider integration.
 
 Under each website, **Cookies on cached pages** can deliver a missing Meta
 `_fbp` separately from public cached HTML. Enable it only for an existing Meta

@@ -88,3 +88,24 @@ class CookieVaryContract(unittest.TestCase):
                     [http.response('/page',visitor,headers=self.headers(choices,digest=digest)) for visitor in ('alice','bob')],
                     [http.request('/page',visitor,headers=['Cookie: vendor_id='+visitor],cache='MISS') for visitor in ('alice','bob')],
                     program=program('basic',choices,connected=connected))
+
+    def test_newer_origin_policy_cannot_be_collapsed_by_older_shared_choice(self):
+        for name,old in [('preference',settings('preference','shared')),
+                         ('_ga',settings('preference','automatic'))]:
+            newer=settings(name,'variant')
+            for profile in http.PROFILES:
+                with self.subTest(profile=profile,name=name):
+                    self.run_policy(profile,
+                        [http.response('/page',visitor,headers=self.headers(newer)) for visitor in ('alice','bob')],
+                        [http.request('/page','alice',headers=['Cookie: '+name+'=alice'],cache='MISS'),
+                         http.request('/page','bob',headers=['Cookie: '+name+'=bob'],cache='MISS'),
+                         http.request('/page','alice',headers=['Cookie: '+name+'=alice'],cache='HIT'),
+                         http.request('/page','bob',headers=['Cookie: '+name+'=bob'],cache='HIT')],
+                        program=program(profile,old,connected=True))
+
+    def test_agreed_shared_only_policy_keeps_original_downstream_cookie_vary(self):
+        choices=settings('preference','shared')
+        self.run_policy('basic',[http.response('/page','public',headers=self.headers(choices))],
+            [http.request('/page','public',headers=['Cookie: preference=alice'],cache='MISS'),
+             http.request('/page','public',headers=['Cookie: preference=bob'],cache='HIT')+'\nexpect resp.http.Vary ~ "Cookie"'],
+            program=program('basic',choices,connected=True))

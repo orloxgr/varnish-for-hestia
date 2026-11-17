@@ -26,7 +26,7 @@ def view(state, owner=None, domain=None):
         import cookie_policy
         extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
         profile=state['owners'][owner]['sites'][domain]['profile']
-    def explain(metadata,match):
+    def explain(metadata,match,action):
         cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
                    cookie_admin._matches(entry['match'],match)),None)
         if cart:
@@ -34,6 +34,9 @@ def view(state, owner=None, domain=None):
             if profile=='basic':
                 metadata['effective_action']='private'
                 metadata['core_precedence']+='Basic passes this cart/session request to the application.'
+            elif action=='private':
+                metadata['effective_action']='private'
+                metadata['core_precedence']='The explicit Private choice passes the entire cart/session request. The built-in privacy guard remains in effect.'
             else:
                 metadata['effective_action']='application-contract'
                 metadata['core_precedence']+='Basic passes this cart/session request. UltraCache shares only an approved ESI parent with private fragments; without that application contract it also passes.'
@@ -44,8 +47,8 @@ def view(state, owner=None, domain=None):
                 metadata['core_precedence']='This website’s additional bypass cookie rule '+name+' takes precedence over the table choice.'
                 break
     for row in rows:
-        explain(row,row['match'])
-        explain(row['reset_metadata'],row['reset_match'])
+        explain(row,row['match'],row['action'])
+        explain(row['reset_metadata'],row['reset_match'],row['inherited_action'])
     return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,
             'cookie_scope': 'central' if owner is None else 'site', 'domain': domain,
             'cookie_policies': central if owner is None else site,

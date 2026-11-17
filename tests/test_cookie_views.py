@@ -42,5 +42,12 @@ class CookieViews(unittest.TestCase):
         self.assertEqual(row['reset_metadata']['effective_action'],'private')
         self.assertIn('additional bypass cookie rule woocommerce_*',row['reset_metadata']['core_precedence'])
 
+    def test_explicit_private_cart_choice_does_not_claim_optional_esi_sharing(self):
+        data=self.view(profile='ultracache',choices=settings('woocommerce_cart_hash','private'))
+        row=next(row for row in data['cookie_policy_rows'] if row['id']=='custom:fixture')
+        self.assertEqual(row['effective_action'],'private')
+        self.assertIn('entire cart/session request',row['core_precedence'])
+        self.assertEqual(row['reset_metadata']['effective_action'],'application-contract')
+
 
 if __name__=='__main__':unittest.main()
