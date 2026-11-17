@@ -73,6 +73,7 @@ class CookieControl(unittest.TestCase):
         tamper = False
         rollback_state='restored'
         rollback_override=None
+        failure=None
         class Handler(http.server.BaseHTTPRequestHandler):
             def log_message(self, *args):
                 pass
@@ -90,9 +91,11 @@ class CookieControl(unittest.TestCase):
                 result = dict(ok=True, protocol=1, operation=operation, requestId=data['requestId'],
                               host=data['host'], activeDigest=active, targetDigest=target)
                 if operation=='rollback':result['rollbackState']=rollback_state
+                status=500 if failure else 200
+                if failure:result.update(ok=False,**failure)
                 raw = control.canonical(result)
-                self.send_response(200)
-                self.send_header(control.HEADER, control.response_signature(token, 200, data['requestId'], raw))
+                self.send_response(status)
+                self.send_header(control.HEADER, control.response_signature(token, status, data['requestId'], raw))
                 self.send_header(control.DIGEST_HEADER, hashlib.sha256(raw).hexdigest())
                 self.send_header('Content-Length', str(len(raw)))
                 self.end_headers(); self.wfile.write(raw.replace(b'"ok":true', b'"ok":null') if tamper else raw)
@@ -112,6 +115,14 @@ class CookieControl(unittest.TestCase):
         rollback_state='restored'
         with self.assertRaisesRegex(control.ControlError,'did not restore'):
             client.call('rollback')
+        failure={'stage':'commit','code':'ultracache_html_retirement_failed','message':'Private visitor or credential text must not be echoed'}
+        with self.assertRaisesRegex(control.ControlError,'commit.*500; ultracache_html_retirement_failed') as caught:
+            client.call('commit')
+        self.assertNotIn(failure['message'],str(caught.exception))
+        failure['code']='unsafe/private/value'
+        with self.assertRaises(control.ControlError) as caught:client.call('commit')
+        self.assertNotIn(failure['code'],str(caught.exception))
+        failure=None
         tamper = True
         with self.assertRaisesRegex(control.ControlError, 'authentication failed'):
             client.call('status')
