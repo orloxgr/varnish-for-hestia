@@ -98,6 +98,18 @@ class NativeSessionResolver(unittest.TestCase):
         self.config_path.chmod(0o600)
         self.assertEqual(self.call(self.cookie+'; '+self.cookie), 'unresolved\tjoomla-session-unavailable\n')
 
+    def test_traverse_only_ancestor_allows_known_file_reads_but_not_symlinks(self):
+        ancestor=self.folder/'traverse-only';ancestor.mkdir(mode=0o711)
+        target=ancestor/'customer';shutil.copytree(self.root,target)
+        self.config['sites']['a'*32]['installations'][0]['root']=str(target)
+        self.config_path.write_text(json.dumps(self.config))
+        self.assertEqual(self.call(),'guest\tjoomla-guest-session\n')
+        self.assertEqual(ancestor.stat().st_mode & 0o777,0o711)
+        alias=self.folder/'linked-ancestor';alias.symlink_to(ancestor,target_is_directory=True)
+        self.config['sites']['a'*32]['installations'][0]['root']=str(alias/'customer')
+        self.config_path.write_text(json.dumps(self.config))
+        self.assertEqual(self.call(),'unresolved\tjoomla-session-unavailable\n')
+
     @unittest.skipUnless(shutil.which('systemctl'), 'Native systemd required')
     def test_actual_systemd_sandbox_socket_permissions_and_idempotent_prepare(self):
         sys.path.insert(0,str(ROOT/'src'))
@@ -110,6 +122,7 @@ class NativeSessionResolver(unittest.TestCase):
         state={'owners':{'nobody':owner},'hosting_timeouts':{'connect':10000}}
         with patch.object(cms_resolver,'NAME',name),patch.object(cms_resolver,'UNIT',Path('/etc/systemd/system')/(name+'.service')), \
              patch.object(cms_resolver,'SOCKET',socket_path),patch.object(cms_resolver,'CODE',self.folder), \
+             patch.object(cms_resolver,'__file__',str(self.folder/'src/cms_resolver.py')), \
              patch.object(cms_resolver,'configuration_path',return_value=self.config_path),patch.object(cms_resolver,'frame_bytes',return_value=1000000):
             before=cms_resolver.snapshot()
             try:
@@ -124,6 +137,14 @@ class NativeSessionResolver(unittest.TestCase):
                 first=cms_resolver.run('systemctl','show',name,'--property=MainPID','--value')
                 cms_resolver.prepare(state,{})
                 self.assertEqual(cms_resolver.run('systemctl','show',name,'--property=MainPID','--value'),first)
+                for dependency in ('cms_discovery.py','cms_routes.py'):
+                    path=self.folder/'shared'/dependency
+                    path.write_text(path.read_text()+'\n# New installed dependency revision\n')
+                    cms_resolver.prepare(state,{})
+                    following=cms_resolver.run('systemctl','show',name,'--property=MainPID','--value')
+                    self.assertNotEqual(following,first)
+                    self.assertEqual(self.call(),'guest\tjoomla-guest-session\n')
+                    first=following
             finally:
                 cms_resolver.restore(before)
             self.assertFalse(cms_resolver.UNIT.exists())
