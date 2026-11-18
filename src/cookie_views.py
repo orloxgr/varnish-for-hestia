@@ -26,13 +26,20 @@ def view(state, owner=None, domain=None):
         import cookie_policy
         extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
         profile=state['owners'][owner]['sites'][domain]['profile']
-    def explain(metadata,match,action):
+    def explain(metadata,match,action,reset_id=None):
+        metadata['mode_default_action']=None
         if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
-            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),cookie_admin.concrete(site))
+            site_choices=cookie_admin.concrete(site)
+            if reset_id is not None:site_choices['rules']=[rule for rule in site_choices['rules'] if rule['id']!=reset_id]
+            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),site_choices)
                            if cookie_admin._matches(rule['match'],match)),None)
-            if explicit is None:
-                metadata['effective_action']='shared'
-                metadata['core_precedence']='Aggressive caching shares this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
+            inherited_explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),None)
+                                     if cookie_admin._matches(rule['match'],match)),None)
+            metadata['effective_action']=explicit['action'] if explicit else 'shared'
+            metadata['mode_default_action']=None if inherited_explicit else 'shared'
+            metadata['core_precedence']='Aggressive caching can share this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
+        if owner is not None and match['kind']=='exact' and match['value'] in aggressive.session_names(entry):
+            metadata['core_precedence']='Joomla sessions are checked against current authentication state before warm lookup. Verified anonymous requests share public HTML; authenticated and remember-me requests pass. An explicit Private choice also passes anonymous requests.'
         cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
                    cookie_admin._matches(entry['match'],match)),None)
         if cart:
@@ -54,7 +61,7 @@ def view(state, owner=None, domain=None):
                 break
     for row in rows:
         explain(row,row['match'],row['action'])
-        explain(row['reset_metadata'],row['reset_match'],row['inherited_action'])
+        explain(row['reset_metadata'],row['reset_match'],row['inherited_action'],row['id'])
     return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,
             'cookie_scope': 'central' if owner is None else 'site', 'domain': domain,
             'cookie_policies': cookie_admin.concrete(central if owner is None else site),
