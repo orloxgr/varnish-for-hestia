@@ -39,7 +39,7 @@ def view(state, owner=None, domain=None):
             metadata['mode_default_action']=None if inherited_explicit else 'shared'
             metadata['core_precedence']='Aggressive caching can share this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
         if owner is not None and match['kind']=='exact' and match['value'] in aggressive.session_names(entry):
-            metadata['core_precedence']='Joomla sessions are checked against current authentication state before warm lookup. Verified anonymous requests share public HTML; authenticated and remember-me requests pass. An explicit Private choice also passes anonymous requests.'
+            metadata['core_precedence']='Aggressive caching shares this opaque Joomla cookie without checking session state. Known login markers and private routes remain active. An explicit Private choice passes matching requests.'
         cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
                    cookie_admin._matches(entry['match'],match)),None)
         if cart:

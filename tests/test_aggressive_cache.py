@@ -88,6 +88,31 @@ class SiteCacheSettings(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('varnishd'),'Native Varnish required')
 class AggressiveNative(unittest.TestCase):
+    def test_public_hit_with_origin_stopped_and_original_joomla_html_unchanged(self):
+        page='<script type="application/json" class="joomla-script-options">{"csrf.token":"0123456789abcdef0123456789abcdef"}</script><form><input type="hidden" name="0123456789abcdef0123456789abcdef" value="1"></form><main>original</main>'
+        for profile in ('basic','ultracache'):
+            calls=[]
+            def origin(path,headers):
+                calls.append((path,headers.get('Cookie')))
+                return page,[('Cache-Control','private, no-store'),('Set-Cookie','PHPSESSID=origin-A; Path=/; HttpOnly')]
+            settings={'aggressive':True,'cms_installations':[{'cms':'joomla','base':'/'}],
+                      'cms_cookies':[{'cms':'joomla','base':'/','cookie_name':'a'*32,'supported':True}]}
+            def no_runtime(source):
+                for marker in ('X-SCP-Session','ensure_token','joomla-token','session_state','token_fragment'):
+                    self.assertNotIn(marker,source)
+                return source
+            with self.subTest(profile=profile),proxy(profile,origin,site_settings=settings,transform=no_runtime) as get:
+                first=get('/article?utm_source=A','a'*32+'=opaque-A; PHPSESSID=A')
+                self.assertEqual(dict(first[1])['X-Cache'],'MISS');self.assertEqual(first[2],page)
+                get.stop_origin()
+                for visitor in ('B','C'):
+                    result=get('/article?utm_source='+visitor,'a'*32+'=opaque-'+visitor+'; PHPSESSID='+visitor)
+                    self.assertEqual(result[0],200);self.assertEqual(dict(result[1])['X-Cache'],'HIT')
+                    self.assertEqual(result[2],page)
+                    self.assertFalse(any(k.lower()=='set-cookie' for k,v in result[1]))
+                    self.assertEqual(dict(result[1])['Cache-Control'],'private, no-store')
+                self.assertEqual(calls,[('/article?utm_source=A','a'*32+'=opaque-A; PHPSESSID=A')])
+
     def test_selected_lifetime_origin_headers_and_cookie_url_preserved(self):
         for profile in ('basic','ultracache'):
             with self.subTest(profile=profile):

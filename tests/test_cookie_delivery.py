@@ -96,6 +96,9 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
 
                 get.endpoint = ('127.0.0.1', port)
                 get.origin_port = origin.server_port
+                def stop_origin():
+                    origin.shutdown();origin.server_close();thread.join(timeout=5)
+                get.stop_origin = stop_origin
                 if management:
                     def activate(name,source):
                         path=root/(name+'.vcl');path.write_text(source)

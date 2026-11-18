@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 import cms_discovery
 import cms_metadata
 import cms_routes
-import cms_sessions
+import cms_cookies
 from inventory import document_root
 
 
@@ -44,22 +44,22 @@ def discover(payload):
     with __import__('os').scandir(root):pass
     records = cms_discovery.discover(payload['root'])
     notices=[]
-    sessions=[]
+    cookies=[]
     for index, record in enumerate(records):
         if record['cms'] not in ('wordpress','joomla','prestashop'):continue
         root=Path(payload['root'])/unquote(record['base']).lstrip('/')
         if record['cms']=='joomla':
-            try:sessions.append(dict(cms='joomla',base=record['base'],cookie_name=cms_sessions.joomla_settings(root),supported=True))
+            try:cookies.append(dict(cms='joomla',base=record['base'],cookie_name=cms_cookies.joomla_name(root),supported=True))
             except (OSError,ValueError):
-                sessions.append(dict(cms='joomla',base=record['base'],supported=False))
-                notices.append('joomla at '+record['base']+': Session configuration is not supported by the local authentication resolver.')
+                cookies.append(dict(cms='joomla',base=record['base'],supported=False))
+                notices.append('joomla at '+record['base']+': Static Joomla cookie recognition is unavailable.')
         try:
             connection=cms_metadata.connection(record['cms'],root)
             records[index]=cms_metadata.aliases(record,lambda sql:query(connection,sql,payload.get('timeout')),
                                                  connection['prefix'],payload['hosts'])
         except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):
             notices.append(record['cms']+' at '+record['base']+': Configured route metadata unavailable; standard CMS routes remain active.')
-    return dict(installations=records,notices=notices,sessions=sessions)
+    return dict(installations=records,notices=notices,cookies=cookies)
 
 
 def refresh(state, inventory, hestia, scope):
@@ -89,7 +89,8 @@ def refresh(state, inventory, hestia, scope):
                             record['private_paths']=sorted(set(record['private_paths']+old['private_paths']))
                             record['private_queries']=[*old.get('private_queries',[]),*record['private_queries']]
                 site['cms_installations']=cms_routes.normalize(records)
-                site['cms_sessions']=result['sessions']
+                site['cms_cookies']=result['cookies']
+                site.pop('cms_sessions',None)
                 site['cms_document_root']=root
                 site.pop('cms_pending_root',None)
                 site['cms_discovery']={'checked_utc':checked,'status':'partial' if result['notices'] else 'complete',

@@ -107,7 +107,7 @@ class CookieRuntime(unittest.TestCase):
             for site in owner['sites'].values():site['origin_ip']='127.0.0.1'
         host=next(iter(next(iter(self.state['owners'].values()))['sites']))
         self.program=service.render(self.state,self.config).encode()
-        guard_only=self.program.replace(b'hvh-cache-policy-v8',b'hvh-cache-policy-v7')
+        guard_only=self.program.replace(b'hvh-cache-policy-v9',b'hvh-cache-policy-v7')
         legacy=guard_only.replace(b'bereq.http.X-SCP-Cookie-Contract ~ "^[0-9a-f]{64}$" &&',
                                   b'bereq.http.X-SCP-Cookie-Contract &&')
         def visit(visitor):

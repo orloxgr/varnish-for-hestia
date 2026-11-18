@@ -76,7 +76,7 @@ UltraCache. When enabled, anonymous public HTML uses the selected positive
 request private/no-store or a shorter lifetime. The original browser cache headers
 are restored on delivery. This option does not change browser cache settings.
 
-Known authentication, carts, private actions, explicit Private cookie choices and
+Known login markers, carts, private actions, explicit Private cookie choices and
 additional website bypass rules still take precedence. A generic `PHPSESSID`
 alone no longer forces PASS in aggressive mode. Original request URL and cookies
 reach the origin unchanged; tracking dimensions are removed only from the lookup
@@ -102,19 +102,14 @@ detection succeeds. Root can explicitly refresh all websites with:
 sudo /usr/local/hestia/bin/v-varnish-hestia refresh-cms
 ```
 
-For supported Joomla 3–6 database sessions, an addon-owned local service checks
-the current guest/user ID before opaque session requests can reuse a warm public
-object. There is no cached guest authentication result. Expired sessions remain
-anonymous; authenticated and remember-me requests stay private. Unsupported or
-unavailable session configurations report a specific reason instead of assuming
-the user is anonymous. Queries run as the hosting account, and credentials stay
-out of addon state, generated VCL, panel responses and command arguments.
-
-Joomla's core JavaScript `csrf.token` uses a private ESI fragment in both
-profiles. The shared object contains a template; each visitor receives an
-application-generated token and their own original cookies. A small Joomla core
-component request supplies that personal value on a HIT while the main page
-stays cached. Forms containing session-bound hidden tokens remain private.
+Aggressive request handling runs entirely in VCL. A warm public HIT requires
+no Python worker, session database query, token fetch or origin request. Joomla
+cookie names are recognized statically during CMS detection. HTML is cached
+unchanged, including any application-generated tokens already inside it; this
+mode does not verify opaque session authentication or personalize those tokens.
+Known login markers, private routes and explicit cookie choices still apply.
+The former CMS session service is removed after the new VCL activates during an
+upgrade, with owned-resource recovery retained for a failed apply.
 
 ## Cookies on cached pages
 
@@ -205,10 +200,10 @@ supply extra undecided rows. Central and website choices remain authoritative.
 The old `update-cookie-database` command reports this lifecycle without fetching
 or claiming that a download updated cache behavior.
 
-The request-owned native helper is built locally using `varnish-dev` matching
+The request-owned native cookie-handoff extension is built locally using `varnish-dev` matching
 the installed engine. Installation does not upgrade or restart Varnish. The
 package dependency keeps those headers aligned during future APT upgrades;
-a systemd pre-start step rebuilds the helper if the engine ABI changed. Running
+a systemd pre-start step rebuilds the extension if the engine ABI changed. Running
 visitor requests never read a database or contact GitHub.
 
 Inspect `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,

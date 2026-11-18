@@ -14,7 +14,6 @@ import cookie_admin
 import cookie_control
 import aggressive
 import cms_routes
-import cms_resolver
 
 PROFILES = profile_settings.PROFILES
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,11 +83,6 @@ def render(state, config):
                             'set req.http.X-HVH-Site = ' + quoted(site['id']) + ';\n' +
                             'set req.http.X-HVH-Profile = ' + quoted(site['profile']) + ';\n' +
                             ('set req.http.X-SCP-Aggressive = "1"; set req.http.X-SCP-Aggressive-TTL = ' + quoted(str(site['aggressive_ttl'])) + ';\n' if site['aggressive'] else '') +
-                            ('set req.http.X-SCP-Session-Socket = '+quoted(cms_resolver.SOCKET)+'; '+
-                             'set req.http.X-SCP-Session-Site = '+quoted(site['id'])+'; '+
-                             'set req.http.X-SCP-Session-Timeout = '+quoted(hosting_timeouts.seconds(state.get('hosting_timeouts',{}).get('connect',60000)))+';\n'
-                             'set req.http.X-SCP-Token-Timeout = '+quoted(hosting_timeouts.seconds(hosting_timeouts.frontend(state)['read'] if 'hosting_timeouts' in state else 180000))+';\n'
-                             if site['aggressive'] and any(row['cms']=='joomla' for row in site.get('cms_installations',[])) else '') +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
                             ('set req.http.X-SCP-Cookie-Contract = ' + quoted(site['cookie_contract']) + ';\n') +
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
@@ -175,7 +169,6 @@ def render(state, config):
   if (req.http.X-HVH-Disabled == "1") {
     set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
-  if (req.restarts > 0 && req.http.X-SCP-Token-Retry) { set req.http.X-SCP-Reason = req.http.X-SCP-Token-Retry; return (pass); }
   ''' + '\n'.join(custom_recv) + '''
   ''' + '\n'.join(cookie_bypass) + '''
   call scp_recv;
@@ -189,7 +182,7 @@ sub vcl_hash {
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
   call scp_cookie_hash;
-  hash_data("hvh-cache-policy-v8");
+  hash_data("hvh-cache-policy-v9");
   hash_data(req.http.X-HVH-Site);
   if (req.http.X-SCP-Aggressive == "1") { hash_data("aggressive"); hash_data(req.http.X-SCP-Aggressive-TTL); }
   hash_data(req.http.host);
@@ -222,7 +215,6 @@ sub vcl_backend_response {
 sub vcl_backend_error {
   cookie_handoff.discard();
 }
-sub vcl_synth { call scp_synth; }
 sub vcl_deliver {
   call scp_deliver;
   set resp.http.X-Hestia-Varnish = resp.http.X-SCP-Result;

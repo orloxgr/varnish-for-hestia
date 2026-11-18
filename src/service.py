@@ -29,7 +29,7 @@ import cookie_execution
 import aggressive
 import cache_behavior
 import cms_inventory
-import cms_resolver
+import legacy_cms
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -249,7 +249,7 @@ def recover_pending(config_override=None, cookie_report=None):
     preserved=record_cookie_rollback(extra.get('cookie_operations', []))
     if cookie_report is not None:cookie_report.extend(preserved)
     transaction.restore_files(record)
-    cms_resolver.restore(extra.get('cms_resolver'))
+    legacy_cms.restore(extra.get('cms_resolver'))
     before = base64.b64decode(extra['apache']) if extra['apache'] is not None else None
     if extra.get('local_started', True):
         routing.rollback(extra['routes'], before)
@@ -291,7 +291,7 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None, cm
         cookie_bridge.inspect(cookie_ops)
         apache = routing.APACHE.read_bytes() if routing.APACHE.exists() else None
         extra = {'routes': changes, 'cookie_operations': cookie_ops, 'local_started': False,
-                 'cms_resolver':cms_resolver.snapshot(),
+                 'cms_resolver':legacy_cms.snapshot(),
                  'apache': base64.b64encode(apache).decode() if apache is not None else None}
         transaction.begin(STORE, transaction_paths(), extra)
         def journal(**updates):
@@ -300,10 +300,9 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None, cm
             record['extra'] = extra
             write_json(STORE/'apply.json', record)
         try:
-            cms_resolver.prepare(state,config)
             cookie_bridge.prepare(cookie_ops, journal)
             result = apply(state, previous, inventory, config, changes=changes, cookie_ops=cookie_ops, journal=journal)
-            cms_resolver.finish(state)
+            legacy_cms.retire()
             progress.stage('Committing desired and applied configuration')
             if old != state:
                 write_json(desired_path, state)
@@ -311,7 +310,7 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None, cm
                 write_json(applied_path, state)
         except ApplyRolledBack as failure:
             cookie_bridge.rollback(cookie_ops, journal)
-            cms_resolver.restore(extra.get('cms_resolver'))
+            legacy_cms.restore(extra.get('cms_resolver'))
             transaction.finish(STORE)
             if record_cookie_rollback(cookie_ops):
                 original=getattr(failure,'cookie_control_error',failure)

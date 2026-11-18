@@ -24,7 +24,7 @@ import transaction
 import repository
 import cookie_bridge
 import cookie_control
-import cms_resolver
+import legacy_cms
 
 ID = 'varnish-for-hestia'
 INSTALL = Path('/opt') / ID
@@ -188,7 +188,7 @@ def recover_restore():
     record=transaction.read(service.STORE,restore_paths(),filename='restore.json')
     if record is None:return
     extra=record['extra']
-    cms_resolver.restore(extra.get('cms_resolver'))
+    legacy_cms.restore(extra.get('cms_resolver'))
     def persist():
         write_json(service.STORE/'restore.json', record)
     cookie_bridge.rollback(extra.get('cookie_operations', []), persist)
@@ -292,7 +292,7 @@ def restore(value, hestia, source):
                           'repository':previous_repository,'routes':original_routes,
                  'apache':base64.b64encode(apache).decode() if apache is not None else None,
                  'cookie_operations':cookie_ops,'local_started':False}
-        extra['cms_resolver']=cms_resolver.snapshot()
+        extra['cms_resolver']=legacy_cms.snapshot()
         transaction.begin(service.STORE,restore_paths(),extra,filename='restore.json')
         def journal(**updates):
             extra.update(updates)
@@ -316,15 +316,14 @@ def restore(value, hestia, source):
             routing.run('systemctl', 'start', 'varnish'); service.wait_healthy(config)
             _, undo = routing.apply(changes, routing.apache_config(inventory, config['origin_port']))
             subprocess.run(['python3', str(source / 'tools/install-integration.py')], check=True, capture_output=True, timeout=None)
-            cms_resolver.prepare(state,config)
-            cms_resolver.finish(state)
+            legacy_cms.retire()
             write_json(service.STORE / 'desired.json', state); write_json(service.STORE / 'applied.json', state)
             routing.run('systemctl', 'enable', 'varnish')
         except Exception as failure:
             # Recovery also covers a commit whose response was lost. If remote
             # rollback fails, its durable identity remains for the next retry.
             cookie_bridge.rollback(cookie_ops,journal)
-            cms_resolver.restore(extra.get('cms_resolver'))
+            legacy_cms.restore(extra.get('cms_resolver'))
             preserved=service.record_cookie_rollback(cookie_ops)
             if not extra['local_started']:
                 recover_restore()
@@ -392,8 +391,8 @@ def uninstall(value, hestia):
     except Exception:
         routing.rollback(*undo)
         raise RuntimeError('Uninstall failed; original addon routes were restored') from None
-    import cms_resolver
-    cms_resolver.finish({'owners':{}})
+    import legacy_cms
+    legacy_cms.retire()
     for path in (CRON, DROPIN, BRIDGE):
         path.unlink(missing_ok=True)
     repository.remove()
