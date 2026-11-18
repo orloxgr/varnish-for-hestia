@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.20.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.21.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -226,6 +226,10 @@ sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
 Updates retain existing tokens, site settings and memory budget.
+Version 0.21.0 keeps aggressive request handling entirely in VCL and retires the
+former CMS session service after successful activation. It uses a fresh cache
+namespace so old Joomla token templates cannot be reused; pages refill on demand.
+Aggressive caching remains off unless explicitly enabled for that website.
 The installer prints timestamped stages and actual account/domain counts to
 stderr as it works. During a slow native command or lock wait it reports the
 current stage every ten seconds; this does not set an execution deadline.
@@ -258,8 +262,9 @@ private-state handling. **UltraCache** adds ESI composition and explicitly appro
 shared parents using exactly that same base policy. No application detection or
 extra protection switches are required.
 
-There is no addon TTL cap or forced grace/keep duration. Freshness follows the
-origin and native Varnish, with explicit central/site VCL additions retained.
+There is no addon TTL cap or forced grace/keep duration. With aggressive caching
+off, freshness follows the origin and native Varnish, with explicit central/site
+VCL additions retained. Aggressive mode uses the selected website server TTL.
 Uncacheable-response markers use the running Varnish's `uncacheable_ttl` setting.
 Otherwise public responses whose Set-Cookie names are all Shared can cache
 without storing personal cookie fields. Mixed Private/Variant/unknown response

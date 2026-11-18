@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.21.0 · 2026-11-18
 
 - Keep aggressive caching entirely in VCL: no runtime session SQL, Python service, token provider, Joomla ESI token rewrite or HTML body gate. Cache original HTML unchanged, including embedded tokens; retain known login/cart markers, private routes and explicit cookie choices. Remove the former owned CMS unit/config/socket after new VCL activation, with failed-apply recovery.
 
