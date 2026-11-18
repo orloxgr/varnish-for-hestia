@@ -50,10 +50,29 @@ $panel = top_panel($headerOwner, $TAB);
                         <div class="u-mb10"><label class="form-label" for="cookies-<?= $escape($site['domain']) ?>">Cookies that bypass cache</label>
                             <textarea title="One case-sensitive cookie name per line. A trailing * matches a name prefix, for example membership_*. If a listed cookie is present, this domain and its aliases bypass shared cache. Cookies are not deleted. Empty uses the profile defaults; built-in private-cookie protections remain active." class="form-control" id="cookies-<?= $escape($site['domain']) ?>" name="bypass_cookies" rows="4" spellcheck="false" placeholder="membership_*&#10;custom_currency"><?= $escape(implode("\n", $site['bypass_cookies'] ?? [])) ?></textarea>
                         </div>
-                        <p class="u-mb10">One name per line; use a trailing <code>*</code> for a prefix. Matching requests go to the application. Built-in login, session and cart exclusions remain active.</p>
+                        <p class="u-mb10">One name per line; use a trailing <code>*</code> for a prefix. Matching requests go to the application. Known login and cart exclusions remain active; aggressive mode can share generic anonymous session cookies.</p>
                         <p class="u-mb10">Other cookies do not cause bypass by themselves. Add cookies here when the application changes page content, such as language, currency or membership.</p>
                         <button type="submit" class="button" title="Save these additional cookie bypass rules for this website and its aliases. Only this website’s cache is invalidated; profile, VCL and tokens are retained."><i class="fas fa-floppy-disk icon-purple"></i>Save cookie rules</button>
                     </form>
+                    <details class="box-collapse u-mb10">
+                        <summary class="box-collapse-header" title="Control server-side public HTML caching. Known CMS private routes and actions stay excluded.">Server cache and CMS rules</summary>
+                        <div class="box-collapse-content"><form method="post">
+                            <?php $formFields('configure-cache-policy', $site['domain']); $cacheId = $site['domain']; ?>
+                            <label class="form-label u-block u-mb20"><input type="checkbox" name="aggressive" value="1" <?= !empty($site['aggressive']) ? 'checked' : '' ?> title="Use the selected server cache duration for public anonymous HTML despite generic origin cache restrictions. Known login, private CMS state, cart actions and explicit private choices keep their exclusions."> Enable aggressive caching</label>
+                            <label class="form-label" for="aggressive-ttl-<?= $escape($cacheId) ?>">Server cache duration (seconds)</label>
+                            <input class="form-control u-mb20" id="aggressive-ttl-<?= $escape($cacheId) ?>" type="number" min="1" step="1" name="aggressive_ttl" value="<?= $escape($site['aggressive_ttl'] ?? 86400) ?>" title="Lifetime used by aggressive caching. A shorter generic origin cache lifetime does not cap this choice. Browser cache settings are separate.">
+                            <p class="u-mb10">CMS private paths and actions are recognized automatically, including configured routes when available. They remain excluded with aggressive caching enabled.</p>
+                            <?php if (!empty($site['cms_discovery']['error'])): ?><p class="u-mb10" role="status"><?= $escape($site['cms_discovery']['error']) ?></p><?php endif; ?>
+                            <?php if (!empty($site['cms_installations'])): ?>
+                                <ul class="u-mb20"><?php foreach ($site['cms_installations'] as $cms): ?><li><strong><?= $escape(['wordpress'=>'WordPress / WooCommerce','joomla'=>'Joomla','drupal'=>'Drupal','magento'=>'Magento / Adobe Commerce','prestashop'=>'PrestaShop'][$cms['cms']] ?? $cms['cms']) ?></strong> · <?= $escape($cms['base']) ?><?php if (!empty($cms['private_paths'])): ?> · Configured private paths: <?= $escape(implode(', ', $cms['private_paths'])) ?><?php endif; ?></li><?php endforeach; ?></ul>
+                            <?php else: ?><p class="u-mb20"><?= ($site['cms_discovery']['status'] ?? '') === 'complete' ? 'No supported CMS detected.' : 'CMS discovery is pending or unavailable. Refresh detection to check this website.' ?></p><?php endif; ?>
+                            <label class="form-label" for="private-paths-<?= $escape($cacheId) ?>">Additional private paths</label>
+                            <textarea class="form-control u-mb10" id="private-paths-<?= $escape($cacheId) ?>" name="custom_private_paths" rows="4" spellcheck="false" placeholder="/custom-members-area" title="One custom private URL path per line. Known CMS routes are added automatically. These exceptions apply only to this website and its aliases."><?= $escape(implode("\n", $site['custom_private_paths'] ?? [])) ?></textarea>
+                            <button type="submit" class="button" title="Validate and apply this website’s server cache behavior and additional private paths. Profile, tokens, browser cache and other websites are preserved.">Save cache behavior</button>
+                        </form>
+                        <form method="post" class="u-mt20"><?php $formFields('refresh-cms', $site['domain']); ?><button type="submit" class="button" title="Read this website’s native document root and configured CMS routes as its hosting account. Keeps existing unsaved form edits separate; save them before refreshing.">Refresh CMS detection</button></form>
+                        </div>
+                    </details>
                     <details class="box-collapse u-mb10">
                         <summary class="box-collapse-header" title="Browser caching for existing files served directly by Nginx. Dynamic responses retain their application policy.">Browser cache</summary>
                         <div class="box-collapse-content"><form method="post">

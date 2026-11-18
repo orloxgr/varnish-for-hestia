@@ -5,6 +5,19 @@ import subprocess
 import progress
 
 
+def document_root(hestia, owner, domain, observed):
+    """Resolve native CUSTOM_DOCROOT; never guess a hosting home directory."""
+    value = observed.get('document_root') or observed.get('DOCUMENT_ROOT')
+    if not value:
+        details = hestia('v-list-web-domain', owner, domain, 'json').get(domain)
+        if not isinstance(details, dict):
+            raise ValueError('Native Hestia domain details are unavailable')
+        value = details.get('DOCUMENT_ROOT')
+    if not isinstance(value, str) or not value.startswith('/') or '..' in Path(value).parts:
+        raise ValueError('Native Hestia did not return an absolute document root')
+    return str(Path(value))
+
+
 def collect(hestia):
     progress.stage('Reading native Hestia accounts and IP addresses')
     users = hestia('v-list-users', 'json')
@@ -33,6 +46,7 @@ def collect(hestia):
             'sites':{domain:{'aliases':[s.strip() for s in web.get('ALIAS','').split(',') if s.strip()],
                              'suspended':web.get('SUSPENDED') == 'yes',
                              'origin_ip':local_ip(web['IP']), 'proxy_template':web.get('PROXY',''),
+                             'document_root':web.get('DOCUMENT_ROOT'),
                              'proxy_extensions':web.get('PROXY_EXT','')}
                      for domain, web in domains.items()},
         }

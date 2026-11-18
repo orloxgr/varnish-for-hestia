@@ -12,6 +12,9 @@ import hosting_timeouts
 import profile_settings
 import cookie_admin
 import cookie_control
+import aggressive
+import cms_routes
+import cms_resolver
 
 PROFILES = profile_settings.PROFILES
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,7 +62,7 @@ def render(state, config):
             if origin not in backends:
                 backends[origin] = 'hvh_origin_' + str(len(backends))
             browser_cache.selected(site, state)
-            sites.append(dict(site, domain=domain, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
+            sites.append(dict(site, **aggressive.settings(site), domain=domain, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
                               cookie_contract=cookie_control.cache_contract(site.get('cookie_integration'),domain,site['aliases'],
                                   state.get('cookie_policies'),site.get('cookie_policies')),
                               owned_domains=list(owner['sites']),
@@ -80,6 +83,11 @@ def render(state, config):
             dispatch.append(('if' if not dispatch else 'else if') + ' (' + condition + ') {\n' +
                             'set req.http.X-HVH-Site = ' + quoted(site['id']) + ';\n' +
                             'set req.http.X-HVH-Profile = ' + quoted(site['profile']) + ';\n' +
+                            ('set req.http.X-SCP-Aggressive = "1"; set req.http.X-SCP-Aggressive-TTL = ' + quoted(str(site['aggressive_ttl'])) + ';\n' if site['aggressive'] else '') +
+                            ('set req.http.X-SCP-Session-Socket = '+quoted(cms_resolver.SOCKET)+'; '+
+                             'set req.http.X-SCP-Session-Site = '+quoted(site['id'])+'; '+
+                             'set req.http.X-SCP-Session-Timeout = '+quoted(hosting_timeouts.seconds(state.get('hosting_timeouts',{}).get('connect',60000)))+';\n'
+                             if site['aggressive'] and any(row['cms']=='joomla' for row in site.get('cms_installations',[])) else '') +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
                             ('set req.http.X-SCP-Cookie-Contract = ' + quoted(site['cookie_contract']) + ';\n') +
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
@@ -88,12 +96,22 @@ def render(state, config):
     custom_recv, custom_response, cookie_bypass, cookie_rules, response_rules = [], [], [], [], []
     cookie_groups={}
     response_groups={}
+    cms_rules=[]
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
+        if site.get('cms_pending_root'):
+            custom_recv.append(condition+' { set req.http.X-SCP-Reason = "cms-document-root-changed"; return (pass); }')
         # Identical effective rules are emitted once, irrespective of the
         # number of hosted domains. IDs/descriptions do not multiply VCL.
-        key=json.dumps(cookie_admin.concrete(site.get('cookie_policies')),sort_keys=True)
-        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'ids':[]})['ids'].append(site['id'])
+        session_names=aggressive.session_names(site)
+        key=json.dumps([cookie_admin.concrete(site.get('cookie_policies')),site['aggressive'],session_names],sort_keys=True)
+        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'aggressive':site['aggressive'],'session_names':session_names,'ids':[]})['ids'].append(site['id'])
+        cms_code=cms_routes.compile_recv(site.get('cms_installations'))
+        if cms_code:
+            cms_rules.append(condition+' {\n'+cms_code+'\n}')
+        paths=cms_routes.compile_custom_recv(site.get('custom_private_paths',[]),reason='custom-private-path')
+        if paths:
+            custom_recv.append(condition+' {\n'+paths+'\n}')
         purge.append(condition + ' { if (req.http.X-Hestia-Varnish-Token != ' + quoted(site['token']) +
                      ' && req.http.X-UltraCache-Token != ' + quoted(site['token']) +
                      ') { return (synth(403, "Purge token denied")); } }')
@@ -111,8 +129,8 @@ def render(state, config):
                 ' set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
-        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True)+'\n}')
-        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'])
+        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,automatic_shared=group['session_names'])+'\n}')
+        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'],aggressive_mode=group['aggressive'],automatic_shared=group['session_names'])
         response_groups.setdefault(rules,[]).extend(group['ids'])
     for rules,identities in response_groups.items():
         condition=' || '.join('bereq.http.X-HVH-Site == '+quoted(identity) for identity in identities)
@@ -171,6 +189,7 @@ sub vcl_hash {
   call scp_cookie_hash;
   hash_data("hvh-cache-policy-v8");
   hash_data(req.http.X-HVH-Site);
+  if (req.http.X-SCP-Aggressive == "1") { hash_data("aggressive"); hash_data(req.http.X-SCP-Aggressive-TTL); }
   hash_data(req.http.host);
   hash_data(req.http.X-SCP-Key-URL);
   return (lookup);
@@ -217,7 +236,7 @@ sub vcl_deliver {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules)))
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules)))
     if cookie_groups:
         text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())

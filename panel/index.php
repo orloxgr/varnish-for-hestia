@@ -115,6 +115,11 @@ if (in_array($action, ['admin-browser-cache', 'configure-browser-cache'], true))
     $request['versioned_seconds'] = filter_var($_POST['versioned_seconds'] ?? '', FILTER_VALIDATE_INT);
     $request['versioned_paths'] = $_POST['versioned_paths'] ?? '';
 }
+if ($action === 'configure-cache-policy') {
+    $request['aggressive'] = ($_POST['aggressive'] ?? '') === '1';
+    $request['aggressive_ttl'] = filter_var($_POST['aggressive_ttl'] ?? '', FILTER_VALIDATE_INT);
+    $request['custom_private_paths'] = $_POST['custom_private_paths'] ?? '';
+}
 $jsonResponse = ($_GET['format'] ?? '') === 'json' ||
     ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html');
 $bridge = static function (array $payload) use ($root, $meta): array {
@@ -151,7 +156,7 @@ $bridge = static function (array $payload) use ($root, $meta): array {
 [$code, $data] = $bridge($request);
 $pageError = '';
 if ($code !== 0 || !is_array($data) || empty($data['ok'])) {
-    $cookieValidationError = is_array($data) && in_array($data['stage'] ?? '', ['validate-cookie-policies', 'wordpress-cookie-control'], true) ? (string)($data['error'] ?? '') : '';
+    $cookieValidationError = is_array($data) && in_array($data['stage'] ?? '', ['validate-cookie-policies', 'wordpress-cookie-control', 'validate-cache-policy'], true) ? (string)($data['error'] ?? '') : '';
     if ($jsonResponse) {
         if ($cookieValidationError !== '') {
             $respond(400, ['ok' => false, 'stage' => $data['stage'], 'error' => $cookieValidationError]);
@@ -203,6 +208,10 @@ if ($pageError === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'The purge token for ' . $selectedDomain . ' was changed.';
     } elseif ($action === 'configure-site') {
         $message = 'The profile and VCL for ' . $selectedDomain . ' were applied.';
+    } elseif ($action === 'configure-cache-policy') {
+        $message = 'The server cache behavior for ' . $selectedDomain . ' was applied.';
+    } elseif ($action === 'refresh-cms') {
+        $message = 'CMS detection for ' . $selectedDomain . ' was refreshed. See its detection status below.';
     } elseif ($action === 'configure-browser-cache') {
         $message = 'Browser cache headers for ' . $selectedDomain . ' were applied.';
     } elseif ($action === 'configure-cookies') {

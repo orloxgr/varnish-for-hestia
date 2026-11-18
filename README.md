@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.19.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.20.0** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -65,8 +65,50 @@ is sized for a **32 GB server**: Varnish also uses RAM outside cache storage,
 and PHP, databases and other services need their own RAM. Hestia's existing code
 and templates are not replaced.
 
-While this repository is private, cloning requires your GitHub username and a
-token with repository access at the password prompt, not your GitHub password.
+This repository is public; cloning does not require GitHub credentials.
+
+## Server cache and CMS rules
+
+Each website has **Server cache and CMS rules** in its existing accordion.
+**Enable aggressive caching** is off by default and works with Basic and
+UltraCache. When enabled, anonymous public HTML uses the selected positive
+**Server cache duration (seconds)**, including when generic origin cache headers
+request private/no-store or a shorter lifetime. The original browser cache headers
+are restored on delivery. This option does not change browser cache settings.
+
+Known authentication, carts, private actions, explicit Private cookie choices and
+additional website bypass rules still take precedence. A generic `PHPSESSID`
+alone no longer forces PASS in aggressive mode. Original request URL and cookies
+reach the origin unchanged; tracking dimensions are removed only from the lookup
+key. Real response cookies use the same request-owned handoff as Shared HTML:
+they never become part of an object replayed to another visitor.
+
+CMS detection uses Hestia's native document root, including custom document
+roots and nested installations. Known WordPress/WooCommerce, Joomla, Drupal,
+Magento and PrestaShop private paths and query actions are added automatically.
+Static Magento backend aliases and read-only WordPress/WooCommerce, Joomla and
+PrestaShop database route metadata enrich these rules where available. Detection
+shows its status and retains last valid configured routes when metadata fails.
+Use **Additional private paths** only for custom URL path prefixes, one per line.
+
+Installation, saving cache behavior and **Refresh CMS detection** read metadata
+as the hosting account without running customer PHP. Normal panel reads and
+minute reconciliation do not recursively scan sites or query route databases.
+A native document-root change triggers one refresh; failed discovery after such
+a change pauses that website's cache with `cms-document-root-changed` until
+detection succeeds. Root can explicitly refresh all websites with:
+
+```sh
+sudo /usr/local/hestia/bin/v-varnish-hestia refresh-cms
+```
+
+For supported Joomla 3–6 database sessions, an addon-owned local service checks
+the current guest/user ID before opaque session requests can reuse a warm public
+object. There is no cached guest authentication result. Expired sessions remain
+anonymous; authenticated and remember-me requests stay private. Unsupported or
+unavailable session configurations report a specific reason instead of assuming
+the user is anonymous. Queries run as the hosting account, and credentials stay
+out of addon state, generated VCL, panel responses and command arguments.
 
 ## Cookies on cached pages
 

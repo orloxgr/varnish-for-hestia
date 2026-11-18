@@ -2,6 +2,7 @@
 import cookie_admin
 import cookie_database
 from cookie_catalogue import load_catalogue
+import aggressive
 
 
 def view(state, owner=None, domain=None):
@@ -26,6 +27,12 @@ def view(state, owner=None, domain=None):
         extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
         profile=state['owners'][owner]['sites'][domain]['profile']
     def explain(metadata,match,action):
+        if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
+            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),cookie_admin.concrete(site))
+                           if cookie_admin._matches(rule['match'],match)),None)
+            if explicit is None:
+                metadata['effective_action']='shared'
+                metadata['core_precedence']='Aggressive caching shares this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
         cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
                    cookie_admin._matches(entry['match'],match)),None)
         if cart:

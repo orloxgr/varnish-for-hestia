@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT / 'shared'))
 from cookie_admin import CookieChoiceError
 from cookie_control import ControlError
+from cache_behavior import CachePolicyError
 META = json.loads((ROOT / 'addon.json').read_text())
 HESTIA = Path('/usr/local/hestia')
 ENV = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'HESTIA': str(HESTIA), 'LANG': 'C.UTF-8'}
@@ -94,9 +95,9 @@ def locked_main(raw=None):
             result = update()
             print(json.dumps({'ok': result['result'] != 'error', 'cookie_database': result}))
             return int(result['result'] == 'error')
-        if sys.argv[1:] == ['reconcile']:
+        if sys.argv[1:] in (['reconcile'], ['refresh-cms']):
             from service import reconcile
-            state, config, result = reconcile(hestia)
+            state, config, result = reconcile(hestia, cms_scope='all' if sys.argv[1:] == ['refresh-cms'] else None)
             print(json.dumps({'ok': True, 'accounts': len(state['owners']), **result}))
             return 0
         if sys.argv[1:] == ['discover']:
@@ -122,6 +123,9 @@ def locked_main(raw=None):
         code = 0
     except CookieChoiceError as error:
         result = {'ok': False, 'stage': 'validate-cookie-policies', 'error': str(error)}
+        code = 1
+    except CachePolicyError as error:
+        result = {'ok':False,'stage':'validate-cache-policy','error':str(error)}
         code = 1
     except ControlError as error:
         result = {'ok': False, 'stage': 'wordpress-cookie-control', 'error': str(error)}

@@ -81,7 +81,7 @@ def classify(root, header, query):
         name = joomla_settings(root)
         # Joomla 3 accepts a pre-3.6 remember-me cookie under a bare hash name.
         # Its token.series shape is not an unrelated numeric analytics cookie.
-        if any(other!=name and re.fullmatch('[a-f0-9]{32}',other) and '.' in value
+        if any(other!=name and re.fullmatch('[a-f0-9]{32}',other) and re.fullmatch(r'[A-Za-z0-9]+[.][A-Za-z0-9]{20}',value)
                for other,value in supplied.items()):
             return 'unresolved', 'joomla-legacy-remember'
         if name not in supplied:

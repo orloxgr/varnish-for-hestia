@@ -13,11 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
 from vcl import PROFILES, render
 
 
-def program(profile, *, backend_response='', bypass_cookies=None, cookie_delivery=None, cookie_policies=None):
+def program(profile, *, backend_response='', bypass_cookies=None, cookie_delivery=None, cookie_policies=None, site_settings=None):
     state = {'owners': {'alice': {'enabled': True, 'suspended': False, 'package': 'default', 'sites': {
         'example.test': {'id': 'a'*32, 'aliases': [], 'profile': profile, 'token': 'A'*32,
                          'enabled': True, 'suspended': False, 'custom_recv': '',
                          'custom_backend_response': backend_response, 'bypass_cookies': bypass_cookies or [], 'cookie_delivery': cookie_delivery, 'cookie_policies': cookie_policies}}}}}
+    state['owners']['alice']['sites']['example.test'].update(site_settings or {})
     return render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080}).replace('"8080"', '"${s1_port}"', 1)
 
 

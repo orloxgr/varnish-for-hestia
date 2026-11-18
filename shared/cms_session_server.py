@@ -46,7 +46,7 @@ def select_installation(site, path):
 
 
 def resolve(config, request):
-    if (request.get('schema') != 1 or not re.fullmatch('[a-f0-9]{32}', request.get('site', '')) or
+    if (not isinstance(request,dict) or request.get('schema') != 1 or not re.fullmatch('[a-f0-9]{32}', request.get('site', '')) or
             not isinstance(request.get('path'), str) or not isinstance(request.get('cookie'), str)):
         return 'unresolved\tcms-session-protocol\n'
     site = config['sites'].get(request['site'])

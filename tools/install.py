@@ -291,7 +291,7 @@ def install(args):
             progress.stage('Installing managed proxy template definitions')
             existing['template_name'] = routing.install_templates(SOURCE, existing)
             write_json(service.CONFIG / 'settings.json', existing)
-            _, _, result = service.reconcile(hestia)
+            _, _, result = service.reconcile(hestia,cms_scope='all')
             progress.stage('Enabling native ESI attribute processing without restarting Varnish')
             maintenance.configure_esi(existing)
             progress.stage('Scheduling reconciliation with the bundled reviewed cookie rules')
@@ -352,7 +352,7 @@ def install(args):
         # The registry must start from the transaction's persisted identities,
         # including after a failed attempt restored an absent/older registry.
         write_json(service.STORE / 'desired.json', state)
-        state, _, result = service.reconcile(hestia, config_override=config)
+        state, _, result = service.reconcile(hestia, config_override=config,cms_scope='all')
         maintenance.integration_files(SOURCE, config)
         run('systemctl', 'enable', 'varnish')
         config['installed'] = True

@@ -26,6 +26,10 @@ import cookie_admin
 import cookie_bridge
 import cookie_control
 import cookie_execution
+import aggressive
+import cache_behavior
+import cms_inventory
+import cms_resolver
 from vcl import render, PROFILES
 
 CONFIG = Path('/etc/varnish-for-hestia')
@@ -185,6 +189,7 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
                 old = old_sites.get(site['id'])
                 if old and (any(old[key] != site[key] for key in ('enabled', 'profile', 'custom_recv', 'custom_backend_response')) or
                             old.get('bypass_cookies', []) != site.get('bypass_cookies', []) or
+                            cache_behavior.execution(old) != cache_behavior.execution(site) or
                             any(operation['site_id'] == site['id'] and operation['base_digest'] != operation['target_digest']
                                 for operation in (cookie_ops or [])) or
                             state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
@@ -244,6 +249,7 @@ def recover_pending(config_override=None, cookie_report=None):
     preserved=record_cookie_rollback(extra.get('cookie_operations', []))
     if cookie_report is not None:cookie_report.extend(preserved)
     transaction.restore_files(record)
+    cms_resolver.restore(extra.get('cms_resolver'))
     before = base64.b64decode(extra['apache']) if extra['apache'] is not None else None
     if extra.get('local_started', True):
         routing.rollback(extra['routes'], before)
@@ -255,7 +261,7 @@ def recover_pending(config_override=None, cookie_report=None):
     return True
 
 
-def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
+def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None, cms_scope=None):
     # Only root-side installation code supplies the override while the public
     # bridge remains unavailable until installation commits.
     recover_pending(config_override)
@@ -270,6 +276,11 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
         browser_cache.defaults(state)
         if mutation:
             mutation(state, config)
+        changed_cms=cms_inventory.changed_roots(state,inventory)
+        effective_cms_scope='all' if cms_scope=='all' else changed_cms | set(cms_scope or [])
+        if effective_cms_scope:
+            progress.stage('Detecting CMS installations and configured private routes')
+            cms_inventory.refresh(state,inventory,hestia,effective_cms_scope)
         applied_path = STORE / 'applied.json'
         previous = json.loads(applied_path.read_text()) if applied_path.exists() else None
         progress.stage('Preparing managed proxy routes')
@@ -280,6 +291,7 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
         cookie_bridge.inspect(cookie_ops)
         apache = routing.APACHE.read_bytes() if routing.APACHE.exists() else None
         extra = {'routes': changes, 'cookie_operations': cookie_ops, 'local_started': False,
+                 'cms_resolver':cms_resolver.snapshot(),
                  'apache': base64.b64encode(apache).decode() if apache is not None else None}
         transaction.begin(STORE, transaction_paths(), extra)
         def journal(**updates):
@@ -288,8 +300,10 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
             record['extra'] = extra
             write_json(STORE/'apply.json', record)
         try:
+            cms_resolver.prepare(state,config)
             cookie_bridge.prepare(cookie_ops, journal)
             result = apply(state, previous, inventory, config, changes=changes, cookie_ops=cookie_ops, journal=journal)
+            cms_resolver.finish(state)
             progress.stage('Committing desired and applied configuration')
             if old != state:
                 write_json(desired_path, state)
@@ -297,6 +311,7 @@ def reconcile(hestia, mutation=None, config_override=None, cookie_scope=None):
                 write_json(applied_path, state)
         except ApplyRolledBack as failure:
             cookie_bridge.rollback(cookie_ops, journal)
+            cms_resolver.restore(extra.get('cms_resolver'))
             transaction.finish(STORE)
             if record_cookie_rollback(cookie_ops):
                 original=getattr(failure,'cookie_control_error',failure)
@@ -342,6 +357,8 @@ def request(hestia, owner_name, action, payload):
             owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
         elif action == 'configure-browser-cache':
             browser_cache.change(state, payload, owner['sites'][domain])
+        elif action == 'configure-cache-policy':
+            cache_behavior.change(owner['sites'][domain],payload)
         elif action == 'configure-cookie-policies':
             owner['sites'][domain]['cookie_policies'] = cookie_admin.normalize(payload.get('cookie_policies'))
             if 'cookie_integration' in payload:
@@ -357,12 +374,14 @@ def request(hestia, owner_name, action, payload):
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
                 raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies') and not isinstance(domain, str):
         raise ValueError('Select a site')
     if action == 'configure-cookie-policies':
         state, config, result = reconcile(hestia, mutate, cookie_scope={(owner_name,domain)})
+    elif action in ('configure-cache-policy','refresh-cms'):
+        state, config, result = reconcile(hestia, mutate, cms_scope={(owner_name,domain)})
     else:
         state, config, result = reconcile(hestia, mutate)
     owner = state['owners'][owner_name]
@@ -380,6 +399,10 @@ def request(hestia, owner_name, action, payload):
                            'enabled': site['enabled'], 'profile': site['profile'],
                            'custom_recv': site['custom_recv'], 'custom_backend_response': site['custom_backend_response'],
                            'bypass_cookies': site.get('bypass_cookies', []),
+                           **aggressive.settings(site),
+                           'custom_private_paths':site.get('custom_private_paths',[]),
+                           'cms_installations':site.get('cms_installations',[]),
+                           'cms_discovery':site.get('cms_discovery'),
                            'browser_cache': browser_cache.selected(site, state),
                            'browser_cache_override': site.get('browser_cache'),
                            'routing_active': site['settings'].get('routing_active', False)}

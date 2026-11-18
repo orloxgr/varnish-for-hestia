@@ -75,7 +75,8 @@ class JoomlaSessions(unittest.TestCase):
     def test_expired_session_is_guest_but_remember_cookies_keep_auth_boundary(self):
         self.assertEqual(cms_sessions.classify(self.root,self.name+'=expired',lambda *_:[]),('guest','joomla-expired-session'))
         self.assertEqual(cms_sessions.classify(self.root,'joomla_remember_me_ab=token.series',self.fail),('private','joomla-remember-session'))
-        self.assertEqual(cms_sessions.classify(self.root,'a'*32+'=token.series',self.fail),('unresolved','joomla-legacy-remember'))
+        self.assertEqual(cms_sessions.classify(self.root,'a'*32+'=token.abcdefghijklmnopqrst',self.fail),('unresolved','joomla-legacy-remember'))
+        self.assertEqual(cms_sessions.classify(self.root,'a'*32+'=123.456',self.fail),('guest','joomla-no-session'))
 
     def test_database_parameter_and_password_stay_out_of_argv(self):
         class Result:

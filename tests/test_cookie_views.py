@@ -12,9 +12,9 @@ from test_cookie_admin import settings
 
 
 class CookieViews(unittest.TestCase):
-    def view(self,profile='basic',choices=None,bypass=None,central=False):
+    def view(self,profile='basic',choices=None,bypass=None,central=False,aggressive=False):
         state={'owners':{'alice':{'sites':{'example.test':{'profile':profile,'aliases':[],
-            'cookie_policies':choices,'bypass_cookies':bypass or []}}}}}
+            'cookie_policies':choices,'bypass_cookies':bypass or [],'aggressive':aggressive}}}}}
         with patch.object(cookie_views.cookie_database,'database',return_value={'records':[]}), \
              patch.object(cookie_views.cookie_database,'directory',return_value=ROOT/'shared/cookie-recognition'):
             return cookie_views.view(state,None if central else 'alice',None if central else 'example.test')
@@ -48,6 +48,15 @@ class CookieViews(unittest.TestCase):
         self.assertEqual(row['effective_action'],'private')
         self.assertIn('entire cart/session request',row['core_precedence'])
         self.assertEqual(row['reset_metadata']['effective_action'],'application-contract')
+
+    def test_aggressive_generic_session_effective_action_and_explicit_private(self):
+        data=self.view(aggressive=True)
+        row=next(row for row in data['cookie_policy_rows'] if row['name']=='PHPSESSID')
+        self.assertEqual(row['effective_action'],'shared')
+        self.assertIn('Aggressive caching',row['core_precedence'])
+        data=self.view(aggressive=True,choices=settings('PHPSESSID','private'))
+        row=next(row for row in data['cookie_policy_rows'] if row['id']=='custom:fixture')
+        self.assertEqual(row['effective_action'],'private')
 
 
 if __name__=='__main__':unittest.main()

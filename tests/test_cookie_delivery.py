@@ -17,7 +17,7 @@ POLICY_VERSION = load_catalogue()['version']
 
 
 @contextlib.contextmanager
-def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False):
+def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None):
     """An isolated origin and daemon; never load/restart the installed service."""
     class Origin(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -45,7 +45,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
     try:
         with tempfile.TemporaryDirectory(prefix='hvh-cookie-http-') as folder:
             root = Path(folder)
-            source = program(profile, cookie_delivery=delivery, cookie_policies=policies).replace('${s1_port}', str(origin.server_port))
+            source = program(profile, cookie_delivery=delivery, cookie_policies=policies, site_settings=site_settings).replace('${s1_port}', str(origin.server_port))
             if transform is not None:
                 source = transform(source)
             (root / 'policy.vcl').write_text(source)
