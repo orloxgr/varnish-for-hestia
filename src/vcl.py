@@ -87,6 +87,7 @@ def render(state, config):
                             ('set req.http.X-SCP-Session-Socket = '+quoted(cms_resolver.SOCKET)+'; '+
                              'set req.http.X-SCP-Session-Site = '+quoted(site['id'])+'; '+
                              'set req.http.X-SCP-Session-Timeout = '+quoted(hosting_timeouts.seconds(state.get('hosting_timeouts',{}).get('connect',60000)))+';\n'
+                             'set req.http.X-SCP-Token-Timeout = '+quoted(hosting_timeouts.seconds(hosting_timeouts.frontend(state)['read'] if 'hosting_timeouts' in state else 180000))+';\n'
                              if site['aggressive'] and any(row['cms']=='joomla' for row in site.get('cms_installations',[])) else '') +
                             'set req.backend_hint = ' + site['backend'] + ';\n' +
                             ('set req.http.X-SCP-Cookie-Contract = ' + quoted(site['cookie_contract']) + ';\n') +
@@ -174,6 +175,7 @@ def render(state, config):
   if (req.http.X-HVH-Disabled == "1") {
     set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
+  if (req.restarts > 0) { set req.http.X-SCP-Reason = "joomla-token-retry"; return (pass); }
   ''' + '\n'.join(custom_recv) + '''
   ''' + '\n'.join(cookie_bypass) + '''
   call scp_recv;
@@ -220,6 +222,7 @@ sub vcl_backend_response {
 sub vcl_backend_error {
   cookie_handoff.discard();
 }
+sub vcl_synth { call scp_synth; }
 sub vcl_deliver {
   call scp_deliver;
   set resp.http.X-Hestia-Varnish = resp.http.X-SCP-Result;

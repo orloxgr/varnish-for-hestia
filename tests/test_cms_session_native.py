@@ -1,6 +1,7 @@
 """Disposable real MariaDB + UID drop + UNIX socket checks, no live sites."""
 import hashlib
 import base64
+import http.client
 import json
 import os
 from pathlib import Path
@@ -140,7 +141,7 @@ class NativeSessionResolver(unittest.TestCase):
         site=state['owners']['nobody']['sites']['example.test']
         self.assertEqual(site['cms_discovery']['status'],'complete',site['cms_discovery'])
         self.assertEqual(site['cms_installations'][0]['private_paths'],['/el/members-area','/members-area'])
-        self.assertEqual(site['cms_installations'][0]['private_queries'],[{'name':'Itemid','value':'333'}])
+        self.assertEqual(site['cms_installations'][0]['private_queries'],[{'name':'Itemid','value':'333','base':'/'}])
         self.assertEqual(site['cms_sessions'][0]['cookie_name'],self.cookie.split('=')[0])
         # A later failed native root lookup keeps last valid aliases and says why.
         inventory['nobody']['sites']['example.test']['document_root']='/missing-native-root'
@@ -236,7 +237,11 @@ $statement=$db->prepare('INSERT INTO j_session (session_id,guest,userid,client_i
 $id=session_id();$statement->bind_param('s',$id);$statement->execute();
 $token=md5('secret'.'0'.$_SESSION['token']);
 header('Content-Type: text/html; charset=UTF-8');
-echo '<form method="post"><input type="hidden" name="'.$token.'" value="1"></form>';
+if (parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH)==='/page') {
+    echo '<script type="application/json" class="joomla-script-options new">'.json_encode(['csrf.token'=>$token]).'</script><main>public page</main>';
+} else {
+    echo '<form method="post"><input type="hidden" name="'.$token.'" value="1"></form>';
+}
 session_write_close();
 '''
         code=code.replace('SESSION_FOLDER',json.dumps(str(sessions))).replace('SESSION_COOKIE',json.dumps(cookie_name)).replace('DB_NAME',json.dumps(self.name))
@@ -244,7 +249,7 @@ session_write_close();
         self.sql('GRANT INSERT,UPDATE ON `'+self.name+"`.* TO '"+self.name+"'@'localhost';")
         with socket.socket() as reservation:
             reservation.bind(('127.0.0.1',0));port=reservation.getsockname()[1]
-        process=subprocess.Popen(['/usr/bin/php8.3','-S','127.0.0.1:'+str(port),'-t',str(web)],
+        process=subprocess.Popen(['/usr/bin/php8.3','-S','127.0.0.1:'+str(port),'-t',str(web),str(web/'index.php')],
                                  stdout=subprocess.PIPE,stderr=subprocess.PIPE,user=self.account.pw_uid,
                                  group=self.account.pw_gid,extra_groups=[],cwd='/',env={'PATH':'/usr/bin:/bin'})
         def stop():process.terminate();process.communicate(timeout=10)
@@ -276,6 +281,41 @@ session_write_close();
         self.assertRegex(session_a,r'^[A-Za-z0-9,-]+$')
         self.sql('UPDATE `'+self.name+"`.j_session SET guest=0,userid=77 WHERE session_id='"+session_a+"';")
         self.assertEqual(self.token_call(header_a),'private\tjoomla-authenticated-session\n')
+        if shutil.which('varnishd'):
+            import cms_resolver
+            from test_cookie_delivery import proxy
+            for profile in ('basic','ultracache'):
+                full_requests=[]
+                def origin(path,headers):
+                    full_requests.append(path)
+                    connection=http.client.HTTPConnection('127.0.0.1',port,timeout=10)
+                    try:
+                        connection.request('GET',path,headers={'Host':'example.test','Cookie':headers.get('Cookie',''),
+                            'User-Agent':headers.get('User-Agent',''),'X-Forwarded-Proto':'https'})
+                        response=connection.getresponse();body=response.read().decode()
+                        fields=[(name,value) for name,value in response.getheaders() if name.lower() not in ('content-length','connection','date','server','host')]
+                        self.assertEqual(response.status,200)
+                        return body,fields
+                    finally:connection.close()
+                settings={'aggressive':True,'cms_installations':[{'cms':'joomla','base':'/'}],
+                          'cms_sessions':[{'cms':'joomla','base':'/','cookie_name':cookie_name,'supported':True}]}
+                with self.subTest(profile=profile),patch.object(cms_resolver,'SOCKET',self.config['socket']),proxy(profile,origin,site_settings=settings) as get:
+                    alpha=get('/page?utm_source=A',extra={'User-Agent':'Actual test browser','X-Real-IP':'192.0.2.45'})
+                    beta=get('/page?utm_source=B',extra={'User-Agent':'Actual test browser','X-Real-IP':'192.0.2.46'})
+                    self.assertEqual(dict(alpha[1])['X-Hestia-Varnish'],'MISS')
+                    self.assertEqual(dict(beta[1])['X-Hestia-Varnish'],'HIT')
+                    token_a=cms_session_server.cms_sessions.token_from_html(alpha[2])
+                    token_b=cms_session_server.cms_sessions.token_from_html(beta[2])
+                    self.assertNotEqual(token_a,token_b)
+                    cookies_a=[value.split(';',1)[0] for name,value in alpha[1] if name.lower()=='set-cookie' and value.startswith(cookie_name+'=')]
+                    cookies_b=[value.split(';',1)[0] for name,value in beta[1] if name.lower()=='set-cookie' and value.startswith(cookie_name+'=')]
+                    self.assertTrue(cookies_a);self.assertTrue(cookies_b);self.assertNotEqual(cookies_a[-1],cookies_b[-1])
+                    returning=get('/page?utm_source=C',cookies_a[-1],extra={'User-Agent':'Actual test browser','X-Real-IP':'192.0.2.45'})
+                    self.assertEqual(dict(returning[1])['X-Hestia-Varnish'],'HIT')
+                    self.assertEqual(cms_session_server.cms_sessions.token_from_html(returning[2]),token_a)
+                    self.assertFalse(any(name.lower()=='set-cookie' for name,value in returning[1]))
+                    self.assertEqual(full_requests,['/page?utm_source=A'])
+                    self.assertEqual(alpha[2].replace(token_a,'SAME'),beta[2].replace(token_b,'SAME'))
 
 
 if __name__ == '__main__':unittest.main()

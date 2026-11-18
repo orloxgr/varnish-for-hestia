@@ -72,5 +72,19 @@ class CoreTokens(unittest.TestCase):
                 with self.subTest(overrides=overrides):
                     self.assertEqual(server.resolve_token(self.configuration(),self.request(**overrides),self.fail),'unresolved\tjoomla-token-unavailable\n')
 
+    def test_unicode_installation_base_uses_same_normalized_route_for_selection_and_redirect(self):
+        config=self.configuration()
+        config['sites']['a'*32]['installations'][0]['base']='/%CE%B5%CE%BB'
+        request=self.request(path='/%ce%b5%ce%bb/page',host='example.test')
+        self.assertIsNotNone(server.select_installation(config['sites']['a'*32],request['path']))
+        paths=[]
+        def fetch(origin,path,headers,remaining,scheme):
+            paths.append(path)
+            if len(paths)==1:return 301,[('Location','/%ce%b5%ce%bb/index.php?canonical=1')],b''
+            return 200,[],('<form><input name="'+TOKEN+'" type="hidden" value="1"></form>').encode()
+        with patch.object(server,'resolve',return_value='guest\tjoomla-no-session\n'):
+            self.assertTrue(server.resolve_token(config,request,fetch).startswith('token\t'))
+        self.assertEqual(len(paths),2)
+
 
 if __name__=='__main__':unittest.main()

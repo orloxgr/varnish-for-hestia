@@ -13,6 +13,7 @@ import time
 from urllib.parse import unquote
 
 import aggressive
+import hosting_timeouts
 from files import write, write_json
 
 UNIT=Path('/etc/systemd/system/varnish-for-hestia-cms.service')
@@ -98,8 +99,11 @@ def configuration(state,config):
     shared=Path(__file__).resolve().parents[1]/'shared'
     source_identity=hashlib.sha256(b''.join((shared/name).read_bytes() for name in
         ('cms_sessions.py','cms_session_server.py','cms_metadata.py','cms_discovery.py','cms_routes.py'))).hexdigest()
+    allowances=state.get('hosting_timeouts',{})
+    token_timeout=hosting_timeouts.frontend(state)['read']/1000 if all(key in allowances for key in ('connect','read','send')) else allowances.get('connect',60000)/1000
     return dict(schema=1,socket=SOCKET,allowed_uids=[daemon.pw_uid],socket_gid=grp.getgrnam('varnish').gr_gid,
                 max_frame_bytes=frame_bytes(config),query_timeout=state.get('hosting_timeouts',{}).get('connect',60000)/1000 or None,
+                token_timeout=token_timeout or None,
                 sites=sites,source_identity=source_identity)
 
 
