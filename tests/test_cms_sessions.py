@@ -97,6 +97,8 @@ class JoomlaSessions(unittest.TestCase):
         nested = {'cms':'joomla','base':'/shop','root':'/safe/shop'}
         site = {'uid':1001,'gid':1001,'home':'/home/customer','installations':[
             {'cms':'joomla','base':'/','root':'/safe'}, nested]}
+        site['origins']={'https':{'type':'unix','path':'/root/native-origin.sock',
+                                  'headers':{'X-WV-Origin':'root-only-gateway-secret'}}}
         self.assertEqual(cms_session_server.select_installation(site, '/shop/page?x=1'), nested)
         self.assertEqual(cms_session_server.select_installation(site, '/shopping')['root'], '/safe')
         self.assertEqual(cms_session_server.resolve({'sites':{}}, {'schema':1,'site':'a'*32,'path':'/','cookie':''}), 'unresolved\tcms-session-site\n')
@@ -109,6 +111,8 @@ class JoomlaSessions(unittest.TestCase):
             self.assertEqual(run.call_args.kwargs['group'], 1001)
             self.assertEqual(run.call_args.kwargs['extra_groups'], [])
             self.assertNotIn('personal=id', str(run.call_args.args))
+            self.assertNotIn('root-only-gateway-secret', run.call_args.kwargs['input'])
+            self.assertNotIn('/root/native-origin.sock', run.call_args.kwargs['input'])
             self.assertEqual(json.loads(run.call_args.kwargs['input'])['root'], '/safe/shop')
 
 

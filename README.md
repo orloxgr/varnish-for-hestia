@@ -110,6 +110,12 @@ unavailable session configurations report a specific reason instead of assuming
 the user is anonymous. Queries run as the hosting account, and credentials stay
 out of addon state, generated VCL, panel responses and command arguments.
 
+Joomla's core JavaScript `csrf.token` uses a private ESI fragment in both
+profiles. The shared object contains a template; each visitor receives an
+application-generated token and their own original cookies. A small Joomla core
+component request supplies that personal value on a HIT while the main page
+stays cached. Forms containing session-bound hidden tokens remain private.
+
 ## Cookies on cached pages
 
 **Cookie policies** opens the searchable editor. Administrators have central

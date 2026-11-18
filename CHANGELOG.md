@@ -5,6 +5,7 @@
 - Add an opt-in aggressive public HTML cache mode and independent positive server TTL per website, with the same semantics in Basic and UltraCache. Retain original origin URLs/cookies and browser cache headers, request-owned response-cookie delivery, explicit Private choices and known authentication/cart exceptions.
 - Discover CMS installations through native Hestia document roots as the hosting UID. Compile known CMS paths/query actions and available configured aliases; refresh on install/save, explicit detection requests and native root changes without recurring panel file/database scans. Preserve last valid metadata and report precise failures.
 - Resolve Joomla 3–6 database-backed guest/authenticated sessions before warm lookup through a root-owned local service and unprivileged prepared SQL queries. Keep live authentication results uncached, preserve expired guest visits, isolate native owners and include service state in apply/restore recovery.
+- Keep Joomla public HTML cached while delivering its actual JavaScript CSRF token and PHP-issued session cookies through a private per-visitor ESI fragment, including Basic. Read actual response bodies before object allocation, retain private hidden-token forms, and fall back to the original response when the token provider is unavailable.
 
 ## 0.20.0 · 2026-11-17
 

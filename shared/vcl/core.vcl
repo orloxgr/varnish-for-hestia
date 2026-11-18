@@ -2,6 +2,7 @@
 
 sub scp_init {
     cookie_handoff.reset();
+    if (req.restarts == 0) { unset req.http.X-SCP-Token-Retry; }
     unset req.http.X-SCP-Cookie-Handoff;
     unset req.http.X-SCP-Cookie-Contract;
     unset req.http.X-UltraCache-Cookie-Settings;
@@ -76,7 +77,7 @@ sub scp_hit {
     if (obj.http.X-SCP-Joomla-Token == "1" && req.method != "HEAD" &&
         !cookie_handoff.ensure_token(req.http.X-SCP-Session-Socket, req.http.X-SCP-Session-Site,
             req.url, req.http.Cookie, req.http.host, req.http.X-Forwarded-Proto,
-            req.http.User-Agent, req.http.X-Real-IP, std.duration(req.http.X-SCP-Token-Timeout, 0s))) {
+            req.http.User-Agent, req.http.X-Real-IP, req.http.Accept-Language, std.duration(req.http.X-SCP-Token-Timeout, 0s))) {
         set req.http.X-SCP-Reason = cookie_handoff.token_reason();
         return (pass);
     }
@@ -144,8 +145,9 @@ sub scp_deliver {
         !cookie_handoff.prepare_token() &&
         !cookie_handoff.ensure_token(req.http.X-SCP-Session-Socket, req.http.X-SCP-Session-Site,
             req.url, req.http.Cookie, req.http.host, req.http.X-Forwarded-Proto,
-            req.http.User-Agent, req.http.X-Real-IP, std.duration(req.http.X-SCP-Token-Timeout, 0s))) {
+            req.http.User-Agent, req.http.X-Real-IP, req.http.Accept-Language, std.duration(req.http.X-SCP-Token-Timeout, 0s))) {
         set req.http.X-SCP-Reason = cookie_handoff.token_reason();
+        set req.http.X-SCP-Token-Retry = req.http.X-SCP-Reason;
         return (restart);
     }
     cookie_handoff.deliver();

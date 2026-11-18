@@ -175,7 +175,7 @@ def render(state, config):
   if (req.http.X-HVH-Disabled == "1") {
     set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
-  if (req.restarts > 0) { set req.http.X-SCP-Reason = "joomla-token-retry"; return (pass); }
+  if (req.restarts > 0 && req.http.X-SCP-Token-Retry) { set req.http.X-SCP-Reason = req.http.X-SCP-Token-Retry; return (pass); }
   ''' + '\n'.join(custom_recv) + '''
   ''' + '\n'.join(cookie_bypass) + '''
   call scp_recv;

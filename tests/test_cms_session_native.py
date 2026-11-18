@@ -2,15 +2,18 @@
 import hashlib
 import base64
 import http.client
+import http.server
 import json
 import os
 from pathlib import Path
 import pwd
 import shutil
 import socket
+import socketserver
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import uuid
@@ -316,6 +319,51 @@ session_write_close();
                     self.assertFalse(any(name.lower()=='set-cookie' for name,value in returning[1]))
                     self.assertEqual(full_requests,['/page?utm_source=A'])
                     self.assertEqual(alpha[2].replace(token_a,'SAME'),beta[2].replace(token_b,'SAME'))
+
+        # Webuzo's native gateway is root-only. The shared broker must use its
+        # UNIX transport without exposing the destination/credential to PHP UID.
+        gateway_secret=uuid.uuid4().hex
+        observed=[]
+        class Gateway(http.server.BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_GET(gateway):
+                observed.append(gateway.headers.get('X-WV-Origin'))
+                if observed[-1]!=gateway_secret:
+                    gateway.send_response(403);gateway.end_headers();return
+                connection=http.client.HTTPConnection('127.0.0.1',port,timeout=10)
+                try:
+                    headers={name:value for name,value in gateway.headers.items()
+                             if name.lower() not in ('x-wv-origin','connection')}
+                    connection.request('GET',gateway.path,headers=headers)
+                    response=connection.getresponse();body=response.read()
+                    gateway.send_response(response.status)
+                    for name,value in response.getheaders():
+                        if name.lower() not in ('content-length','connection','date','server'):
+                            gateway.send_header(name,value)
+                    gateway.send_header('Content-Length',str(len(body)));gateway.end_headers()
+                    gateway.wfile.write(body)
+                finally:connection.close()
+        class UnixGateway(socketserver.ThreadingUnixStreamServer):
+            daemon_threads=True
+        gateway_path=self.folder/'native-origin.sock'
+        gateway=UnixGateway(str(gateway_path),Gateway);gateway_path.chmod(0o600)
+        thread=threading.Thread(target=gateway.serve_forever,daemon=True);thread.start()
+        def stop_gateway():gateway.shutdown();gateway.server_close();thread.join(timeout=5)
+        self.addCleanup(stop_gateway)
+        site['origins']['https']={'type':'unix','path':str(gateway_path),
+                                  'headers':{'X-WV-Origin':gateway_secret}}
+        self.config_path.write_text(json.dumps(self.config))
+        unix_reply=self.token_call().rstrip('\n').split('\t')
+        self.assertEqual(unix_reply[0],'token');self.assertRegex(unix_reply[1],r'^[a-f0-9]{32}$')
+        self.assertIn('Set-Cookie: '+cookie_name+'=',base64.b64decode(unix_reply[2]).decode('latin-1'))
+        self.assertEqual(observed,[gateway_secret])
+        denied=subprocess.run([sys.executable,'-I','-c',
+            'import socket; s=socket.socket(socket.AF_UNIX); s.connect('+repr(str(gateway_path))+')'],
+            user=self.account.pw_uid,group=self.account.pw_gid,extra_groups=[],capture_output=True)
+        self.assertNotEqual(denied.returncode,0);self.assertIn(b'PermissionError',denied.stderr)
+        site['origins']['https']['headers']['X-WV-Origin']='wrong'
+        self.config_path.write_text(json.dumps(self.config))
+        self.assertEqual(self.token_call(),'unresolved\tjoomla-token-unavailable\n')
 
 
 if __name__ == '__main__':unittest.main()
