@@ -1,5 +1,6 @@
 """Disposable real MariaDB + UID drop + UNIX socket checks, no live sites."""
 import hashlib
+import base64
 import json
 import os
 from pathlib import Path
@@ -62,6 +63,14 @@ class NativeSessionResolver(unittest.TestCase):
         request={'schema':1,'site':'a'*32,'path':'/public?utm_source=original','cookie':self.cookie if cookie is None else cookie}
         with socket.socket(socket.AF_UNIX) as connection:
             connection.settimeout(10); connection.connect(self.config['socket'])
+            connection.sendall((json.dumps(request)+'\n').encode())
+            return connection.makefile('rb').readline().decode()
+
+    def token_call(self,cookie='',host='example.test'):
+        request={'schema':1,'op':'token','site':'a'*32,'path':'/el/page','cookie':cookie,
+                 'host':host,'scheme':'https','user_agent':'Actual test browser','client_ip':'192.0.2.45'}
+        with socket.socket(socket.AF_UNIX) as connection:
+            connection.settimeout(10);connection.connect(self.config['socket'])
             connection.sendall((json.dumps(request)+'\n').encode())
             return connection.makefile('rb').readline().decode()
 
@@ -206,6 +215,67 @@ class NativeSessionResolver(unittest.TestCase):
                 self.assertFalse((store/'apply.json').exists())
                 self.assertEqual((config_dir/'active.vcl').read_text(),'previous runtime source')
             finally:cms_resolver.restore(before)
+
+    @unittest.skipUnless(shutil.which('php8.3'),'Native PHP HTTP server required')
+    def test_tokens_and_session_cookie_are_created_by_real_php_and_owned_by_each_client(self):
+        web=self.folder/'component';web.mkdir()
+        sessions=self.folder/'php-sessions';sessions.mkdir()
+        os.chown(sessions,self.account.pw_uid,self.account.pw_gid);sessions.chmod(0o700)
+        cookie_name=self.cookie.split('=')[0]
+        code='''<?php
+if ($_SERVER['HTTP_HOST'] === 'www.example.test') {
+    header('Location: https://example.test'.$_SERVER['REQUEST_URI'], true, 301); exit;
+}
+ini_set('session.save_path', SESSION_FOLDER);
+session_name(SESSION_COOKIE);
+session_set_cookie_params(['path'=>'/', 'secure'=>true, 'httponly'=>true, 'samesite'=>'Lax']);
+session_start();
+if (!isset($_SESSION['token'])) $_SESSION['token']=bin2hex(random_bytes(16));
+$db=new mysqli('localhost', DB_NAME, 'fixturepassword', DB_NAME);
+$statement=$db->prepare('INSERT INTO j_session (session_id,guest,userid,client_id) VALUES (?,1,0,0) ON DUPLICATE KEY UPDATE guest=1,userid=0');
+$id=session_id();$statement->bind_param('s',$id);$statement->execute();
+$token=md5('secret'.'0'.$_SESSION['token']);
+header('Content-Type: text/html; charset=UTF-8');
+echo '<form method="post"><input type="hidden" name="'.$token.'" value="1"></form>';
+session_write_close();
+'''
+        code=code.replace('SESSION_FOLDER',json.dumps(str(sessions))).replace('SESSION_COOKIE',json.dumps(cookie_name)).replace('DB_NAME',json.dumps(self.name))
+        (web/'index.php').write_text(code)
+        self.sql('GRANT INSERT,UPDATE ON `'+self.name+"`.* TO '"+self.name+"'@'localhost';")
+        with socket.socket() as reservation:
+            reservation.bind(('127.0.0.1',0));port=reservation.getsockname()[1]
+        process=subprocess.Popen(['/usr/bin/php8.3','-S','127.0.0.1:'+str(port),'-t',str(web)],
+                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,user=self.account.pw_uid,
+                                 group=self.account.pw_gid,extra_groups=[],cwd='/',env={'PATH':'/usr/bin:/bin'})
+        def stop():process.terminate();process.communicate(timeout=10)
+        self.addCleanup(stop)
+        deadline=time.monotonic()+10
+        while True:
+            try:
+                with socket.create_connection(('127.0.0.1',port),timeout=.2):break
+            except OSError:
+                if time.monotonic()>deadline:self.fail('Fixture PHP component did not start')
+                time.sleep(.02)
+        site=self.config['sites']['a'*32]
+        site.update(names=['example.test','www.example.test'],origins={
+            'https':{'type':'tcp','address':'127.0.0.1','port':port}})
+        self.config_path.write_text(json.dumps(self.config))
+        first=self.token_call(host='www.example.test').rstrip('\n').split('\t')
+        second=self.token_call().rstrip('\n').split('\t')
+        self.assertEqual(first[0],'token');self.assertEqual(second[0],'token')
+        self.assertRegex(first[1],r'^[a-f0-9]{32}$');self.assertNotEqual(first[1],second[1])
+        cookie_a=base64.b64decode(first[2]).decode('latin-1').removeprefix('Set-Cookie: ')
+        cookie_b=base64.b64decode(second[2]).decode('latin-1').removeprefix('Set-Cookie: ')
+        self.assertIn('HttpOnly',cookie_a);self.assertIn('secure',cookie_a)
+        header_a=cookie_a.split(';',1)[0];header_b=cookie_b.split(';',1)[0]
+        self.assertNotEqual(header_a,header_b)
+        returning=self.token_call(header_a).rstrip('\n').split('\t')
+        self.assertEqual(returning,['token',first[1],''])
+        self.assertEqual(self.call(header_a),'guest\tjoomla-guest-session\n')
+        session_a=header_a.split('=',1)[1]
+        self.assertRegex(session_a,r'^[A-Za-z0-9,-]+$')
+        self.sql('UPDATE `'+self.name+"`.j_session SET guest=0,userid=77 WHERE session_id='"+session_a+"';")
+        self.assertEqual(self.token_call(header_a),'private\tjoomla-authenticated-session\n')
 
 
 if __name__ == '__main__':unittest.main()

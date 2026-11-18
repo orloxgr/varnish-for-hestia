@@ -92,6 +92,9 @@ def configuration(state,config):
         roots=[dict(cms='joomla',base=row['base'],root=str(root/unquote(row['base']).lstrip('/')))
                for row in site['cms_installations'] if row['cms']=='joomla']
         sites[site['id']]=dict(uid=identity.pw_uid,gid=identity.pw_gid,home=identity.pw_dir,installations=roots)
+        origin=dict(type='tcp',address=site.get('origin_ip',config.get('origin_ip','127.0.0.1')),port=config.get('origin_port',8080))
+        sites[site['id']].update(names=[site.get('domain',next(domain for domain,row in state['owners'][owner]['sites'].items() if row is site)),*site.get('aliases',[])],
+                                origins={'http':origin,'https':dict(origin)})
     shared=Path(__file__).resolve().parents[1]/'shared'
     source_identity=hashlib.sha256(b''.join((shared/name).read_bytes() for name in
         ('cms_sessions.py','cms_session_server.py','cms_metadata.py','cms_discovery.py','cms_routes.py'))).hexdigest()
