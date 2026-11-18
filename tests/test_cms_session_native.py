@@ -176,5 +176,36 @@ class NativeSessionResolver(unittest.TestCase):
                 self.assertEqual(bob[2],'<html>public page</html>')
                 self.assertFalse(any(k.lower()=='set-cookie' for k,v in bob[1]))
 
+    def test_failed_policy_apply_removes_new_helper_and_restores_private_snapshot(self):
+        sys.path.insert(0,str(ROOT/'src'))
+        import cms_resolver
+        import service
+        folder=self.folder/'apply';folder.mkdir()
+        config_dir=folder/'config';config_dir.mkdir()
+        (config_dir/'active.vcl').write_text('previous runtime source')
+        store=folder/'state';store.mkdir(mode=0o700)
+        name='hvh-cms-rollback-'+uuid.uuid4().hex[:10]
+        inventory={'nobody':{'identity':str(self.account.pw_uid)+':birth','package':'default','role':'user','suspended':False,
+            'sites':{'example.test':{'aliases':[],'suspended':False,'origin_ip':'127.0.0.1','proxy_template':'default','proxy_extensions':'','document_root':str(self.root)}}}}
+        def mutate(state,config):
+            site=state['owners']['nobody']['sites']['example.test']
+            site.update(aggressive=True,cms_document_root=str(self.root),cms_installations=[{'cms':'joomla','base':'/'}])
+        def timeouts(state):state['hosting_timeouts']={'connect':10000,'read':10000,'send':10000}
+        with patch.object(service,'CONFIG',config_dir),patch.object(service,'STORE',store),patch.object(service,'ACTIVE',config_dir/'active.vcl'), \
+             patch.object(service,'collect',return_value=inventory),patch.object(service.hosting_timeouts,'refresh',side_effect=timeouts), \
+             patch.object(service.routing,'plan',return_value=[]),patch.object(service,'apply',side_effect=service.ApplyRolledBack('compile rejected')), \
+             patch.object(cms_resolver,'NAME',name),patch.object(cms_resolver,'UNIT',Path('/etc/systemd/system')/(name+'.service')), \
+             patch.object(cms_resolver,'SOCKET','/run/'+name+'/sessions.sock'),patch.object(cms_resolver,'CODE',self.folder), \
+             patch.object(cms_resolver,'frame_bytes',return_value=1000000):
+            before=cms_resolver.snapshot()
+            try:
+                with self.assertRaises(service.ApplyRolledBack):
+                    service.reconcile(None,mutate,config_override={'origin_ip':'127.0.0.1','origin_port':8080})
+                self.assertFalse(cms_resolver.UNIT.exists())
+                self.assertFalse(cms_resolver.configuration_path().exists())
+                self.assertFalse((store/'apply.json').exists())
+                self.assertEqual((config_dir/'active.vcl').read_text(),'previous runtime source')
+            finally:cms_resolver.restore(before)
+
 
 if __name__ == '__main__':unittest.main()

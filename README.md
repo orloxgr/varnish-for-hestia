@@ -89,7 +89,7 @@ Magento and PrestaShop private paths and query actions are added automatically.
 Static Magento backend aliases and read-only WordPress/WooCommerce, Joomla and
 PrestaShop database route metadata enrich these rules where available. Detection
 shows its status and retains last valid configured routes when metadata fails.
-Use **Additional private paths** only for custom URL path prefixes, one per line.
+Use **Additional private path prefixes** only for custom URL prefixes, one per line.
 
 Installation, saving cache behavior and **Refresh CMS detection** read metadata
 as the hosting account without running customer PHP. Normal panel reads and
