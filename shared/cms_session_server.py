@@ -115,7 +115,11 @@ def serve(path):
     with Server(str(target), Handler) as server:
         server.config_path = path
         # Peer credentials are checked before reading or spawning a worker.
-        target.chmod(0o666)
+        if config.get('socket_gid') is not None:
+            os.chown(target, 0, config['socket_gid'])
+            target.chmod(0o660)
+        else:
+            target.chmod(0o666)
         server.serve_forever()
 
 

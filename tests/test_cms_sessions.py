@@ -43,8 +43,7 @@ class JoomlaSessions(unittest.TestCase):
         self.assertEqual(cms_sessions.classify(self.root, 'a'*32+'=tracking', self.fail), ('guest', 'joomla-no-session'))
 
     def test_missing_ambiguous_invalid_and_database_errors_are_unresolved(self):
-        for header, query in [(self.name+'=abc', lambda *_: []),
-                              (self.name+'=a; '+self.name+'=b', self.fail),
+        for header, query in [(self.name+'=a; '+self.name+'=b', self.fail),
                               (self.name+'=bad/value', self.fail)]:
             self.assertEqual(cms_sessions.classify(self.root, header, query)[0], 'unresolved')
         def broken(*_):raise OSError('secret should never appear')
@@ -59,8 +58,24 @@ class JoomlaSessions(unittest.TestCase):
         path = self.root / 'configuration.php'
         path.write_text(path.read_text().replace("'database'", "'redis'"))
         self.assertEqual(cms_sessions.classify(self.root, '', self.fail)[0], 'unresolved')
-        (self.root / 'libraries/src/Version.php').write_text('<?php const MAJOR_VERSION=5;')
+        (self.root / 'libraries/src/Version.php').write_text('<?php const MAJOR_VERSION=9;')
         self.assertEqual(cms_sessions.classify(self.root, '', self.fail)[0], 'unresolved')
+
+    def test_modern_names_custom_seed_and_dynamic_configuration(self):
+        for major in (4,5,6):
+            (self.root / 'libraries/src/Version.php').write_text('<?php const MAJOR_VERSION='+str(major)+';')
+            expected=hashlib.md5(hashlib.md5(b'secret-placeholder').hexdigest().encode()).hexdigest()
+            seed=r'test-secretJoomla\CMS\Application\SiteApplication'
+            expected=hashlib.md5(hashlib.md5(seed.encode()).hexdigest().encode()).hexdigest()
+            self.assertEqual(cms_sessions.joomla_settings(self.root),expected)
+        path=self.root/'configuration.php'
+        path.write_text(path.read_text()+"\n$session_name=getenv('SESSION_NAME');")
+        self.assertEqual(cms_sessions.classify(self.root,'',self.fail)[0],'unresolved')
+
+    def test_expired_session_is_guest_but_remember_cookies_keep_auth_boundary(self):
+        self.assertEqual(cms_sessions.classify(self.root,self.name+'=expired',lambda *_:[]),('guest','joomla-expired-session'))
+        self.assertEqual(cms_sessions.classify(self.root,'joomla_remember_me_ab=token.series',self.fail),('private','joomla-remember-session'))
+        self.assertEqual(cms_sessions.classify(self.root,'a'*32+'=token.series',self.fail),('unresolved','joomla-legacy-remember'))
 
     def test_database_parameter_and_password_stay_out_of_argv(self):
         class Result:

@@ -74,6 +74,10 @@ class NativeSessionResolver(unittest.TestCase):
         path.write_text(path.read_text().replace("$user='"+self.name+"'", "$user='root'").replace("$password='fixturepassword'", "$password=''"))
         self.assertEqual(self.call(), 'unresolved\tjoomla-session-unavailable\n')
 
+    def test_real_expired_session_does_not_force_anonymous_pass(self):
+        self.sql('DELETE FROM `'+self.name+'`.j_session;')
+        self.assertEqual(self.call(),'guest\tjoomla-expired-session\n')
+
     def test_configuration_permissions_and_unknown_scope_are_rejected(self):
         self.config_path.chmod(0o644)
         with self.assertRaises(ValueError):cms_session_server.configuration(self.config_path)

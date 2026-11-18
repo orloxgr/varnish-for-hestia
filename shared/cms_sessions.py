@@ -26,20 +26,34 @@ def cookies(header):
 
 
 def joomla_settings(root):
-    """Verified Joomla 3 default site application + database session handler.
+    """Verified Joomla 3–6 default site application + database session handler.
 
     CMSApplication hashes secret+site; Session::setOptions hashes that name
     again. Do not mistake an arbitrary 32-hex tracking cookie for this session.
     """
     version = read_literal(root, 'libraries/cms/version/version.php') if _legacy(root) else read_literal(root, 'libraries/src/Version.php')
-    release = re.search(r"\b(?:const\s+RELEASE|\$RELEASE)\s*=\s*['\"](3\.[0-9]+)['\"]\s*;", version)
-    major = re.search(r'\bconst\s+MAJOR_VERSION\s*=\s*3\s*;', version)
+    release = re.search(r"\b(?:const\s+RELEASE|\$RELEASE)\s*=\s*['\"]([3-6])\.[0-9]+['\"]\s*;", version)
+    major = re.search(r'\bconst\s+MAJOR_VERSION\s*=\s*([3-6])\s*;', version)
     if not (release or major):
         raise cms_metadata.MetadataUnavailable('Unsupported Joomla session naming')
-    _, values, _ = cms_metadata.settings(read_literal(root, 'configuration.php'))
+    major = int(major[1] if major else release[1])
+    text = read_literal(root, 'configuration.php')
+    tokens = [token for token in cms_metadata.TOKEN.findall(text) if not token.startswith(('//','/*','#'))]
+    _, values, _ = cms_metadata.settings(text)
+    for name in ('secret','session_handler','session_name'):
+        occurrences = [i for i,t in enumerate(tokens[:-1]) if t=='$' and tokens[i+1]==name]
+        if occurrences and (len(occurrences)!=1 or name not in values):
+            raise cms_metadata.MetadataUnavailable('Dynamic session settings are not evaluated')
+    for name in ('shared_session','session_metadata'):
+        occurrences = [i for i,t in enumerate(tokens[:-1]) if t=='$' and tokens[i+1]==name]
+        if occurrences:
+            i=occurrences[0]
+            acceptable = ('0','false',"'0'",'"0"') if name=='shared_session' else ('1','true',"'1'",'"1"')
+            if len(occurrences)!=1 or tokens[i+2:i+5] not in [['=',value,';'] for value in acceptable]:
+                raise cms_metadata.MetadataUnavailable('Unsupported session metadata configuration')
     if values.get('session_handler') != 'database' or not values.get('secret'):
         raise cms_metadata.MetadataUnavailable('Unsupported Joomla session configuration')
-    seed = values.get('session_name', 'site')
+    seed = values.get('session_name', 'site' if major == 3 else r'Joomla\CMS\Application\SiteApplication')
     first = hashlib.md5((values['secret'] + seed).encode()).hexdigest()
     return hashlib.md5(first.encode()).hexdigest()
 
@@ -62,7 +76,14 @@ def classify(root, header, query):
         supplied = cookies(header)
         if supplied.get('joomla_user_state') == 'logged_in':
             return 'private', 'joomla-authenticated-session'
+        if any(name.startswith('joomla_remember_me_') and value for name,value in supplied.items()):
+            return 'private', 'joomla-remember-session'
         name = joomla_settings(root)
+        # Joomla 3 accepts a pre-3.6 remember-me cookie under a bare hash name.
+        # Its token.series shape is not an unrelated numeric analytics cookie.
+        if any(other!=name and re.fullmatch('[a-f0-9]{32}',other) and '.' in value
+               for other,value in supplied.items()):
+            return 'unresolved', 'joomla-legacy-remember'
         if name not in supplied:
             return 'guest', 'joomla-no-session'
         session = supplied[name]
@@ -70,6 +91,8 @@ def classify(root, header, query):
             return 'unresolved', 'joomla-session-invalid'
         connection = cms_metadata.connection('joomla', root)
         records = query(connection, session)
+        if not records:
+            return 'guest', 'joomla-expired-session'
         if len(records) != 1:
             return 'unresolved', 'joomla-session-not-found'
         guest, user = records[0]['guest'], records[0]['userid']
