@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.21.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.21.1** · GPL-3.0-or-later.
 
 ## Quick start
 
@@ -90,6 +90,12 @@ Static Magento backend aliases and read-only WordPress/WooCommerce, Joomla and
 PrestaShop database route metadata enrich these rules where available. Detection
 shows its status and retains last valid configured routes when metadata fails.
 Use **Additional private path prefixes** only for custom URL prefixes, one per line.
+Use **Excluded CMS directories** in the same website form for retired copies,
+for example `/old-site/httpdocs`. Each literal path is relative to that website's
+native document root and skips the entire subtree before configuration reads or
+database queries. Saving retires its detected routes and cookie names, including
+previously retained metadata; files and URL access are unchanged. Other sites and
+the active CMS at `/` remain eligible for detection. `/` excludes all detection.
 
 Installation, saving cache behavior and **Refresh CMS detection** read metadata
 as the hosting account without running customer PHP. Normal panel reads and

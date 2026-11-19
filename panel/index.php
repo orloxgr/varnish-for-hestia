@@ -119,6 +119,7 @@ if ($action === 'configure-cache-policy') {
     $request['aggressive'] = ($_POST['aggressive'] ?? '') === '1';
     $request['aggressive_ttl'] = filter_var($_POST['aggressive_ttl'] ?? '', FILTER_VALIDATE_INT);
     $request['custom_private_paths'] = $_POST['custom_private_paths'] ?? '';
+    $request['cms_excluded_directories'] = $_POST['cms_excluded_directories'] ?? '';
 }
 $jsonResponse = ($_GET['format'] ?? '') === 'json' ||
     ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['display'] ?? '') !== 'html');

@@ -42,7 +42,7 @@ def discover(payload):
     if root.is_symlink() or not root.is_dir():raise ValueError('Native CMS document root is unavailable')
     # Do not report an unreadable root as a successful empty installation list.
     with __import__('os').scandir(root):pass
-    records = cms_discovery.discover(payload['root'])
+    records = cms_discovery.discover(payload['root'], payload.get('excluded_directories', []))
     notices=[]
     cookies=[]
     for index, record in enumerate(records):
@@ -67,19 +67,26 @@ def refresh(state, inventory, hestia, scope):
         for domain, site in row['sites'].items():
             if scope != 'all' and (owner,domain) not in (scope or []):continue
             checked=datetime.datetime.now(datetime.timezone.utc).isoformat()
+            excluded = cms_discovery.exclusions(site.get('cms_excluded_directories', []))
+            # Explicit exclusions also retire retained metadata if this refresh
+            # fails. They must never be restored by the last-valid alias merge.
+            for field in ('cms_installations', 'cms_cookies'):
+                if field in site:
+                    site[field] = [r for r in site[field] if not cms_discovery.excluded(r['base'], excluded)]
             try:
                 account=pwd.getpwnam(owner)
                 if account.pw_uid == 0 or not row['identity'].startswith(str(account.pw_uid)+':'):
                     raise ValueError('Hosting identity changed')
                 root=document_root(hestia,owner,domain,inventory[owner]['sites'][domain])
-                payload=dict(root=root,hosts=[domain,*site['aliases']],timeout=state.get('hosting_timeouts',{}).get('connect',60000)/1000 or None)
+                payload=dict(root=root,hosts=[domain,*site['aliases']],excluded_directories=excluded,
+                             timeout=state.get('hosting_timeouts',{}).get('connect',60000)/1000 or None)
                 process=subprocess.run([sys.executable,'-I','-B',str(WORKER),'--worker'],
                                         input=json.dumps(payload),capture_output=True,text=True,cwd='/',
                                         user=account.pw_uid,group=account.pw_gid,extra_groups=[],umask=0o077,
                                         env={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','HOME':account.pw_dir})
                 if process.returncode:raise ValueError('CMS discovery failed')
                 result=json.loads(process.stdout)
-                records=cms_routes.normalize(result['installations'])
+                records=[r for r in cms_routes.normalize(result['installations']) if not cms_discovery.excluded(r['base'], excluded)]
                 # A metadata failure must not discard previously known aliases.
                 if result['notices']:
                     previous={(r['cms'],r['base']):r for r in site.get('cms_installations',[])}
@@ -89,7 +96,7 @@ def refresh(state, inventory, hestia, scope):
                             record['private_paths']=sorted(set(record['private_paths']+old['private_paths']))
                             record['private_queries']=[*old.get('private_queries',[]),*record['private_queries']]
                 site['cms_installations']=cms_routes.normalize(records)
-                site['cms_cookies']=result['cookies']
+                site['cms_cookies']=[r for r in result['cookies'] if not cms_discovery.excluded(r['base'], excluded)]
                 site.pop('cms_sessions',None)
                 site['cms_document_root']=root
                 site.pop('cms_pending_root',None)
@@ -109,9 +116,12 @@ def changed_roots(state,inventory):
             actual=inventory[owner]['sites'][domain].get('document_root')
             old=site.get('cms_document_root')
             if not actual or not old:continue
-            if actual==old:
+            # Native lists may retain a trailing slash; refresh stores Path's
+            # normalized spelling. Compare the same representation both ways.
+            actual=str(Path(actual))
+            if actual==str(Path(old)):
                 site.pop('cms_pending_root',None)
-            elif site.get('cms_pending_root')!=actual:
+            elif not site.get('cms_pending_root') or str(Path(site['cms_pending_root']))!=actual:
                 site['cms_pending_root']=actual
                 changed.add((owner,domain))
     return changed

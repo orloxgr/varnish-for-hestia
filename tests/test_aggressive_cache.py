@@ -1,6 +1,7 @@
 """Native Hestia public caching, selected TTL and unchanged origin/browser data."""
 import copy
 import hashlib
+import json
 from pathlib import Path
 import shutil
 import tempfile
@@ -51,6 +52,41 @@ class SiteCacheSettings(unittest.TestCase):
         self.assertEqual(cms_inventory.changed_roots(state,inventory),set())
         self.assertNotIn('cms_pending_root',site)
 
+    def test_equivalent_native_docroot_spellings_never_trigger_recurring_scan(self):
+        site={'cms_document_root':'/home/alice/web/example.test/public_html',
+              'cms_pending_root':'/home/alice/web/example.test/public_html/'}
+        state={'owners':{'alice':{'sites':{'example.test':site}}}}
+        inventory={'alice':{'sites':{'example.test':{'document_root':'/home/alice//web/example.test/./public_html/'}}}}
+        for _ in range(3):
+            self.assertEqual(cms_inventory.changed_roots(state,inventory),set())
+            self.assertNotIn('cms_pending_root',site)
+        inventory['alice']['sites']['example.test']['document_root']='/new/root/'
+        self.assertEqual(cms_inventory.changed_roots(state,inventory),{('alice','example.test')})
+        site['cms_document_root']='/new/root'
+        site.pop('cms_pending_root')
+        self.assertEqual(cms_inventory.changed_roots(state,inventory),set())
+
+    def test_repeated_reconcile_never_invokes_worker_for_unchanged_roots(self):
+        state,inventory=fixture()
+        for owner,row in state['owners'].items():
+            for domain,site in row['sites'].items():
+                root='/fixture/'+owner+'/'+domain
+                site['cms_document_root']=root
+                inventory[owner]['sites'][domain]['document_root']=root+'/'
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'desired.json').write_text(json.dumps(state))
+            (root/'applied.json').write_text(json.dumps(state))
+            with patch.object(service,'STORE',root),patch.object(service,'ACTIVE',root/'active.vcl'), \
+                 patch.object(service,'recover_pending'),patch.object(service,'collect',return_value=inventory), \
+                 patch.object(service.hosting_timeouts,'refresh'),patch.object(service.routing,'APACHE',root/'apache.conf'), \
+                 patch.object(service.routing,'plan',return_value=[]),patch.object(service,'apply',return_value={}), \
+                 patch.object(service.legacy_cms,'snapshot',return_value={}),patch.object(service.legacy_cms,'retire'), \
+                 patch.object(cms_inventory,'refresh') as refresh:
+                for _ in range(3):
+                    service.reconcile(None,config_override={'origin_ip':'127.0.0.1','origin_port':8080})
+                refresh.assert_not_called()
+
     def test_site_action_checks_ownership_and_refreshes_only_selected_native_site(self):
         state,_=fixture(); scopes=[]
         def reconcile(hestia,mutation=None,**kwargs):
@@ -59,10 +95,12 @@ class SiteCacheSettings(unittest.TestCase):
             return state,{},{}
         with patch.object(service,'reconcile',side_effect=reconcile):
             result=service.request(None,'user000','configure-cache-policy',{
-                'domain':'s0.user000.test','aggressive':True,'aggressive_ttl':604800,'custom_private_paths':'/members/'})
+                'domain':'s0.user000.test','aggressive':True,'aggressive_ttl':604800,'custom_private_paths':'/members/',
+                'cms_excluded_directories':'/retired/site/'})
             self.assertEqual(scopes,[{('user000','s0.user000.test')}])
             self.assertTrue(result['sites'][0]['aggressive'])
             self.assertEqual(result['sites'][0]['aggressive_ttl'],604800)
+            self.assertEqual(result['sites'][0]['cms_excluded_directories'],['/retired/site'])
             with self.assertRaises(ValueError):service.request(None,'user000','configure-cache-policy',{
                 'domain':'s0.user001.test','aggressive':True})
 

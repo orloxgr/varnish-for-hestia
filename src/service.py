@@ -401,6 +401,7 @@ def request(hestia, owner_name, action, payload):
                            **aggressive.settings(site),
                            'custom_private_paths':site.get('custom_private_paths',[]),
                            'cms_installations':site.get('cms_installations',[]),
+                           'cms_excluded_directories':site.get('cms_excluded_directories',[]),
                            'cms_discovery':site.get('cms_discovery'),
                            'browser_cache': browser_cache.selected(site, state),
                            'browser_cache_override': site.get('browser_cache'),
