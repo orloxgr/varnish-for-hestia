@@ -17,7 +17,7 @@ POLICY_VERSION = load_catalogue()['version']
 
 
 @contextlib.contextmanager
-def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None):
+def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None, ports=(0,0)):
     """An isolated origin and daemon; never load/restart the installed service."""
     class Origin(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -38,7 +38,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
         def log_message(self, *args):
             pass
 
-    origin = ThreadingHTTPServer(('127.0.0.1', 0), Origin)
+    origin = ThreadingHTTPServer(('127.0.0.1', ports[0]), Origin)
     thread = threading.Thread(target=origin.serve_forever, daemon=True)
     thread.start()
     daemon = None
@@ -50,7 +50,8 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
                 source = transform(source)
             (root / 'policy.vcl').write_text(source)
             with socket.socket() as reservation:
-                reservation.bind(('127.0.0.1', 0))
+                reservation.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+                reservation.bind(('127.0.0.1', ports[1]))
                 port = reservation.getsockname()[1]
             admin_args=['-T','none']
             if management:

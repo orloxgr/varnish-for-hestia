@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Route narrowly shaped UltraCache private PHP-session source GETs directly to the origin before cache lookup and ESI marker transport. Preserve original cookies/headers for application MAC and one-use validation; add no public admission capability, helper or session-cache override.
+
 ## 0.21.1 · 2026-11-19
 
 - Compare native and saved CMS document roots with the same path normalization. A trailing slash or redundant separator no longer triggers discovery and database metadata queries on each minute reconciliation.
