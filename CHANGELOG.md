@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.21.2 · 2026-11-19
 
 - Route narrowly shaped UltraCache private PHP-session source GETs directly to the origin before cache lookup and ESI marker transport. Preserve original cookies/headers for application MAC and one-use validation; add no public admission capability, helper or session-cache override.
 
