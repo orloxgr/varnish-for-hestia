@@ -24,6 +24,7 @@ class CookieBridge(unittest.TestCase):
         after=copy.deepcopy(before);after['cookie_defaults_version']='editorial-only'
         self.assertEqual(bridge.plan(after,before),[])
         after['cookie_defaults_digest']='new-execution'
+        after['cookie_defaults_profile_digests']['basic']='new-basic-execution'
         planned=bridge.plan(after,before)
         self.assertEqual(len(planned),1)
         self.assertEqual(planned[0]['policy'],control.materialized_snapshot())

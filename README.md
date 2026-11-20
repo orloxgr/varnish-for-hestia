@@ -149,6 +149,12 @@ exists. A prefix never borrows the decision of its first child. Upstream updates
 not overwrite saved choices. Only executable changes invalidate the affected
 website cache; editing a description does not purge pages.
 
+The cookie editor has independent **Basic** and **UltraCache** columns. Each
+uses Shared HTML, Public variant or Private, with its own central/site overrides
+and Reset. Commenter cookies default to Private in Basic and Shared in UltraCache;
+other cookie defaults are identical. Old saved choices remain explicit in both
+columns. Only the active profile is projected into the existing WordPress sync.
+
 Basic remains independent of WordPress. The optional per-site **WordPress
 integration** targets an explicitly configured compatible UltraCache control
 endpoint using the existing site token. A compatible UltraCache installation

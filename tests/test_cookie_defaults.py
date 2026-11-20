@@ -19,7 +19,7 @@ class CookieDefaults(unittest.TestCase):
     def test_all_source_records_have_concrete_active_decisions(self):
         policy,data=defaults.bundle()
         self.assertEqual(len(data['records']),2288)
-        self.assertEqual({r['action'] for r in policy['rules']},{'shared','variant','private'})
+        self.assertEqual({r['actions'][p] for r in policy['rules'] for p in ('basic','ultracache')},{'shared','variant','private'})
         active=admin.active()
         for row in data['records'].values():
             match=admin._recognition_match(row)
@@ -35,10 +35,10 @@ class CookieDefaults(unittest.TestCase):
 
     def test_legacy_automatic_prefix_does_not_take_first_child_action(self):
         value=settings('brand_', 'automatic',kind='prefix')
-        self.assertEqual(admin.concrete(value)['rules'][0]['action'],'variant')
+        self.assertEqual(admin.concrete(value)['rules'][0]['actions']['basic'],'variant')
         self.assertEqual(value['rules'][0]['action'],'automatic')
-        self.assertEqual(admin.concrete(settings('_ga','automatic'))['rules'][0]['action'],'shared')
-        self.assertEqual(admin.concrete(settings('wordpress_logged_in_','automatic',kind='prefix'))['rules'][0]['action'],'private')
+        self.assertEqual(admin.concrete(settings('_ga','automatic'))['rules'][0]['actions']['basic'],'shared')
+        self.assertEqual(admin.concrete(settings('wordpress_logged_in_','automatic',kind='prefix'))['rules'][0]['actions']['basic'],'private')
 
     def test_global_and_site_choices_override_defaults_in_wire_and_native(self):
         central=settings('_ga','private')
@@ -63,7 +63,7 @@ class CookieDefaults(unittest.TestCase):
         groups={}
         for row in defaults.bundle()[1]['records'].values():
             key=(row['name'],row['wildcard'])
-            groups.setdefault(key,set()).add(row['proposal'])
+            groups.setdefault(key,set()).add(tuple(row['actions'][p] for p in ('basic','ultracache')))
         self.assertTrue(all(len(actions)==1 for actions in groups.values()))
 
     def test_daily_recognition_cannot_hide_rules_or_claim_uncompiled_defaults(self):

@@ -136,12 +136,12 @@ class CachePolicy(unittest.TestCase):
 
     def test_builtin_private_cookies_pass_without_stripping_any_cookies(self):
         cookies = ['wordpress_logged_in_abcd=A', 'wordpress_sec_abcd=A', 'wp-postpass_abcd=A',
-                   'comment_author_abcd=A', 'PHPSESSID=A',
+                   'PHPSESSID=A',
                    'yith_wcwl_session_abcd=A', 'yith_woocompare_abcd=A']
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
-                for cookie in cookies:
+                for cookie in cookies+(['comment_author_abcd=A'] if profile=='basic' else []):
                     for combined in ('_ga=tracking; '+cookie, cookie+'; _gid=tracking',
                                      '_ga=tracking; '+cookie+'; _fbp=tracking'):
                         for visitor in ('A', 'B'):

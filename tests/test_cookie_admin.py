@@ -21,7 +21,7 @@ class CookieAdmin(unittest.TestCase):
         site = settings('vendor_id', 'automatic')
         result = admin.resolve(central, site)
         self.assertEqual([(r['scope'], r['action']) for r in result], [('site', 'automatic'), ('central', 'private')])
-        self.assertEqual(admin.normalize(site), site)
+        self.assertEqual(admin.project(site), site)
 
     def test_conflicting_same_scope_choices_are_rejected_without_changing_input(self):
         value = settings('currency', 'variant')

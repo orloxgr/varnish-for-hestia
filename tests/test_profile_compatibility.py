@@ -13,12 +13,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
 from vcl import PROFILES, render
 
 
-def program(profile, *, backend_response='', bypass_cookies=None, cookie_delivery=None, cookie_policies=None, site_settings=None):
+def program(profile, *, backend_response='', bypass_cookies=None, cookie_delivery=None, cookie_policies=None, site_settings=None, other_profile=None):
     state = {'owners': {'alice': {'enabled': True, 'suspended': False, 'package': 'default', 'sites': {
         'example.test': {'id': 'a'*32, 'aliases': [], 'profile': profile, 'token': 'A'*32,
                          'enabled': True, 'suspended': False, 'custom_recv': '',
                          'custom_backend_response': backend_response, 'bypass_cookies': bypass_cookies or [], 'cookie_delivery': cookie_delivery, 'cookie_policies': cookie_policies}}}}}
     state['owners']['alice']['sites']['example.test'].update(site_settings or {})
+    if other_profile:
+        import copy
+        other=copy.deepcopy(state['owners']['alice']['sites']['example.test'])
+        other.update(id='c'*32,profile=other_profile,token='C'*32)
+        state['owners']['alice']['sites']['other.test']=other
     return render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080}).replace('"8080"', '"${s1_port}"', 1)
 
 

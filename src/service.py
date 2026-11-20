@@ -26,6 +26,7 @@ import cookie_admin
 import cookie_bridge
 import cookie_control
 import cookie_execution
+import cookie_defaults
 import aggressive
 import cache_behavior
 import cms_inventory
@@ -192,9 +193,9 @@ def apply(state, previous, inventory, config, changes=None, cookie_ops=None, jou
                             cache_behavior.execution(old) != cache_behavior.execution(site) or
                             any(operation['site_id'] == site['id'] and operation['base_digest'] != operation['target_digest']
                                 for operation in (cookie_ops or [])) or
-                            state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
-                            execution((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
-                            execution(state.get('cookie_policies'), site.get('cookie_policies')) or
+                            cookie_defaults.changed(previous,state,site['profile'],old['profile']) or
+                            execution((previous or {}).get('cookie_policies'), old.get('cookie_policies'),old['profile']) !=
+                            execution(state.get('cookie_policies'), site.get('cookie_policies'),site['profile']) or
                             old['settings'].get('routing_active') != site['settings'].get('routing_active') or
                             old_site_rules[site['id']] != new_rules[site['profile']]):
                     purge(config, site); invalidated += 1

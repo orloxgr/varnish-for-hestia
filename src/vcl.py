@@ -63,7 +63,7 @@ def render(state, config):
             browser_cache.selected(site, state)
             sites.append(dict(site, **aggressive.settings(site), domain=domain, backend=backends[origin], active=allowed and site['enabled'] and not site['suspended'],
                               cookie_contract=cookie_control.cache_contract(site.get('cookie_integration'),domain,site['aliases'],
-                                  state.get('cookie_policies'),site.get('cookie_policies')),
+                                  state.get('cookie_policies'),site.get('cookie_policies'),site['profile']),
                               owned_domains=list(owner['sites']),
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
                               response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
@@ -103,8 +103,8 @@ def render(state, config):
         # Identical effective rules are emitted once, irrespective of the
         # number of hosted domains. IDs/descriptions do not multiply VCL.
         session_names=aggressive.session_names(site)
-        key=json.dumps([cookie_admin.concrete(site.get('cookie_policies')),site['aggressive'],session_names],sort_keys=True)
-        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'aggressive':site['aggressive'],'session_names':session_names,'ids':[]})['ids'].append(site['id'])
+        key=json.dumps([cookie_admin.project(cookie_admin.concrete(site.get('cookie_policies')),site['profile']),site['aggressive'],session_names,site['profile']],sort_keys=True)
+        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'aggressive':site['aggressive'],'session_names':session_names,'profile':site['profile'],'ids':[]})['ids'].append(site['id'])
         cms_code=cms_routes.compile_recv(site.get('cms_installations'))
         if cms_code:
             cms_rules.append(condition+' {\n'+cms_code+'\n}')
@@ -128,8 +128,8 @@ def render(state, config):
                 ' set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
-        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,automatic_shared=group['session_names'])+'\n}')
-        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'],aggressive_mode=group['aggressive'],automatic_shared=group['session_names'])
+        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,automatic_shared=group['session_names'],profile=group['profile'])+'\n}')
+        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'],aggressive_mode=group['aggressive'],automatic_shared=group['session_names'],profile=group['profile'])
         response_groups.setdefault(rules,[]).extend(group['ids'])
     for rules,identities in response_groups.items():
         condition=' || '.join('bereq.http.X-HVH-Site == '+quoted(identity) for identity in identities)

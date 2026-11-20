@@ -19,19 +19,19 @@ def view(state, owner=None, domain=None):
         entry = state['owners'][owner]['sites'][domain]
         integration = cookie_control.integration(entry.get('cookie_integration'), domain, entry.get('aliases', []))
     catalogue = load_catalogue()
-    rows = cookie_admin.table(database, catalogue, central, site)
+    rows = cookie_admin.table(database, catalogue, central, site,entry['profile'] if owner is not None else 'basic')
     extra=[]
     if owner is not None:
         import cookie_policy
         extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
-    def explain(metadata,match,action,reset_id=None):
+    def explain(metadata,match,action,reset_id=None,profile='basic'):
         metadata['mode_default_action']=None
         if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
             site_choices=cookie_admin.concrete(site)
             if reset_id is not None:site_choices['rules']=[rule for rule in site_choices['rules'] if rule['id']!=reset_id]
-            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),site_choices)
+            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),site_choices,profile)
                            if cookie_admin._matches(rule['match'],match)),None)
-            inherited_explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),None)
+            inherited_explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),None,profile)
                                      if cookie_admin._matches(rule['match'],match)),None)
             metadata['effective_action']=explicit['action'] if explicit else 'shared'
             metadata['mode_default_action']=None if inherited_explicit else 'shared'
@@ -45,14 +45,17 @@ def view(state, owner=None, domain=None):
                 metadata['core_precedence']='This website’s additional bypass cookie rule '+name+' takes precedence over the table choice.'
                 break
     for row in rows:
-        explain(row,row['match'],row['action'])
-        explain(row['reset_metadata'],row['reset_match'],row['inherited_action'],row['id'])
+        for profile,metadata in row['profile_actions'].items():
+            explain(metadata,row['match'],metadata['action'],profile=profile)
+            explain(metadata['reset_metadata'],row['reset_match'],metadata['inherited_action'],row['id'],profile)
+        active=entry['profile'] if owner is not None else 'basic'
+        row.update(row['profile_actions'][active])
     return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,
             'cookie_scope': 'central' if owner is None else 'site', 'domain': domain,
             'cookie_policies': cookie_admin.concrete(central if owner is None else site),
             'cookie_policy_rows': rows,
             'cookie_policy_saved': False,
-            'cookie_legacy_choices': sum(rule['action']=='automatic' for rule in (site if owner is not None else central)['rules']),
+            'cookie_legacy_choices': sum(any(a=='automatic' for a in rule['actions'].values()) for rule in (site if owner is not None else central)['rules']),
             'cookie_integration': integration,
             'cookie_integration_notice': None if owner is None else state['owners'][owner]['sites'][domain].get('cookie_integration_notice'),
             'cookie_profile': None if owner is None else state['owners'][owner]['sites'][domain]['profile']}

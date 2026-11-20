@@ -3,10 +3,11 @@ import copy
 import cookie_admin
 import cookie_control
 import cookie_execution
+import cookie_defaults
 
 
 def _sites(state):
-    return {site['id']: dict(site, domain=domain)
+    return {site['id']: dict(site, domain=domain,profile=site.get('profile','basic'))
             for owner in (state or {}).get('owners', {}).values()
             for domain, site in owner['sites'].items()}
 
@@ -22,6 +23,7 @@ def reconcile_inventory(state):
     from cookie_defaults import bundle, fingerprint
     state['cookie_defaults_version']=bundle()[1]['version']
     state['cookie_defaults_digest']=fingerprint()
+    state['cookie_defaults_profile_digests']=cookie_defaults.profile_digests()
     for owner in state['owners'].values():
         for domain,site in owner['sites'].items():
             if 'cookie_integration' not in site:
@@ -53,11 +55,11 @@ def plan(state, previous, *, force=False, force_sites=()):
             operation(old, old_config, cookie_control.snapshot(), 'disconnect')
         if not config['enabled']:
             continue
-        changed = (state.get('cookie_defaults_digest') != (previous or {}).get('cookie_defaults_digest') or
-                   not old or execution((previous or {}).get('cookie_policies'), old.get('cookie_policies')) !=
-                   execution(state.get('cookie_policies'), site.get('cookie_policies')))
+        changed = (cookie_defaults.changed(previous,state,site['profile'],old['profile'] if old else None) or
+                   not old or execution((previous or {}).get('cookie_policies'), old.get('cookie_policies'),old['profile']) !=
+                   execution(state.get('cookie_policies'), site.get('cookie_policies'),site['profile']))
         if force or sid in force_sites or switched or not old_config or not old_config['enabled'] or changed:
-            operation(site, config, cookie_control.materialized_snapshot(state.get('cookie_policies'), site.get('cookie_policies')), 'apply')
+            operation(site, config, cookie_control.materialized_snapshot(state.get('cookie_policies'), site.get('cookie_policies'),site['profile']), 'apply')
     # A deleted native domain has no managed route left to synchronize. We never
     # block unrelated inventory by trying to contact an already removed website.
     return result
