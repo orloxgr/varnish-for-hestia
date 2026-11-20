@@ -149,23 +149,29 @@ def render(state, config):
   set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));
   ''' + '\n'.join(dispatch) + '''
   set req.http.X-SCP-Profile = req.http.X-HVH-Profile;
+  set req.http.X-SCP-Site = req.http.X-HVH-Site;
   if (req.esi_level > 0 && req_top.http.X-HVH-Site != req.http.X-HVH-Site) {
     return (synth(403, "Cross-site ESI denied"));
   }
   if (req.http.X-Forwarded-Proto ~ "(?i)^https$") {
     set req.http.X-Forwarded-Proto = "https";
   } else { set req.http.X-Forwarded-Proto = "http"; }
-  if (req.method == "PURGE" || req.method == "BAN") {
+  if (req.method == "PURGE" || req.method == "BAN" || req.method == "UC-PRIVATE-GET") {
     if (req.esi_level > 0 || client.ip !~ hvh_local ||
         (req.http.X-Real-IP && req.http.X-Real-IP !~ "^(127[.]0[.]0[.]1|::1)$") ||
         (req.http.X-Forwarded-For && req.http.X-Forwarded-For !~ "^(127[.]0[.]0[.]1|::1)$")) {
       return (synth(403, "Purge source denied"));
     }
     ''' + '\n'.join(purge) + '''
+    if (req.method == "UC-PRIVATE-GET") {
+      if (req.http.X-HVH-Disabled == "1") { return (synth(403, "Site disabled")); }
+      call scp_private_lookup;
+    }
     call hvh_http_control;
   }
   unset req.http.X-Hestia-Varnish-Token;
   unset req.http.X-UltraCache-Token;
+  unset req.http.X-UltraCache-Private-Key;
   unset req.http.X-Ban-Expression;
   unset req.http.X-UltraCache-Contract;
   unset req.http.X-UltraCache-Operation;
@@ -182,6 +188,7 @@ sub vcl_pass {
   call scp_pass;
 }
 sub vcl_hash {
+  call scp_private_hash;
   # Do not reuse objects stored under an earlier privacy/cookie policy.
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
@@ -198,6 +205,7 @@ sub vcl_hit {
   call scp_hit;
 }
 sub vcl_miss {
+  call scp_private_miss;
   call scp_cookie_miss;
   if (req.http.X-HVH-Soft-Purge == "1") { call hvh_soft_purge; }
 }
