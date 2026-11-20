@@ -3,6 +3,7 @@ import base64
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -30,6 +31,57 @@ def fixture():
 
 
 class CookieRules(unittest.TestCase):
+    @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid()==0,'Owned Linux/root apply fixture')
+    def test_bundle_9_to_10_apply_invalidates_only_basic_and_preserves_manual_choices(self):
+        from cookie_upgrade_case import previous_metadata,central_choices,site_choices,expected_action,VARIANTS
+        import cookie_admin, cookie_bridge, cookie_defaults
+        from types import SimpleNamespace
+        inventory=registry_tests.fixture(1,2*len(VARIANTS))
+        previous=desired_state(None,inventory,'varnish')
+        previous.update(previous_metadata());previous['cookie_policies']=central_choices()
+        entries=list(previous['owners']['user000']['sites'].values())
+        cases={}
+        for index,(profile,choice) in enumerate((p,c) for p in ('basic','ultracache') for c in VARIANTS):
+            entry=entries[index];entry['profile']=profile;entry['cookie_policies']=site_choices(profile,choice)
+            cases[entry['id']]=(profile,choice)
+        before=copy.deepcopy(previous)
+        following=desired_state(previous,inventory,'varnish');cookie_bridge.reconcile_inventory(following)
+        self.assertNotEqual(previous['cookie_defaults_profile_digests']['basic'],following['cookie_defaults_profile_digests']['basic'])
+        self.assertEqual(previous['cookie_defaults_profile_digests']['ultracache'],following['cookie_defaults_profile_digests']['ultracache'])
+        config=dict(origin_ip='127.0.0.1',origin_port=8080)
+        with tempfile.TemporaryDirectory(prefix='hvh-defaults-upgrade-') as directory:
+            root=Path(directory);active=root/'active.vcl';active.write_text('previous .9 VCL\n')
+            with (patch.object(service,'CONFIG',root),patch.object(service,'ACTIVE',active),
+                  patch.object(service,'vcls',return_value=[dict(name='previous',status='active')]),
+                  patch.object(service.grp,'getgrnam',return_value=SimpleNamespace(gr_gid=os.getgid())),
+                  patch.object(service,'admin') as admin,patch.object(service,'prune'),
+                  patch.object(service.routing,'apply',return_value=({},None)),
+                  patch.object(service.routing,'apache_config',return_value=''),patch.object(service,'purge') as purge):
+                result=service.apply(following,previous,inventory,config,changes=[])
+                self.assertEqual(result['invalidated_sites'],len(VARIANTS))
+                self.assertEqual({call.args[1]['id'] for call in purge.call_args_list},
+                    {sid for sid,(profile,_) in cases.items() if profile=='basic'})
+                self.assertEqual([call.args[1] for call in admin.call_args_list],['vcl.load','vcl.use'])
+                self.assertEqual(active.read_text(),service.render(following,config))
+            # A normal repeated apply must neither purge nor reactivate.
+            program=active.read_text();name='hvh_gen_'+hashlib.sha256(program.encode()).hexdigest()[:32]
+            with (patch.object(service,'ACTIVE',active),
+                  patch.object(service,'vcls',return_value=[dict(name=name,status='active')]),
+                  patch.object(service,'admin') as admin,patch.object(service,'prune'),
+                  patch.object(service.routing,'apply',return_value=({},None)),
+                  patch.object(service.routing,'apache_config',return_value=''),patch.object(service,'purge') as purge):
+                result=service.apply(copy.deepcopy(following),following,inventory,config,changes=[])
+                self.assertEqual(result['invalidated_sites'],0);purge.assert_not_called();admin.assert_not_called()
+        self.assertEqual(previous,before)
+        self.assertEqual(following['cookie_policies'],before['cookie_policies'])
+        for entry in following['owners']['user000']['sites'].values():
+            profile,choice=cases[entry['id']]
+            self.assertEqual(entry['cookie_policies'],before['owners']['user000']['sites'][entry['domain']]['cookie_policies'])
+            rules=cookie_admin.active(following['cookie_policies'],entry['cookie_policies'],profile=profile)
+            selected=next(r for r in rules if cookie_admin._matches(r['match'],dict(kind='exact',value='woocommerce_cart_hash')))
+            self.assertEqual(selected['action'],expected_action(profile,choice))
+        self.assertEqual(following['cookie_defaults_profile_digests'],cookie_defaults.profile_digests())
+
     def test_exact_names_prefixes_blank_lines_duplicates_and_case(self):
         self.assertEqual(cookie_policy.normalize(' membership_*\r\ncurrency\n\nmembership_*\nCurrency '),
                          ['membership_*', 'currency', 'Currency'])
