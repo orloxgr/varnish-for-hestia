@@ -107,10 +107,16 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
                 # Raw HTTP regressions must use the same adapter entry headers.
                 get.request_headers = {'Host': 'example.test', 'X-Forwarded-Proto': 'https'}
                 get.origin_port = origin.server_port
+                get.source = source
                 def stop_origin():
                     origin.shutdown();origin.server_close();thread.join(timeout=5)
                 get.stop_origin = stop_origin
                 if management:
+                    def adm(*args):
+                        result=subprocess.run(['varnishadm','-T','127.0.0.1:'+str(admin_port),'-S',str(secret),*args],capture_output=True,text=True)
+                        if result.returncode:raise AssertionError(result.stdout+result.stderr)
+                        return result.stdout
+                    get.adm=adm
                     def activate(name,source):
                         path=root/(name+'.vcl');path.write_text(source)
                         for args in [('vcl.load',name,str(path)),('vcl.use',name)]:

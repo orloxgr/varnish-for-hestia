@@ -14,6 +14,7 @@ import cookie_admin
 import cookie_control
 import aggressive
 import cms_routes
+import public_selection
 
 PROFILES = profile_settings.PROFILES
 ROOT = Path(__file__).resolve().parents[1]
@@ -150,6 +151,7 @@ def render(state, config):
   ''' + '\n'.join(dispatch) + '''
   set req.http.X-SCP-Profile = req.http.X-HVH-Profile;
   set req.http.X-SCP-Site = req.http.X-HVH-Site;
+  call scp_selection_context;
   if (req.esi_level > 0 && req_top.http.X-HVH-Site != req.http.X-HVH-Site) {
     return (synth(403, "Cross-site ESI denied"));
   }
@@ -251,7 +253,7 @@ sub scp_private_document_diagnostics {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules), '\n'.join(delivery_authorization)))
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules), '\n'.join(delivery_authorization),public_selection.compile_rules(response_groups,'X-HVH-Site')))
     if cookie_groups:
         text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
