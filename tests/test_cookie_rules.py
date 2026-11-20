@@ -50,7 +50,8 @@ class CookieRules(unittest.TestCase):
         self.assertEqual(previous['cookie_defaults_profile_digests']['ultracache'],following['cookie_defaults_profile_digests']['ultracache'])
         config=dict(origin_ip='127.0.0.1',origin_port=8080)
         with tempfile.TemporaryDirectory(prefix='hvh-defaults-upgrade-') as directory:
-            root=Path(directory);active=root/'active.vcl';active.write_text('previous .9 VCL\n')
+            root=Path(directory);(root/'generations').mkdir()
+            active=root/'active.vcl';active.write_text('previous .9 VCL\n')
             with (patch.object(service,'CONFIG',root),patch.object(service,'ACTIVE',active),
                   patch.object(service,'vcls',return_value=[dict(name='previous',status='active')]),
                   patch.object(service.grp,'getgrnam',return_value=SimpleNamespace(gr_gid=os.getgid())),
