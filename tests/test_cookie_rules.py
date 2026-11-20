@@ -32,7 +32,7 @@ def fixture():
 
 class CookieRules(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid()==0,'Owned Linux/root apply fixture')
-    def test_bundle_9_to_10_apply_invalidates_only_basic_and_preserves_manual_choices(self):
+    def test_bundle_10_to_11_apply_invalidates_both_profiles_and_preserves_manual_choices(self):
         from cookie_upgrade_case import previous_metadata,central_choices,site_choices,expected_action,VARIANTS
         import cookie_admin, cookie_bridge, cookie_defaults
         from types import SimpleNamespace
@@ -47,11 +47,11 @@ class CookieRules(unittest.TestCase):
         before=copy.deepcopy(previous)
         following=desired_state(previous,inventory,'varnish');cookie_bridge.reconcile_inventory(following)
         self.assertNotEqual(previous['cookie_defaults_profile_digests']['basic'],following['cookie_defaults_profile_digests']['basic'])
-        self.assertEqual(previous['cookie_defaults_profile_digests']['ultracache'],following['cookie_defaults_profile_digests']['ultracache'])
+        self.assertNotEqual(previous['cookie_defaults_profile_digests']['ultracache'],following['cookie_defaults_profile_digests']['ultracache'])
         config=dict(origin_ip='127.0.0.1',origin_port=8080)
         with tempfile.TemporaryDirectory(prefix='hvh-defaults-upgrade-') as directory:
             root=Path(directory);(root/'generations').mkdir()
-            active=root/'active.vcl';active.write_text('previous .9 VCL\n')
+            active=root/'active.vcl';active.write_text('previous .10 VCL\n')
             with (patch.object(service,'CONFIG',root),patch.object(service,'ACTIVE',active),
                   patch.object(service,'vcls',return_value=[dict(name='previous',status='active')]),
                   patch.object(service.grp,'getgrnam',return_value=SimpleNamespace(gr_gid=os.getgid())),
@@ -59,9 +59,9 @@ class CookieRules(unittest.TestCase):
                   patch.object(service.routing,'apply',return_value=({},None)),
                   patch.object(service.routing,'apache_config',return_value=''),patch.object(service,'purge') as purge):
                 result=service.apply(following,previous,inventory,config,changes=[])
-                self.assertEqual(result['invalidated_sites'],len(VARIANTS))
+                self.assertEqual(result['invalidated_sites'],2*len(VARIANTS))
                 self.assertEqual({call.args[1]['id'] for call in purge.call_args_list},
-                    {sid for sid,(profile,_) in cases.items() if profile=='basic'})
+                    set(cases))
                 self.assertEqual([call.args[1] for call in admin.call_args_list],['vcl.load','vcl.use'])
                 self.assertEqual(active.read_text(),service.render(following,config))
             # A normal repeated apply must neither purge nor reactivate.
@@ -79,7 +79,7 @@ class CookieRules(unittest.TestCase):
             profile,choice=cases[entry['id']]
             self.assertEqual(entry['cookie_policies'],before['owners']['user000']['sites'][entry['domain']]['cookie_policies'])
             rules=cookie_admin.active(following['cookie_policies'],entry['cookie_policies'],profile=profile)
-            selected=next(r for r in rules if cookie_admin._matches(r['match'],dict(kind='exact',value='woocommerce_cart_hash')))
+            selected=next(r for r in rules if cookie_admin._matches(r['match'],dict(kind='exact',value='wordpress_user_sw_example')))
             self.assertEqual(selected['action'],expected_action(profile,choice))
         self.assertEqual(following['cookie_defaults_profile_digests'],cookie_defaults.profile_digests())
 

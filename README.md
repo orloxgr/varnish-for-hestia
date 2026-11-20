@@ -10,8 +10,8 @@ effort without ESI.** Cookie Database remains the sole cookie classification
 authority. This candidate adds independent profile cookie choices and
 [application-scoped public selection](shared/PUBLIC-SELECTION.md), including
 actual provider context before lookup and private streaming/range delivery.
-Common bundle `2026.11.20.10` keeps personal commenter, YITH, Recently Viewed and
-cart/session defaults Private in Basic and Shared in the integrated UC profile;
+Common bundle `2026.11.20.11` keeps personal commenter, YITH, Recently Viewed,
+cart/session and User Switching defaults Private in Basic and Shared in the integrated UC profile;
 manual choices still win. Final coordinated distribution acceptance is pending.
 The [earlier qualified release evidence](shared/ESI-VALIDATION.md) remains the
 record for 0.22.0/0.11.0; it is not a claim that this candidate was published.
