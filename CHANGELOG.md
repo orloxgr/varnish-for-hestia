@@ -2,6 +2,8 @@
 
 ## 0.23.0 · 2026-11-21 (candidate)
 
+- Keep dedicated UltraCache generation canaries and ESI capability probes on their ordinary native cache/composition routes within a registered application scope. Qualify with five native diagnostic methods per adapter and actual clean WordPress/WCML detection plus currency visits; retain origin privacy, cookie actions and probe authorization.
+
 - Give every cookie independent Basic and UltraCache Shared/Variant/Private choices, with scoped inheritance, reset and unchanged manual choices. Preserve the existing concrete wire snapshots and transactional rollback.
 - Negotiate application-scoped public selection before native lookup. Reuse the correct public publication after the real provider resolves a first visitor or changed currency context; preserve the original Cookie and deliver actual issuer fields only to their owner. Support zero-fragment public snapshots without claiming a zero-PHP provider lookup.
 - Keep genuine non-protocol responses on private native streaming, retaining status, MIME, headers and Range/If-Range. Preserve final range delivery from a complete selected public snapshot. Browser revalidation headers do not replace the selected server cache action; actual origin private/no-store remains authoritative.
