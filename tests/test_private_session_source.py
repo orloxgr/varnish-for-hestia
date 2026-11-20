@@ -41,8 +41,8 @@ class PrivateSessionSource(unittest.TestCase):
                 self.assertEqual(dict(fields)['X-Cache'],'HIT');self.assertEqual(body,'cached public')
                 self.assertEqual(len(calls),4)
 
-    def test_near_matches_and_request_no_store_keep_existing_warm_lookup(self):
-        invalid=[{} ,{'Cache-Control':'no-store'}]
+    def test_near_matches_without_request_no_store_keep_existing_warm_lookup(self):
+        invalid=[{}]
         for name in ('X-UltraCache-Warm-Source','X-UltraCache-Internal-Request','X-UltraCache-Warm',
                      'X-UltraCache-Session-Source-Kind','X-UltraCache-Session-Source'):
             row=dict(HEADERS);row.pop(name);invalid.append(row)
@@ -53,6 +53,9 @@ class PrivateSessionSource(unittest.TestCase):
                            ('X-UltraCache-Session-Source',SOURCE[:-1]),
                            ('X-UltraCache-Session-Source',SOURCE.replace('a','A',1))]:
             invalid.append(dict(HEADERS,**{name:value}))
+        # Explicit no-store now independently requests PASS. Remove it to
+        # isolate validation of the signed source routing shape below.
+        invalid=[{k:v for k,v in row.items() if k!='Cache-Control'} for row in invalid]
         for profile in ('basic','ultracache'):
             calls=[]
             def origin(path,headers):
@@ -66,7 +69,8 @@ class PrivateSessionSource(unittest.TestCase):
                         self.assertNotEqual(fields['X-Hestia-Varnish-Reason'],REASON)
                 client=http.client.HTTPConnection(*get.endpoint,timeout=10)
                 try:
-                    client.request('HEAD',PATH,headers={'Host':'example.test','X-Forwarded-Proto':'https',**HEADERS})
+                    client.request('HEAD',PATH,headers={'Host':'example.test','X-Forwarded-Proto':'https',
+                        **{k:v for k,v in HEADERS.items() if k!='Cache-Control'}})
                     response=client.getresponse();response.read()
                     self.assertEqual(response.getheader('X-Cache'),'HIT')
                     self.assertNotEqual(response.getheader('X-Hestia-Varnish-Reason'),REASON)
