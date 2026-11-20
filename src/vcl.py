@@ -88,12 +88,16 @@ def render(state, config):
                             ('set req.http.X-HVH-Disabled = "1";\n' if not site['active'] else '') + '}')
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
+    delivery_authorization = []
     custom_recv, custom_response, cookie_bypass, cookie_rules, response_rules = [], [], [], [], []
     cookie_groups={}
     response_groups={}
     cms_rules=[]
     for site in sites:
         condition = 'if (req.http.X-HVH-Site == ' + quoted(site['id']) + ')'
+        if site['active'] and site['profile']=='ultracache':
+            delivery_authorization.append('if (bereq.http.X-HVH-Site == '+quoted(site['id'])+
+                ') { set bereq.http.X-UltraCache-Delivery-Authorization = '+quoted(site['token'])+'; }')
         if site.get('cms_pending_root'):
             custom_recv.append(condition+' { set req.http.X-SCP-Reason = "cms-document-root-changed"; return (pass); }')
         # Identical effective rules are emitted once, irrespective of the
@@ -231,7 +235,7 @@ sub vcl_deliver {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules)))
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules), '\n'.join(delivery_authorization)))
     if cookie_groups:
         text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())
