@@ -240,6 +240,14 @@ sub vcl_deliver {
   unset resp.http.X-Cache-Object-Host;
   unset resp.http.X-Cache-Object-URL;
 }
+sub scp_private_document_diagnostics {
+  set resp.http.X-Hestia-Varnish = "PASS";
+  set resp.http.X-Hestia-Varnish-Reason = "application-private-document";
+  if (resp.http.X-UltraCache-Application-Private && resp.http.X-UltraCache-Application-Private != "") {
+    set resp.http.X-Hestia-Varnish-Reason = resp.http.X-UltraCache-Application-Private;
+  }
+  set resp.http.X-Hestia-Varnish-Profile = req.http.X-HVH-Profile;
+}
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
