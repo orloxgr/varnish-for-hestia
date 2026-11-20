@@ -35,10 +35,10 @@ def render_sites():
         ('basic.test','c','basic',True),('disabled.test','d','ultracache',False)):
         sites[identity*32]=dict(id=identity*32,domain=name,names=[name],enabled=enabled,error='',
             token=identity*64,bypass=[],recv_vcl='',backend_vcl='',profile=profile)
-    # Pure source rendering never calls POSIX account APIs. Permit importing
+    # Pure source rendering never calls POSIX account or locking APIs. Permit importing
     # the unchanged production native.hostname validator on Windows only;
     # this shim is not a Webuzo inventory/runtime qualification.
-    imports=patch.dict(sys.modules,{'pwd':types.ModuleType('pwd')}) if os.name=='nt' else contextlib.nullcontext()
+    imports=patch.dict(sys.modules,{n:types.ModuleType(n) for n in ('pwd','grp','fcntl')}) if os.name=='nt' else contextlib.nullcontext()
     with imports:
         import policy
         source=policy.render(sites,'e'*64,'f'*64)
