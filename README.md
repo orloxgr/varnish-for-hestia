@@ -1,14 +1,20 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.22.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.0** · GPL-3.0-or-later.
 
 The UltraCache profile supports request-owned cookie delivery before private
 fragment composition, scoped private-fragment TTL, actual application-private
 documents, and exact public-fragment TTL/error containment. **Basic stays best
 effort without ESI.** Cookie Database remains the sole cookie classification
-authority. See the [qualified contract and release evidence](shared/ESI-VALIDATION.md)
-for the matching UltraCache version, source checkpoints and compatibility limits.
+authority. This candidate adds independent profile cookie choices and
+[application-scoped public selection](shared/PUBLIC-SELECTION.md), including
+actual provider context before lookup and private streaming/range delivery.
+Common bundle `2026.11.20.10` keeps personal commenter, YITH, Recently Viewed and
+cart/session defaults Private in Basic and Shared in the integrated UC profile;
+manual choices still win. Final coordinated distribution acceptance is pending.
+The [earlier qualified release evidence](shared/ESI-VALIDATION.md) remains the
+record for 0.22.0/0.11.0; it is not a claim that this candidate was published.
 
 ## Quick start
 

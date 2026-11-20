@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.0 · 2026-11-21 (candidate)
+
+- Give every cookie independent Basic and UltraCache Shared/Variant/Private choices, with scoped inheritance, reset and unchanged manual choices. Preserve the existing concrete wire snapshots and transactional rollback.
+- Negotiate application-scoped public selection before native lookup. Reuse the correct public publication after the real provider resolves a first visitor or changed currency context; preserve the original Cookie and deliver actual issuer fields only to their owner. Support zero-fragment public snapshots without claiming a zero-PHP provider lookup.
+- Keep genuine non-protocol responses on private native streaming, retaining status, MIME, headers and Range/If-Range. Preserve final range delivery from a complete selected public snapshot. Browser revalidation headers do not replace the selected server cache action; actual origin private/no-store remains authoritative.
+- Ship common cookie bundle `2026.11.20.10`: exact WCML and Aelia currency/location variants, integrated UC sharing for commenter/YITH/history/cart cookies, and Basic Private for those personal-cookie boundaries. Saved Shared/Variant/Private choices remain authoritative. Aelia source/fixture coverage is best effort without the commercial provider.
+- Retain best-effort Basic without ESI, native Hestia CLI/routing and source-built native ABI matching. This is a prepared distribution candidate; coordinated final application/hosting acceptance and publication remain pending. See [public-selection and bundle details](shared/PUBLIC-SELECTION.md).
+
 ## 0.22.0 · 2026-11-20
 
 - Prepare private fragments once in the original authenticated application request before sending parent headers. Deliver authentic repeated provider Set-Cookie fields only to that visitor, preserving original attributes and the public parent. Recover a lost parent from bound public snapshots without repeating provider work.
