@@ -7,6 +7,7 @@
 - Keep genuine non-protocol responses on private native streaming, retaining status, MIME, headers and Range/If-Range. Preserve final range delivery from a complete selected public snapshot. Browser revalidation headers do not replace the selected server cache action; actual origin private/no-store remains authoritative.
 - Ship common cookie bundle `2026.11.20.10`: exact WCML and Aelia currency/location variants, integrated UC sharing for commenter/YITH/history/cart cookies, and Basic Private for those personal-cookie boundaries. Saved Shared/Variant/Private choices remain authoritative. Aelia source/fixture coverage is best effort without the commercial provider.
 - Retain best-effort Basic without ESI, native Hestia CLI/routing and source-built native ABI matching. This is a prepared distribution candidate; coordinated final application/hosting acceptance and publication remain pending. See [public-selection and bundle details](shared/PUBLIC-SELECTION.md).
+- Qualify the ordinary `.9 → .10` apply with persisted profile fingerprints, ten Basic/UC default/manual/reset cases and owned Linux state. Only the five Basic invalidations are requested, manual choices remain unchanged and repeated apply is idempotent. This apply regression is separate from native HTTP/application acceptance.
 
 ## 0.22.0 · 2026-11-20
 
