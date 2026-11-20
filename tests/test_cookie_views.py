@@ -25,12 +25,14 @@ class CookieViews(unittest.TestCase):
         self.assertEqual((row['action'],row['effective_action']),('shared','shared'))
         self.assertNotIn('takes precedence over the table',row['core_precedence'])
 
-    def test_ultracache_and_central_keep_cart_classification_separate_from_composition(self):
+    def test_ultracache_and_central_show_each_profile_action_independently(self):
         for central in (False,True):
             with self.subTest(central=central):
                 data=self.view(profile='ultracache',central=central)
                 row=next(row for row in data['cookie_policy_rows'] if row['name']=='woocommerce_cart_hash')
-                self.assertEqual(row['effective_action'],'shared')
+                self.assertEqual(row['effective_action'],'private' if central else 'shared')
+                self.assertEqual(row['profile_actions']['basic']['effective_action'],'private')
+                self.assertEqual(row['profile_actions']['ultracache']['effective_action'],'shared')
                 self.assertIn('independent of cookie classification',row['core_precedence'])
 
     def test_saved_rename_reset_preserves_actual_legacy_rule_explanation(self):
