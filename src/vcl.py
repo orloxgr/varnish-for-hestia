@@ -182,7 +182,7 @@ sub vcl_hash {
   # Scheme/Accept/encoding remain Vary variants of the same purgeable object.
   call scp_key;
   call scp_cookie_hash;
-  hash_data("hvh-cache-policy-v9");
+  hash_data("hvh-cache-policy-v10");
   hash_data(req.http.X-HVH-Site);
   if (req.http.X-SCP-Aggressive == "1") { hash_data("aggressive"); hash_data(req.http.X-SCP-Aggressive-TTL); }
   hash_data(req.http.host);

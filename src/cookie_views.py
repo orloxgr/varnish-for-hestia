@@ -21,11 +21,9 @@ def view(state, owner=None, domain=None):
     catalogue = load_catalogue()
     rows = cookie_admin.table(database, catalogue, central, site)
     extra=[]
-    profile=None
     if owner is not None:
         import cookie_policy
         extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
-        profile=state['owners'][owner]['sites'][domain]['profile']
     def explain(metadata,match,action,reset_id=None):
         metadata['mode_default_action']=None
         if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
@@ -40,19 +38,6 @@ def view(state, owner=None, domain=None):
             metadata['core_precedence']='Aggressive caching can share this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
         if owner is not None and match['kind']=='exact' and match['value'] in aggressive.session_names(entry):
             metadata['core_precedence']='Aggressive caching shares this opaque Joomla cookie without checking session state. Known login markers and private routes remain active. An explicit Private choice passes matching requests.'
-        cart=next((entry for entry in catalogue['policies'] if entry['consumers']['varnishCart'] and
-                   cookie_admin._matches(entry['match'],match)),None)
-        if cart:
-            metadata['core_precedence']='Reviewed WooCommerce rule '+cart['id']+' takes precedence over the table choice. '
-            if profile=='basic':
-                metadata['effective_action']='private'
-                metadata['core_precedence']+='Basic passes this cart/session request to the application.'
-            elif action=='private':
-                metadata['effective_action']='private'
-                metadata['core_precedence']='The explicit Private choice passes the entire cart/session request. The built-in privacy guard remains in effect.'
-            else:
-                metadata['effective_action']='application-contract'
-                metadata['core_precedence']+='Basic passes this cart/session request. UltraCache shares only an approved ESI parent with private fragments; without that application contract it also passes.'
         for name in extra:
             pattern={'kind':'prefix' if name.endswith('*') else 'exact','value':name.removesuffix('*')}
             if cookie_admin._matches(pattern,match):

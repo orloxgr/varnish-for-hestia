@@ -48,3 +48,14 @@ independent native parity, and UltraCache maintains application/CMP/provider
 integration and WordPress/WooCommerce proofs. Runtime requests do not fetch an
 external cookie database. Recognition metadata is separate from executable
 policy and retains the source attribution and applicable license.
+
+
+## Source preparation for UltraCache #959
+
+The starting behavior above is historical. The isolated #959 candidate removes
+mandatory private/cart and tracking-ignore reclassification in favor of the
+scoped Cookie Database resolver in both directions. Explicit composition
+opt-in and HTTP/routes/actions retain separate reasons. See
+`shared/ESI-DELIVERY-DRAFT.md` for transport revision 2 and the unimplemented
+preflight/private-TTL/adaptive-nonce contracts. Source qualification is not
+native acceptance or a release.

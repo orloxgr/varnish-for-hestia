@@ -31,15 +31,15 @@ class AsyncCart(unittest.TestCase):
             [origin('/parent',visitor,['X-UltraCache-Woo-Async-Parent: 1'],
                     expect=['expect req.http.X-UltraCache-ESI-Candidate == "1"']) for visitor in ('A','B')],
             [get('/parent',visitor,['Cookie: wp_woocommerce_session_demo='+visitor+'; ultracache_esi_optin=1'],cache='PASS') for visitor in ('A','B')])
-    def test_async_warmup_does_not_relax_login_no_optin_or_unapproved_object_guards(self):
+    def test_async_warmup_respects_private_choices_and_explicit_composition_contract(self):
         cookie='wp_woocommerce_session_demo=A; ultracache_esi_optin=1'
         self.run_policy('ultracache',
             [origin('/parent','approved',['X-UltraCache-Woo-Async-Parent: 1']),
-             origin('/parent','logged-in'),origin('/parent','no-optin'),origin('/parent','postpass'),
+             origin('/parent','logged-in'),origin('/parent','postpass'),
              origin('/unapproved','anonymous'),origin('/unapproved','private')],
             [get('/parent','approved',cache='MISS'),
              get('/parent','logged-in',['Cookie: '+cookie+'; wordpress_logged_in_demo=admin'],cache='PASS'),
-             get('/parent','no-optin',['Cookie: wp_woocommerce_session_demo=A'],cache='PASS'),
+             get('/parent','approved',['Cookie: wp_woocommerce_session_demo=A'],cache='HIT'),
              get('/parent','postpass',['Cookie: '+cookie+'; wp-postpass_demo=secret'],cache='PASS'),
              get('/parent','approved',['Cookie: '+cookie],cache='HIT'),
              get('/unapproved','anonymous',cache='MISS'),
@@ -54,7 +54,7 @@ class AsyncCart(unittest.TestCase):
                  get('/parent','private',['Cookie: wp_woocommerce_session_demo=A; ultracache_esi_optin=1'],cache='PASS')])
         self.run_policy('ultracache',
             [origin('/parent','anonymous',['X-UltraCache-Woo-Async-Parent: 1','Vary: Cookie']),origin('/parent','private')],
-            # Approved async parents omit their private cart carrier. Functional
+            # Approved async parents use the resolved Cookie Database projection. Functional
             # cookies still vary; a different currency must reach its origin.
             [get('/parent','anonymous',['Cookie: test_currency=EUR'],cache='MISS'),
              get('/parent','private',['Cookie: test_currency=USD; wp_woocommerce_session_demo=A; ultracache_esi_optin=1'],cache='PASS')])

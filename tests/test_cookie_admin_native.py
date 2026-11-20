@@ -138,10 +138,10 @@ class CookieAdminNative(unittest.TestCase):
                      compatibility.request('/page', 'EUR', headers=['Cookie: vendor_currency=EUR; vendor_id=c'], cache='HIT')],
                     program=program(profile, settings('vendor_', 'shared', kind='prefix'), settings('vendor_currency', 'automatic')))
 
-    def test_private_custom_and_builtin_auth_still_pass(self):
+    def test_explicit_and_default_private_choices_still_pass(self):
         for profile in compatibility.PROFILES:
             for cookie, choices in [('personal_session=A', settings('personal_session', 'private')),
-                                    ('PHPSESSID=A', settings('PHPSESSID', 'shared'))]:
+                                    ('PHPSESSID=A', None)]:
                 with self.subTest(profile=profile, cookie=cookie):
                     self.run_policy(profile,
                         [compatibility.response('/page', visitor) for visitor in ('A', 'B')],

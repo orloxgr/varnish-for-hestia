@@ -320,7 +320,7 @@ ordinary unknown cookies do not cause a cache bypass.
 
 Both `X-Hestia-Varnish` and `X-Cache` consistently report **HIT**, **MISS** or
 **PASS**. `X-Hestia-Varnish-Reason` reports a concrete request/origin reason,
-such as `woocommerce-session-cookie`, `private-rest-context`, `origin-set-cookie`
+such as `cookie-policy-private`, `private-rest-context`, `origin-set-cookie`
 or `origin-cache-policy`. Public hits/misses report `cached-response`/
 `fetch-required`.
 

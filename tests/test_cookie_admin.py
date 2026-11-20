@@ -80,7 +80,7 @@ class CookieAdmin(unittest.TestCase):
         self.assertEqual(row['provider'], '')
         self.assertEqual(row['reset_match'], private['match'])
         self.assertNotIn('requires private handling', row['core_precedence'])
-        self.assertIn('requires private handling',row['reset_metadata']['core_precedence'])
+        self.assertNotIn('requires private handling',row['reset_metadata']['core_precedence'])
         self.assertEqual(row['reset_metadata']['effective_action'],'private')
 
 
