@@ -140,7 +140,8 @@ class CachePolicy(unittest.TestCase):
         for profile in compatibility.PROFILES:
             with self.subTest(profile=profile):
                 responses, requests = [], []
-                for cookie in cookies+(['comment_author_abcd=A','yith_wcwl_session_abcd=A'] if profile=='basic' else []):
+                for cookie in cookies+(['comment_author_abcd=A','yith_wcwl_session_abcd=A',
+                        'woocommerce_recently_viewed=A'] if profile=='basic' else []):
                     for combined in ('_ga=tracking; '+cookie, cookie+'; _gid=tracking',
                                      '_ga=tracking; '+cookie+'; _fbp=tracking'):
                         for visitor in ('A', 'B'):
