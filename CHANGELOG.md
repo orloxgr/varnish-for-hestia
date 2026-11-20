@@ -2,7 +2,7 @@
 
 ## 0.23.0 · 2026-11-21 (candidate)
 
-- Add visible `wordpress_user_sw_` Basic Private / UltraCache Shared defaults (bundle `.11`) after an actual standalone switch-off return-region leak. Keep all manual actions/reset; both structural profile fingerprints change and normal apply invalidates both profiles once. Native C/VCL remain unchanged from the diagnostic fix. New `.11` acceptance is pending.
+- Add visible `wordpress_user_sw_` Basic Private / UltraCache Shared defaults (bundle `.11`) after an actual standalone switch-off return-region leak. Keep all manual actions/reset; both structural profile fingerprints change and normal apply invalidates both profiles once. Native C/VCL remain unchanged from the diagnostic fix. Qualify `.11` with eight Linux methods per adapter and the real no-UltraCache switch-off counter; final coordinated release acceptance remains pending.
 
 - Keep dedicated UltraCache generation canaries and ESI capability probes on their ordinary native cache/composition routes within a registered application scope. Qualify with five native diagnostic methods per adapter and actual clean WordPress/WCML detection plus currency visits; retain origin privacy, cookie actions and probe authorization.
 
