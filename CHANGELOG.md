@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.22.0 · 2026-11-20
+
+- Prepare private fragments once in the original authenticated application request before sending parent headers. Deliver authentic repeated provider Set-Cookie fields only to that visitor, preserving original attributes and the public parent. Recover a lost parent from bound public snapshots without repeating provider work.
+- Support application-authorized private-fragment TTL in native scoped cache objects, with no stale grace, renderer-free hits and invalidation across the relevant context partitions. Keep TTL 0 request-local and avoid retaining issuers, mutators or failed fragments.
+- Add a negotiated complete private-document alternative for actual application state such as pending notices. Preserve fresh template headers, exact body and status while the shared public parent remains available. Keep personal first-response copies and explicit application-private routes outside Aggressive storage.
+- Respect public ESI fragment TTL, including TTL 0, without inherited grace/keep or Aggressive override. Omit failed signed UltraCache child HTTP bodies, preserve siblings/tail, and allow recovery. Direct requests and complete private documents retain their actual status/body; generic ESI and Basic behavior remain unchanged.
+- Retain Cookie Database authority, original provider/session ownership, native Hestia CLI/routing and best-effort Basic without ESI. Build the module against the installed native ABI; no engine binary is bundled.
+- Qualified source: Hestia `d46684c5b1974e7f27a46a26787cf4e88b4c3d94` / Webuzo `993b69cc338c94b51b1d8642bb9fd58d2c0a98f4`. Actual Varnish 9.1 suites passed 37/39 methods without skips; the matching UltraCache ZIP passed actual HTTP 503 containment and the complete 100-visit application regression. See [shared evidence](shared/ESI-VALIDATION.md).
+
 ## 0.21.2 · 2026-11-19
 
 - Route narrowly shaped UltraCache private PHP-session source GETs directly to the origin before cache lookup and ESI marker transport. Preserve original cookies/headers for application MAC and one-use validation; add no public admission capability, helper or session-cache override.
