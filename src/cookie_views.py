@@ -2,7 +2,6 @@
 import cookie_admin
 import cookie_database
 from cookie_catalogue import load_catalogue
-import aggressive
 
 
 def view(state, owner=None, domain=None):
@@ -20,24 +19,10 @@ def view(state, owner=None, domain=None):
         integration = cookie_control.integration(entry.get('cookie_integration'), domain, entry.get('aliases', []))
     catalogue = load_catalogue()
     rows = cookie_admin.table(database, catalogue, central, site,entry['profile'] if owner is not None else 'basic')
-    def explain(metadata,match,action,reset_id=None,profile='basic'):
-        metadata['mode_default_action']=None
-        if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
-            site_choices=cookie_admin.concrete(site)
-            if reset_id is not None:site_choices['rules']=[rule for rule in site_choices['rules'] if rule['id']!=reset_id]
-            explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),site_choices,profile)
-                           if cookie_admin._matches(rule['match'],match)),None)
-            inherited_explicit=next((rule for rule in cookie_admin.resolve(cookie_admin.concrete(central),None,profile)
-                                     if cookie_admin._matches(rule['match'],match)),None)
-            metadata['effective_action']=explicit['action'] if explicit else 'shared'
-            metadata['mode_default_action']=None if inherited_explicit else 'shared'
-            metadata['core_precedence']='Aggressive caching can share this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
-        if owner is not None and match['kind']=='exact' and match['value'] in aggressive.session_names(entry):
-            metadata['core_precedence']='Aggressive caching shares this opaque Joomla cookie without checking session state. Known login markers and private routes remain active. An explicit Private choice passes matching requests.'
     for row in rows:
         for profile,metadata in row['profile_actions'].items():
-            explain(metadata,row['match'],metadata['action'],profile=profile)
-            explain(metadata['reset_metadata'],row['reset_match'],metadata['inherited_action'],row['id'],profile)
+            metadata['mode_default_action']=None
+            metadata['reset_metadata']['mode_default_action']=None
         active=entry['profile'] if owner is not None else 'basic'
         row.update(row['profile_actions'][active])
     return {'ok': True, 'service_installed': True, 'cookie_policy_view': True,

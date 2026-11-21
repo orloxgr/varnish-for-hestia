@@ -134,7 +134,10 @@ class AggressiveNative(unittest.TestCase):
                 calls.append((path,headers.get('Cookie')))
                 return page,[('Cache-Control','private, no-store'),('Set-Cookie','PHPSESSID=origin-A; Path=/; HttpOnly')]
             settings={'aggressive':True,'cms_installations':[{'cms':'joomla','base':'/'}],
-                      'cms_cookies':[{'cms':'joomla','base':'/','cookie_name':'a'*32,'supported':True}]}
+                      'cms_cookies':[{'cms':'joomla','base':'/','cookie_name':'a'*32,'supported':True}],
+                      'cookie_policies':{'schemaVersion':1,'rules':[
+                          dict(id='custom:'+name,match=dict(kind='exact',value=name),description='Explicit Shared choice',action='shared')
+                          for name in ('PHPSESSID','a'*32)]}}
             def no_runtime(source):
                 for marker in ('X-SCP-Session','ensure_token','joomla-token','session_state','token_fragment'):
                     self.assertNotIn(marker,source)

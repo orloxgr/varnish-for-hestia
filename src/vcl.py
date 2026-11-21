@@ -104,9 +104,8 @@ def render(state, config):
             custom_recv.append(condition+' { set req.http.X-SCP-Reason = "cms-document-root-changed"; return (pass); }')
         # Identical effective rules are emitted once, irrespective of the
         # number of hosted domains. IDs/descriptions do not multiply VCL.
-        session_names=aggressive.session_names(site)
-        key=json.dumps([cookie_admin.project(cookie_admin.concrete(site.get('cookie_policies')),site['profile']),site['aggressive'],session_names,site['profile']],sort_keys=True)
-        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'aggressive':site['aggressive'],'session_names':session_names,'profile':site['profile'],'ids':[]})['ids'].append(site['id'])
+        key=json.dumps([cookie_admin.project(cookie_admin.concrete(site.get('cookie_policies')),site['profile']),site['profile']],sort_keys=True)
+        cookie_groups.setdefault(key,{'settings':site.get('cookie_policies'),'profile':site['profile'],'ids':[]})['ids'].append(site['id'])
         cms_code=cms_routes.compile_recv(site.get('cms_installations'))
         if cms_code:
             cms_rules.append(condition+' {\n'+cms_code+'\n}')
@@ -123,8 +122,8 @@ def render(state, config):
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
-        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,automatic_shared=group['session_names'],profile=group['profile'])+'\n}')
-        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'],aggressive_mode=group['aggressive'],automatic_shared=group['session_names'],profile=group['profile'])
+        cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,profile=group['profile'])+'\n}')
+        rules = cookie_admin.response_rules(state.get('cookie_policies'),group['settings'],profile=group['profile'])
         response_groups.setdefault(rules,[]).extend(group['ids'])
     for rules,identities in response_groups.items():
         condition=' || '.join('bereq.http.X-HVH-Site == '+quoted(identity) for identity in identities)

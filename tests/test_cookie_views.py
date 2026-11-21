@@ -56,14 +56,14 @@ class CookieViews(unittest.TestCase):
     def test_aggressive_generic_session_effective_action_and_explicit_private(self):
         data=self.view(aggressive=True)
         row=next(row for row in data['cookie_policy_rows'] if row['name']=='PHPSESSID')
-        self.assertEqual(row['effective_action'],'shared')
-        self.assertEqual(row['mode_default_action'],'shared')
-        self.assertIn('Aggressive caching',row['core_precedence'])
+        self.assertEqual(row['effective_action'],'private')
+        self.assertIsNone(row['mode_default_action'])
+        self.assertIn('independent of cookie classification',row['core_precedence'])
         data=self.view(aggressive=True,choices=settings('PHPSESSID','private'))
         row=next(row for row in data['cookie_policy_rows'] if row['id']=='custom:fixture')
         self.assertEqual(row['effective_action'],'private')
-        self.assertEqual(row['mode_default_action'],'shared')
-        self.assertEqual(row['reset_metadata']['mode_default_action'],'shared')
+        self.assertIsNone(row['mode_default_action'])
+        self.assertIsNone(row['reset_metadata']['mode_default_action'])
 
 
 if __name__=='__main__':unittest.main()

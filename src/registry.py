@@ -87,6 +87,8 @@ def desired_state(previous, inventory, kind):
             if kind == 'varnish':
                 from cookie_migration import migrate_site
                 migrate_site(entry)
+                import aggressive
+                entry['cookie_rules_revision'] = aggressive.COOKIE_RULE_REVISION
                 # Retire the old provider-specific issuer; cache policies are
                 # edited in the common cookie sheet for every cookie.
                 entry.pop('cookie_delivery', None)

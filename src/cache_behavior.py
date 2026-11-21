@@ -33,7 +33,7 @@ def execution(site):
     """Only effective policy changes invalidate a site, never scan timestamps."""
     values = aggressive.settings(site)
     return (values['aggressive'], values['aggressive_ttl'] if values['aggressive'] else None,
-            aggressive.session_names(site),
+            site.get('cookie_rules_revision',0) if values['aggressive'] else None,
             site.get('cms_document_root'),site.get('cms_pending_root'),
             cms_routes.literal_prefixes(site.get('custom_private_paths', [])),
             cms_routes.normalize(site.get('cms_installations')))
