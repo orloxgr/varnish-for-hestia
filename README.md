@@ -8,6 +8,8 @@ contained renderer fallbacks on its authenticated prepare response. After full
 validation, native Varnish records one value-free, request-bound VSL diagnostic.
 This distinguishes degraded composition from a parent HTTP200/HIT without a new
 control or browser header. See the [shared diagnostic contract](shared/CONTRACT.md#debug-only-prepared-fallback-diagnostic).
+The [qualification record](shared/PREPARE-DIAGNOSTICS.md) separates paired native
+checks from actual WordPress wire acceptance.
 
 The UltraCache profile supports request-owned cookie delivery before private
 fragment composition, scoped private-fragment TTL, actual application-private

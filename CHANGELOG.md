@@ -1,10 +1,10 @@
 # Changelog
 
-## 0.23.1 · 2026-11-21 (candidate)
+## 0.23.1 · 2026-11-21
 
 - Consume the existing `X-UltraCache-ESI-Error-Contained: 1` response marker as an optional WordPress Debug aggregate on a successful authenticated prepare. After complete envelope and owner validation, emit one fixed, transaction-bound VSL diagnostic for contained renderer fallback. Keep the marker outside shared storage and visitor responses; add no envelope field, capability, UI control or automation.
 - Keep failed HTTP responses, invalid envelopes and wrong owner bindings on the existing rejection path. Preserve ordinary child error containment, privateDocument status/body, cookies and best-effort Basic behavior.
-- Qualify 17 native/source-boundary checks per adapter plus one actual request-snapshot recovery regression per adapter, without skips. Actual paired WordPress Debug/fallback acceptance remains coordinated separately before publication.
+- Qualify 17 native/source-boundary checks per adapter plus one actual request-snapshot recovery regression per adapter, without skips. Pass ten actual WordPress/WooCommerce FPM wire cases with the common module and Hestia VCL, including Debug ON/OFF, real fallback, actual HTTP/SQL failures and recovery. See [scope and evidence](shared/PREPARE-DIAGNOSTICS.md); production and broader application-release acceptance remain separate.
 
 ## 0.23.0 · 2026-11-21 (candidate)
 
