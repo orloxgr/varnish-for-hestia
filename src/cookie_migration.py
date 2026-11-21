@@ -1,8 +1,8 @@
 """Convert old owner exclusions to ordinary visible cookie-policy choices."""
 import hashlib
 
-import cookie_admin
 import cookie_policy
+import cookie_admin
 
 SOURCE = 'Imported from legacy website cookie bypass settings.'
 
