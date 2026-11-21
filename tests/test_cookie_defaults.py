@@ -29,7 +29,7 @@ class CookieDefaults(unittest.TestCase):
             self.assertTrue(defaults.valid_name(match['value']))
         database=json.loads((ROOT/'shared/cookie-recognition/recognition.json').read_text(encoding='utf-8'))
         rows=admin.table(database,load_catalogue())
-        self.assertEqual(len(rows),2300)
+        self.assertEqual(len(rows),2305)
         self.assertNotIn('automatic',{row['action'] for row in rows})
         self.assertTrue(all(row['scope']=='bundled' and row['default_version']==data['version'] for row in rows))
 
@@ -69,7 +69,7 @@ class CookieDefaults(unittest.TestCase):
     def test_daily_recognition_cannot_hide_rules_or_claim_uncompiled_defaults(self):
         rows=admin.table({'records':[{'id':'new','name':'brand_new_cookie','provider':'New provider'}]},load_catalogue())
         bundled=[r for r in rows if r['id']!='ocd:new']
-        self.assertEqual(len(bundled),2300)
+        self.assertEqual(len(bundled),2305)
         self.assertTrue(all(r['active_rule'] for r in bundled))
         new=next(r for r in rows if r['id']=='ocd:new')
         self.assertEqual((new['action'],new['scope'],new['effective_action']),('variant','recognition','existing-policy'))

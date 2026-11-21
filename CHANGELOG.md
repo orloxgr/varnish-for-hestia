@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Apply saved cookie actions before any CMS cookie decision. Move Drupal, Joomla and PrestaShop session/authentication defaults into visible, editable Private rules in bundle `2026.11.21.1`; retain separate private routes/actions. See [scope and native qualification](shared/CMS-COOKIE-CHOICES.md).
+
 ## 0.23.1 · 2026-11-21
 
 - Consume the existing `X-UltraCache-ESI-Error-Contained: 1` response marker as an optional WordPress Debug aggregate on a successful authenticated prepare. After complete envelope and owner validation, emit one fixed, transaction-bound VSL diagnostic for contained renderer fallback. Keep the marker outside shared storage and visitor responses; add no envelope field, capability, UI control or automation.
