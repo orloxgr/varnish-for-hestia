@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1 · 2026-11-21 (candidate)
+
+- Consume the existing `X-UltraCache-ESI-Error-Contained: 1` response marker as an optional WordPress Debug aggregate on a successful authenticated prepare. After complete envelope and owner validation, emit one fixed, transaction-bound VSL diagnostic for contained renderer fallback. Keep the marker outside shared storage and visitor responses; add no envelope field, capability, UI control or automation.
+- Keep failed HTTP responses, invalid envelopes and wrong owner bindings on the existing rejection path. Preserve ordinary child error containment, privateDocument status/body, cookies and best-effort Basic behavior.
+- Qualify 17 native/source-boundary checks per adapter plus one actual request-snapshot recovery regression per adapter, without skips. Actual paired WordPress Debug/fallback acceptance remains coordinated separately before publication.
+
 ## 0.23.0 · 2026-11-21 (candidate)
 
 - Add visible `wordpress_user_sw_` Basic Private / UltraCache Shared defaults (bundle `.11`) after an actual standalone switch-off return-region leak. Keep all manual actions/reset; both structural profile fingerprints change and normal apply invalidates both profiles once. Native C/VCL remain unchanged from the diagnostic fix. Qualify `.11` with eight Linux methods per adapter and the real no-UltraCache switch-off counter; final coordinated release acceptance remains pending.

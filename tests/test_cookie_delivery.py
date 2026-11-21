@@ -118,6 +118,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
                 get.request_headers = {'Host': 'example.test', 'X-Forwarded-Proto': 'https'}
                 get.origin_port = origin.server_port
                 get.source = source
+                get.instance = root/'instance'
                 def stop_origin():
                     origin.shutdown();origin.server_close();thread.join(timeout=5)
                 get.stop_origin = stop_origin
