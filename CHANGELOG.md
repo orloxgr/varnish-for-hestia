@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.23.2 · 2026-11-22
 
+- Reuse equivalent image Accept representations from an authenticated newly selected public snapshot without inventing an inner page-cache HIT. Preserve distinct signed publication pointers even when HTML bytes match. Ordinary fresh origin STORE responses keep their existing Vary behavior.
+- Keep aggressive HTTP caching independent of cookie classification. Ordinary Shared / Public variant / Private choices now apply consistently; retire forced PHP/Joomla cookie sharing and invalidate old aggressive replicas once.
+- Prepare registered UltraCache non-resolver publications on an eligible cold MISS, then reuse the ordinary URL/Variant key. Plain warm HITs keep zero backend work; private parents keep one grouped prepare per visitor.
+- Negotiate actual observed server-cookie delivery for public parents with zero private fragments. Preserve owner-only fields and strict signed/boolean/header binding; expose the work flag and request-owned outcome. Marked pages incur actual application work; Basic and unmarked plain HITs stay on their existing paths.
 - Expose a validated, request-owned prepared private delivery outcome independently of Debug and parent HIT. Preserve optional Debug logging; reject missing/invalid/duplicate or incomplete producer verdicts and remove client/origin/cached copies. See [wire contract and qualification](shared/DELIVERY-OUTCOME.md).
 - Import legacy website cookie bypasses into visible ordinary Private choices during normal reconciliation, retaining saved profile choices, tokens and scoped inheritance. Remove the separate form/PASS mechanism; keep old backup validation and idempotent upgrade behavior.
 - Apply saved cookie actions before any CMS cookie decision. Move Drupal, Joomla and PrestaShop session/authentication defaults into visible, editable Private rules in bundle `2026.11.21.1`; retain separate private routes/actions. See [scope and native qualification](shared/CMS-COOKIE-CHOICES.md).

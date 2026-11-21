@@ -1,28 +1,44 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.2** · GPL-3.0-or-later.
 
-With WordPress Debug enabled, a cooperating UltraCache application can report
-contained renderer fallbacks on its authenticated prepare response. After full
-validation, native Varnish records one value-free, request-bound VSL diagnostic.
-This distinguishes degraded composition from a parent HTTP200/HIT without a new
-control or browser header. See the [shared diagnostic contract](shared/CONTRACT.md#debug-only-prepared-fallback-diagnostic).
-The [qualification record](shared/PREPARE-DIAGNOSTICS.md) separates paired native
-checks from actual WordPress wire acceptance.
+Cookie choices apply through one scoped resolver. CMS session defaults are visible
+and editable, and old website bypass lists migrate into ordinary Private rows.
+See [CMS choices](shared/CMS-COOKIE-CHOICES.md).
+
+A compatible UltraCache application and native Varnish now report the completed
+request's prepared private fragment outcome separately from parent cache HIT.
+The outcome works with Debug off; Debug retains its separate optional value-free
+VSL diagnostic. Native Varnish never generates provider cookie identifiers.
+See the [delivery outcome contract](shared/DELIVERY-OUTCOME.md).
+
+Registered UltraCache applications now prepare their public representation on
+an eligible cold MISS even without resolver-cookie variants. Plain warm HITs
+retain zero backend work. See [cold public selection](shared/COLD-PUBLIC-SELECTION.md).
+
+Observed server-cookie publications can negotiate a separate
+[cookie-only delivery contract](shared/COOKIE-ONLY-DELIVERY.md). A marked HIT
+reuses public HTML and executes its actual application issuer once per visitor,
+including its real consent and lifecycle decisions. Original cookie fields stay
+request-owned. Unmarked plain pages keep their zero-backend path; Basic keeps
+its existing best-effort behavior without ESI. Existing old WordPress publications
+need the application's normal capability redetection, cache clear and warm-up
+after both compatible components are upgraded. A native addon update does not
+rebuild an old local application snapshot. See the [qualification record](shared/COOKIE-WARM-VALIDATION.md).
 
 The UltraCache profile supports request-owned cookie delivery before private
 fragment composition, scoped private-fragment TTL, actual application-private
 documents, and exact public-fragment TTL/error containment. **Basic stays best
 effort without ESI.** Cookie Database remains the sole cookie classification
-authority. This candidate adds independent profile cookie choices and
+authority. Profiles provide independent cookie choices and
 [application-scoped public selection](shared/PUBLIC-SELECTION.md), including
 actual provider context before lookup and private streaming/range delivery.
-Common bundle `2026.11.20.11` keeps personal commenter, YITH, Recently Viewed,
+Common bundle `2026.11.21.1` keeps personal commenter, YITH, Recently Viewed,
 cart/session and User Switching defaults Private in Basic and Shared in the integrated UC profile;
-manual choices still win. Final coordinated distribution acceptance is pending.
-The [earlier qualified release evidence](shared/ESI-VALIDATION.md) remains the
-record for 0.22.0/0.11.0; it is not a claim that this candidate was published.
+manual choices still win. The [current qualification record](shared/COOKIE-WARM-VALIDATION.md)
+separates native, application and installation checks; [earlier evidence](shared/ESI-VALIDATION.md)
+remains the historical record for 0.22.0/0.11.0.
 
 ## Quick start
 
@@ -97,12 +113,13 @@ UltraCache. When enabled, anonymous public HTML uses the selected positive
 request private/no-store or a shorter lifetime. The original browser cache headers
 are restored on delivery. This option does not change browser cache settings.
 
-Known login markers, carts, private actions, explicit Private cookie choices and
-additional website bypass rules still take precedence. A generic `PHPSESSID`
-alone no longer forces PASS in aggressive mode. Original request URL and cookies
-reach the origin unchanged; tracking dimensions are removed only from the lookup
-key. Real response cookies use the same request-owned handoff as Shared HTML:
-they never become part of an object replayed to another visitor.
+Aggressive caching does not change cookie actions. The same bundled defaults and
+saved per-profile Shared HTML, Public variant and Private choices apply, including
+Private defaults for `PHPSESSID` and `__Secure-PHPSESSID`. CMS-discovered opaque
+cookie names are no longer silently Shared; ordinary selected rules and functional
+Vary handling apply. Private routes/actions remain separate. Original request URL
+and cookies reach the origin unchanged. Only Shared response cookies use the
+request-owned handoff; their fields never become part of a replayed object.
 
 CMS detection uses Hestia's native document root, including custom document
 roots and nested installations. Known WordPress/WooCommerce, Joomla, Drupal,
