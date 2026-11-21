@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expose a validated, request-owned prepared private delivery outcome independently of Debug and parent HIT. Preserve optional Debug logging; reject missing/invalid/duplicate or incomplete producer verdicts and remove client/origin/cached copies. See [wire contract and qualification](shared/DELIVERY-OUTCOME.md).
 - Import legacy website cookie bypasses into visible ordinary Private choices during normal reconciliation, retaining saved profile choices, tokens and scoped inheritance. Remove the separate form/PASS mechanism; keep old backup validation and idempotent upgrade behavior.
 - Apply saved cookie actions before any CMS cookie decision. Move Drupal, Joomla and PrestaShop session/authentication defaults into visible, editable Private rules in bundle `2026.11.21.1`; retain separate private routes/actions. See [scope and native qualification](shared/CMS-COOKIE-CHOICES.md).
 
