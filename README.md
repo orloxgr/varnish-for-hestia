@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.2** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.3** · GPL-3.0-or-later.
 
 Cookie choices apply through one scoped resolver. CMS session defaults are visible
 and editable, and old website bypass lists migrate into ordinary Private rows.

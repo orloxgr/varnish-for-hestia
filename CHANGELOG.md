@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.3 · 2026-11-22
+
+- Split Cookie Policies action filtering into independent Basic and UltraCache controls. Each matches its own column; selecting both requires both actions on the same row. Keep search, source filtering and pagination consistent, and reveal newly added or pasted rows by clearing the action filters.
+
 ## 0.23.2 · 2026-11-22
 
 - Reuse equivalent image Accept representations from an authenticated newly selected public snapshot without inventing an inner page-cache HIT. Preserve distinct signed publication pointers even when HTML bytes match. Ordinary fresh origin STORE responses keep their existing Vary behavior.

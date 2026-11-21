@@ -34,10 +34,10 @@ const window={addEventListener(){},confirm:()=>true};let submitted;
 const context={document,window,Option,TextEncoder,structuredClone,crypto:{randomUUID},console,URL,Blob};
 const find=(tag,text)=>root.querySelectorAll(tag).find(n=>n.textContent===text);
 if(product==='hestia'){
-  for(const id of ['cookie-initial','cookie-rows','cookie-page','cookie-count','cookie-error','cookie-payload','cookie-form','cookie-search','cookie-action-filter','cookie-source-filter','cookie-page-size','cookie-select-page','cookie-prev','cookie-next','cookie-add','cookie-bulk-action','cookie-paste','cookie-import',...['basic','ultracache'].flatMap(p=>['cookie-bulk-','cookie-reset-','cookie-suggest-'].map(x=>x+p))]){
+  for(const id of ['cookie-initial','cookie-rows','cookie-page','cookie-count','cookie-error','cookie-payload','cookie-form','cookie-search','cookie-action-filter-basic','cookie-action-filter-ultracache','cookie-source-filter','cookie-page-size','cookie-select-page','cookie-prev','cookie-next','cookie-add','cookie-bulk-action','cookie-paste','cookie-import',...['basic','ultracache'].flatMap(p=>['cookie-bulk-','cookie-reset-','cookie-suggest-'].map(x=>x+p))]){
     const n=new Element(id==='cookie-rows'?'tbody':id==='cookie-form'?'form':'div');ids.set(id,n);root.append(n);
   }
-  ids.get('cookie-initial').textContent=JSON.stringify(initial);ids.get('cookie-page-size').value='100';ids.get('cookie-source-filter').value='';ids.get('cookie-action-filter').value='';ids.get('cookie-search').value='';
+  ids.get('cookie-initial').textContent=JSON.stringify(initial);ids.get('cookie-page-size').value='100';ids.get('cookie-source-filter').value='';for(const p of ['basic','ultracache'])ids.get('cookie-action-filter-'+p).value='';ids.get('cookie-search').value='';
 } else {
   context.window.WebuzoCookiePolicies=undefined;
 }
@@ -79,3 +79,63 @@ await (product==='hestia'?ids.get('cookie-import'):find('button','Append pasted 
 payload=await save();const added=payload.rules.find(r=>r.match.value==='my_cookie');
 assert.ok(added,'Paste did not preserve tab-separated columns');assert.deepEqual(added.actions,{basic:'variant',ultracache:'private'});
 console.log(product+': two columns, three choices, isolated edits/reset, schema2 save and four-column paste passed');
+
+
+if (product === 'hestia') {
+  // Reload the actual editor with every Basic / UltraCache combination.
+  const actions = ['shared','variant','private'], filterRows = [];
+  for (const basic of actions) for (const ultracache of actions) for (let index=0; index<3; index++) {
+    const fixture=structuredClone(row);
+    fixture.id=`filter:${basic}:${ultracache}:${index}`;
+    fixture.name=`cookie_${basic}_${ultracache}_${index}`;
+    fixture.match={kind:'exact',value:fixture.name};
+    for (const [profile,action] of Object.entries({basic,ultracache})) {
+      fixture.profile_actions[profile]={...fixture.profile_actions[profile],action,proposal:action,inherited_action:action,effective_action:action};
+    }
+    filterRows.push(fixture);
+  }
+  for (const [id,old] of ids) {
+    const fresh=new Element(old.tagName);ids.set(id,fresh);
+  }
+  root.replaceChildren(...ids.values());
+  ids.get('cookie-initial').textContent=JSON.stringify({...initial,rows:filterRows});
+  ids.get('cookie-page-size').value='25';
+  ids.get('cookie-search').value='';ids.get('cookie-source-filter').value='';
+  const filters=Object.fromEntries(['basic','ultracache'].map(p=>[p,ids.get('cookie-action-filter-'+p)]));
+  for (const filter of Object.values(filters)) filter.value='';
+  vm.runInNewContext(fs.readFileSync('panel/cookie-admin.js','utf8'),context);
+  const visibleNames=()=>ids.get('cookie-rows').querySelectorAll('input').filter(n=>n.type==='text').map(n=>n.value);
+  const setFilter=async(profile,value)=>{filters[profile].value=value;await filters[profile].fire('input');};
+  await ids.get('cookie-next').fire('click');assert.equal(visibleNames().length,2);
+  await setFilter('ultracache','shared');
+  assert.equal(visibleNames().length,9,'Changing a profile filter must return to the first page');
+  assert.equal(ids.get('cookie-page').textContent,'Page 1 / 1');
+  for (const profile of ['basic','ultracache']) for (const action of actions) {
+    await setFilter(profile==='basic'?'ultracache':'basic','');await setFilter(profile,action);
+    assert.equal(visibleNames().length,9);
+    assert.ok(visibleNames().every(name=>name.split('_')[profile==='basic'?1:2]===action));
+  }
+  await setFilter('basic','private');await setFilter('ultracache','shared');
+  assert.equal(visibleNames().length,3,'Both selected profile columns must match the same row');
+  await setFilter('basic','');
+  assert.equal(visibleNames().length,9);
+  assert.ok(visibleNames().includes('cookie_private_shared_0'),'UltraCache Shared must include Basic Private');
+  ids.get('cookie-search').value='cookie_private';await ids.get('cookie-search').fire('input');
+  assert.equal(visibleNames().length,3,'Search must combine with the profile filters');
+  assert.equal((await save()).rules.length,0,'Filtering must not change any policy');
+  const action=ids.get('cookie-rows').querySelectorAll('select').find(n=>n.getAttribute('aria-label')==='UltraCache action for cookie_private_shared_0');
+  action.value='private';await action.fire('change');
+  assert.equal(visibleNames().length,2,'Filters must use the current draft action');
+  ids.get('cookie-source-filter').value='local';await ids.get('cookie-source-filter').fire('input');
+  assert.equal(visibleNames().length,0,'Source and action filters must both match');
+  await setFilter('ultracache','private');assert.deepEqual(visibleNames(),['cookie_private_shared_0']);
+  ids.get('cookie-paste').value='pasted_cookie\tIndependent columns\tshared\tvariant';
+  await ids.get('cookie-import').fire('click');
+  assert.ok(visibleNames().includes('pasted_cookie'),'Pasted rows must be visible despite previous action filters');
+  for (const filter of Object.values(filters)) assert.equal(filter.value,'');
+  await setFilter('basic','private');await setFilter('ultracache','private');
+  await ids.get('cookie-add').fire('click');
+  for (const filter of Object.values(filters)) assert.equal(filter.value,'');
+  assert.ok(visibleNames().includes(''),'New rows must be visible despite previous action filters');
+  console.log('hestia: independent profile filters, all three actions, combined search/source/draft matches, pagination reset and visible added/pasted rows passed');
+}

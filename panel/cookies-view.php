@@ -35,7 +35,9 @@ $choices = $data['cookie_policies'] ?? ['schemaVersion' => 2, 'rules' => []];
 <?php endif; ?>
 <div class="cookie-toolbar">
 <label>Search<input class="form-control" id="cookie-search" type="search" placeholder="Name, description or provider" title="Search every local recognition record, reviewed policy and custom row."></label>
-<label>Action (either profile)<select class="form-select" id="cookie-action-filter" title="Match the selected action in either the Basic or UltraCache column."><option value="">All actions</option><option value="shared">Shared HTML</option><option value="variant">Public variant</option><option value="private">Private</option></select></label>
+<?php foreach (['basic' => 'Basic', 'ultracache' => 'UltraCache'] as $profileKey => $profileLabel): ?>
+<label><?= $profileLabel ?><select class="form-select" id="cookie-action-filter-<?= $profileKey ?>" aria-label="Filter <?= $profileLabel ?> cookie action" title="Match only the <?= $profileLabel ?> column. Both profile filters apply when selected."><option value="">All actions</option><option value="shared">Shared HTML</option><option value="variant">Public variant</option><option value="private">Private</option></select></label>
+<?php endforeach; ?>
 <label>Source<select class="form-select" id="cookie-source-filter" title="Show inherited, locally overridden or custom entries."><option value="">All entries</option><option value="local">Local choices</option><option value="inherited">Inherited/default</option><option value="custom">Custom rows</option></select></label>
 <label>Rows per page<select class="form-select" id="cookie-page-size" title="Pagination changes display only. All records remain searchable and selectable."><option>25</option><option selected>100</option><option value="all">All</option></select></label>
 </div>
