@@ -81,11 +81,12 @@ def desired_state(previous, inventory, kind):
                 else:
                     from profile_settings import choices
                     entry.update(token=secrets.token_urlsafe(32), profile=choices(state)['default_profile'],
-                                 custom_recv='', custom_backend_response='', bypass_cookies=[])
+                                 custom_recv='', custom_backend_response='')
                 row['sites'][domain] = entry
             entry = row['sites'][domain]
             if kind == 'varnish':
-                entry.setdefault('bypass_cookies', [])
+                from cookie_migration import migrate_site
+                migrate_site(entry)
                 # Retire the old provider-specific issuer; cache policies are
                 # edited in the common cookie sheet for every cookie.
                 entry.pop('cookie_delivery', None)

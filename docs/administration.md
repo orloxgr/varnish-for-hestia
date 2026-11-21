@@ -143,72 +143,26 @@ CSS and other assets that reach Varnish use the selected preset's cache policy.
 The UltraCache preset adds ESI and explicitly approved async parents to this
 same common base. There is no separate permissive Woo/session implementation.
 
-### Additional cookie exclusions
+### Cookie choices and imported exclusions
 
-Each domain has a **Cookies that bypass cache** field, also available to an
-administrator through **Manage website**. Save cookie rules independently of
-profile and VCL settings. Rules apply only to that site and its aliases.
+Use **Cookie cache policies** for exact names and trailing-star prefixes. Each
+profile has an independent Shared HTML, Public variant or Private action.
+Website choices precede central choices; within a scope exact names precede the
+longest matching prefix. Original cookies reach the application unchanged.
 
-Enter one case-sensitive exact cookie name or trailing-star prefix per line:
+Ordinary upgrade imports old website bypass entries as visible Private choices,
+with a source description. A covering explicit website choice wins independently
+per profile. A wider imported prefix remains active outside a newer, narrower
+choice. The usual site-over-central precedence remains visible; central rules
+are not copied into websites or frozen by migration. Tokens and unrelated
+settings remain unchanged. Repeating the upgrade does not recreate imported rows.
 
-```text
-membership_*
-custom_currency
-```
-
-A match sends the request to the application. It does not delete the cookie.
-Empty uses the profile defaults; custom rules only add bypasses and cannot remove
-built-in private-cookie protections. These rules apply to both presets and are retained when changing presets. Names may contain
-valid HTTP cookie-name characters, with an optional trailing `*` prefix wildcard. Names are interpreted literally, including regex punctuation. There is no addon rule-count, input-size or name-length quota; arbitrary regular expressions and cookie values are not accepted.
-
-Use these exclusions for plugins whose HTML depends on a cookie, including
-language, currency or membership when their origin does not emit Vary: Cookie
-or an appropriate private policy. An origin Vary: Cookie uses a functional cookie
-key that omits known analytics IDs but retains unknown/consent/referral cookies.
-The origin receives the original cookies; downstream caches retain Vary: Cookie. Profile changes, discovery and configuration backups preserve the rules.
-Saving invalidates only the selected site's cache. Invalid input keeps the
-previous policy. The origin's response privacy headers and Set-Cookie remain
-independent cacheability checks. The existing UltraCache ESI opt-in and response
-approval are still required before cart-cookie requests can share a parent;
-custom exclusions take precedence over that opt-in.
-
-All profiles honor `Surrogate-Control: no-store`, even when the UltraCache
-profile processes ESI in the same response. Uncacheable responses keep only a
-two-minute hit-for-miss decision, with no stored response body or grace/keep
-window. Concurrent requests can reach the origin independently. A subsequent
-cacheable origin response can replace that decision immediately.
-
-UltraCache uses a WordPress/WooCommerce VCL profile with ESI, approved
-shared parents, private cookie carriers, native content-negotiation variants,
-grace and keep. ESI can use the same site's aliases and cannot cross site scopes.
-
-All profiles also work with ordinary PHP or WordPress without the named plugins.
-Absent ESI response headers mean normal HTTP delivery and caching; optional shared
-parents without approval are delivered uncached. No application detection occurs.
-Accept media types, quality values and quoted parameters retain their meaning;
-only unquoted optional whitespace is normalized. Native Vary: Accept keeps JSON,
-XML, text and image representations separate. Both presets bypass the standard
-cart, checkout and account URLs without requiring a plugin.
-
-The site-local language supports `if`/`else`, request-side `return(pass)`, custom
-`X-User-*` headers, and backend-response TTL/grace/keep values. For example:
-
-```vcl
-# Request section
-if (req.url ~ "^/uncached/") { return (pass); }
-```
-
-```vcl
-# Backend response section
-if (bereq.url ~ "[.]css$") { set beresp.ttl = 2d; }
-```
-
-Input is parsed into this site-local language and compiled by native Varnish before
-activation. Host/backend assignment, cookies/authentication fields, internal
-scopes, global subroutines, imports/includes, inline C, purge logic and private
-response controls stay outside the editing scope. Sections have no addon byte/token/nesting quota; native compilation validates the actual syntax and types. Invalid input keeps the working VCL,
-state and routes. Routine changes use native `vcl.load`/`vcl.use`, without restarting
-the shared service, and invalidate only affected site scopes.
+The separate bypass form and runtime list are retired. Imported rules use the
+same request/response resolver and connected WordPress snapshot as other editor
+rows. Resetting a row resumes the ordinary inherited default; it does not restore
+a hidden old exclusion. Existing backups remain validated and can be restored
+through normal migration. Real private routes/actions and origin privacy remain
+separate from cookie choices.
 
 ## Native routing and lifecycle
 

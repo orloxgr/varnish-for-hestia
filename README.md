@@ -374,18 +374,20 @@ standard ESI from another application, but the application must produce the
 includes, fragment endpoints and suitable cache policy. Enabling a Varnish parser
 feature alone cannot turn ordinary WordPress nonces into private fragments.
 
-## Cookie exclusions per website
+## Cookie choices per website
 
-Open **Plugins → Varnish → your domain → Cookies that bypass cache**.
-Enter one cookie name per line, such as `custom_currency`, or a prefix such as
-`membership_*`, then click **Save cookie rules**. Empty uses the built-in defaults.
+Open **Plugins → Varnish → your domain → Cookie cache policies**. Each exact
+cookie name or literal trailing-star prefix has independent Basic and UltraCache
+**Shared HTML**, **Public variant** or **Private** actions. Website choices take
+precedence over central choices; reset resumes inheritance. Cookies reach the
+application unchanged. Origin private responses and private routes/actions have
+separate exclusions.
 
-Both presets bypass known login, session and cart cookies; other cookies do not
-cause bypass by themselves. Add rules for applications that personalize HTML
-without declaring a suitable Vary or private response policy. Both presets also
-handle ordinary public HTML/CSS/HTTP content.
-Rules apply to the selected domain and aliases. Administrators use the same
-controls through **Manage website**. Cookies are not deleted.
+Normal upgrade converts old **Cookies that bypass cache** entries into visible
+Private rows with an import description. Existing explicit website choices keep
+precedence independently in each profile. The old form and separate runtime PASS
+list are removed. Imported rows can be edited/reset in the same cookie editor;
+no second list overrides it. Tokens and other website settings are retained.
 
 Existing static-file routing is retained: files served directly by Nginx remain
 there. Both presets handle public assets that reach Varnish without changing routing.

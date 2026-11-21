@@ -350,11 +350,6 @@ def request(hestia, owner_name, action, payload):
                 raise ValueError('Invalid Varnish profile')
             site.update(profile=payload['profile'], custom_recv=payload.get('custom_recv', ''),
                         custom_backend_response=payload.get('custom_backend_response', ''))
-        elif action == 'configure-cookies':
-            from cookie_policy import normalize
-            if not isinstance(payload.get('bypass_cookies'), str):
-                raise ValueError('Cookie rules must be text, one per line')
-            owner['sites'][domain]['bypass_cookies'] = normalize(payload['bypass_cookies'])
         elif action == 'configure-browser-cache':
             browser_cache.change(state, payload, owner['sites'][domain])
         elif action == 'configure-cache-policy':
@@ -374,9 +369,9 @@ def request(hestia, owner_name, action, payload):
             if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{12,}', value):
                 raise ValueError('Purge tokens need at least 12 letters, digits, underscore or hyphen')
             owner['sites'][domain]['token'] = value
-    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies'):
+    if action not in ('status', 'credentials', 'toggle-account', 'toggle-site', 'configure-site', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies'):
         raise ValueError('Unsupported Varnish action')
-    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-cookies', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies') and not isinstance(domain, str):
+    if action in ('credentials', 'toggle-site', 'configure-site', 'configure-browser-cache', 'configure-cache-policy', 'refresh-cms', 'token', 'flush', 'cookie-policies', 'configure-cookie-policies') and not isinstance(domain, str):
         raise ValueError('Select a site')
     if action == 'configure-cookie-policies':
         state, config, result = reconcile(hestia, mutate, cookie_scope={(owner_name,domain)})
@@ -398,7 +393,6 @@ def request(hestia, owner_name, action, payload):
                 'sites': [{'domain': name, 'aliases': site['aliases'], 'suspended': site['suspended'],
                            'enabled': site['enabled'], 'profile': site['profile'],
                            'custom_recv': site['custom_recv'], 'custom_backend_response': site['custom_backend_response'],
-                           'bypass_cookies': site.get('bypass_cookies', []),
                            **aggressive.settings(site),
                            'custom_private_paths':site.get('custom_private_paths',[]),
                            'cms_installations':site.get('cms_installations',[]),

@@ -15,6 +15,8 @@ class CookieViews(unittest.TestCase):
     def view(self,profile='basic',choices=None,bypass=None,central=False,aggressive=False):
         state={'owners':{'alice':{'sites':{'example.test':{'profile':profile,'aliases':[],
             'cookie_policies':choices,'bypass_cookies':bypass or [],'aggressive':aggressive}}}}}
+        from cookie_migration import migrate_site
+        migrate_site(state['owners']['alice']['sites']['example.test'])
         with patch.object(cookie_views.cookie_database,'database',return_value={'records':[]}), \
              patch.object(cookie_views.cookie_database,'directory',return_value=ROOT/'shared/cookie-recognition'):
             return cookie_views.view(state,None if central else 'alice',None if central else 'example.test')
@@ -41,7 +43,7 @@ class CookieViews(unittest.TestCase):
         row=next(row for row in data['cookie_policy_rows'] if row['id']=='policy:woocommerce-cart-hash')
         self.assertEqual(row['effective_action'],'shared')
         self.assertEqual(row['reset_metadata']['effective_action'],'private')
-        self.assertIn('additional bypass cookie rule woocommerce_*',row['reset_metadata']['core_precedence'])
+        self.assertNotIn('additional bypass cookie rule',row['reset_metadata']['core_precedence'])
 
     def test_explicit_private_cart_choice_does_not_claim_optional_esi_sharing(self):
         data=self.view(profile='ultracache',choices=settings('woocommerce_cart_hash','private'))

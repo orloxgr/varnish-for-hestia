@@ -20,10 +20,6 @@ def view(state, owner=None, domain=None):
         integration = cookie_control.integration(entry.get('cookie_integration'), domain, entry.get('aliases', []))
     catalogue = load_catalogue()
     rows = cookie_admin.table(database, catalogue, central, site,entry['profile'] if owner is not None else 'basic')
-    extra=[]
-    if owner is not None:
-        import cookie_policy
-        extra = cookie_policy.normalize(state['owners'][owner]['sites'][domain].get('bypass_cookies', []))
     def explain(metadata,match,action,reset_id=None,profile='basic'):
         metadata['mode_default_action']=None
         if owner is not None and aggressive.settings(entry)['aggressive'] and match['kind']=='exact' and match['value'] in aggressive.GENERIC_COOKIES:
@@ -38,12 +34,6 @@ def view(state, owner=None, domain=None):
             metadata['core_precedence']='Aggressive caching can share this generic anonymous session cookie. Known CMS authentication, private routes and explicit Private choices still take precedence.'
         if owner is not None and match['kind']=='exact' and match['value'] in aggressive.session_names(entry):
             metadata['core_precedence']='Aggressive caching shares this opaque Joomla cookie without checking session state. Known login markers and private routes remain active. An explicit Private choice passes matching requests.'
-        for name in extra:
-            pattern={'kind':'prefix' if name.endswith('*') else 'exact','value':name.removesuffix('*')}
-            if cookie_admin._matches(pattern,match):
-                metadata['effective_action']='private'
-                metadata['core_precedence']='This website’s additional bypass cookie rule '+name+' takes precedence over the table choice.'
-                break
     for row in rows:
         for profile,metadata in row['profile_actions'].items():
             explain(metadata,row['match'],metadata['action'],profile=profile)

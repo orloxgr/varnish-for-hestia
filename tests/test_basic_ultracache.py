@@ -29,8 +29,11 @@ class PresetUpgrade(unittest.TestCase):
         result = desired_state(previous, inventory, 'varnish')
         upgraded = list(result['owners']['user000']['sites'].values())
         for old, new in zip(sites, upgraded):
-            for key in ('id', 'token', 'enabled', 'bypass_cookies', 'settings'):
+            for key in ('id', 'token', 'enabled', 'settings'):
                 self.assertEqual(old[key], new[key])
+            self.assertNotIn('bypass_cookies', new)
+            self.assertTrue(any(r['match']==dict(kind='prefix',value='membership_') and
+                all(a=='private' for a in r['actions'].values()) for r in new['cookie_policies']['rules']))
             self.assertEqual(new['profile'], 'ultracache' if old['profile'] == 'ultracache' else 'basic')
             if new['profile'] == 'basic':
                 self.assertIn('"'+old['profile']+'"', new['custom_recv'])
@@ -38,7 +41,9 @@ class PresetUpgrade(unittest.TestCase):
                 self.assertIn('beresp.ttl', new['custom_backend_response'])
                 self.assertIn('beresp.grace', new['custom_backend_response'])
             else:
-                self.assertEqual(old, new)
+                from cookie_migration import migrate_site
+                expected=dict(old);migrate_site(expected)
+                self.assertEqual(expected, new)
         self.assertEqual(result['profile_settings']['default_profile'], 'basic')
         self.assertEqual(set(result['profile_settings']['rules']), {'basic', 'ultracache'})
         self.assertEqual(result, desired_state(result, inventory, 'varnish'))

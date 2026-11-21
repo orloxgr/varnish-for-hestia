@@ -57,7 +57,7 @@ def digest(payload):
 
 
 def validate(payload):
-    config, state = payload['settings'], payload['desired']
+    config, state = payload['settings'], copy.deepcopy(payload['desired'])
     if (config.get('schema') != 1 or any(type(config.get(key)) is not int or not 1 <= config[key] <= 65535 for key in ('listen_port', 'admin_port')) or
             config['listen_port'] == config['admin_port'] or
             not isinstance(config.get('memory_mb'), int) or config['memory_mb'] <= 0 or
@@ -68,6 +68,8 @@ def validate(payload):
         raise ValueError('Invalid administrator secret in archive')
     import profile_settings
     profile_settings.consolidate(state)
+    from cookie_migration import migrate_state
+    migrate_state(state)
     from cookie_bridge import validate as validate_cookies
     validate_cookies(state)
     render(state, config)

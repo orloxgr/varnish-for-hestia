@@ -48,6 +48,8 @@ def render(state, config):
                    owner['package'] not in config.get('denied_packages', []) and
                    (config.get('allowed_packages') is None or owner['package'] in config['allowed_packages']))
         for domain, site in sorted(owner['sites'].items()):
+            if site.get('bypass_cookies'):
+                raise ValueError('Legacy cookie exclusions need normal reconciliation before rendering')
             sid = site['id']
             if not re.fullmatch(r'[0-9a-f]{32}', sid) or sid in identities:
                 raise ValueError('Invalid or duplicate site scope')
@@ -67,8 +69,7 @@ def render(state, config):
                                   state.get('cookie_policies'),site.get('cookie_policies'),site['profile']),
                               owned_domains=list(owner['sites']),
                               hosts=hosts, recv=(validate(profile_rules[site['profile']]['custom_recv'], 'recv') + '\n' + validate(site['custom_recv'], 'recv')).strip(),
-                              response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip(),
-                              bypass_cookies=cookie_policy.normalize(site.get('bypass_cookies', []))))
+                              response=(validate(profile_rules[site['profile']]['custom_backend_response'], 'backend_response') + '\n' + validate(site['custom_backend_response'], 'backend_response')).strip()))
     text = ['vcl 4.1;', 'import std; import purge; import header; import cookie_handoff;', 'acl hvh_local { "127.0.0.1"; "::1"; }',
             '\n'.join('backend ' + name + ' { .host = ' + quoted(ip) + '; .port = ' + quoted(str(port)) + ';'+backend_options+' }'
                       for ip, name in backends.items())]
@@ -90,7 +91,7 @@ def render(state, config):
     dispatch.append(('else ' if dispatch else '') + '{ return (synth(421, "Unknown cache host")); }')
     purge = []
     delivery_authorization = []
-    custom_recv, custom_response, cookie_bypass, cookie_rules, response_rules = [], [], [], [], []
+    custom_recv, custom_response, cookie_rules, response_rules = [], [], [], []
     cookie_groups={}
     response_groups={}
     cms_rules=[]
@@ -120,13 +121,6 @@ def render(state, config):
                                ' unset req.http.X-SCP-Reason; }')
         if site['response']:
             custom_response.append('if (bereq.http.X-HVH-Site == ' + quoted(site['id']) + ') { ' + site['response'] + ' }')
-        if site['bypass_cookies']:
-            cookie_bypass.append(condition + ' { if (req.http.Cookie ~ ' +
-                cookie_policy.vcl_pattern(site['bypass_cookies']) +
-                ') { set req.http.X-SCP-Cookie-Name = regsub(req.http.Cookie, {"^.*?' +
-                cookie_policy.pattern(site['bypass_cookies']) + '.*$"}, "\\2");' +
-                ' set req.http.X-SCP-Cookie-Role = "site-bypass";' +
-                ' set req.http.X-SCP-Reason = "site-cookie-rule"; return (pass); } }')
     for group in cookie_groups.values():
         condition=' || '.join('req.http.X-HVH-Site == '+quoted(identity) for identity in group['ids'])
         cookie_rules.append('if ('+condition+') {\n'+cookie_admin.compile_vcl(state.get('cookie_policies'),group['settings'],chain_defaults=True,automatic_shared=group['session_names'],profile=group['profile'])+'\n}')
@@ -182,7 +176,6 @@ def render(state, config):
     set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
   ''' + '\n'.join(custom_recv) + '''
-  ''' + '\n'.join(cookie_bypass) + '''
   call scp_recv;
   return (hash);
 }

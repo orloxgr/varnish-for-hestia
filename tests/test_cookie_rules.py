@@ -99,45 +99,22 @@ class CookieRules(unittest.TestCase):
         state, inventory = fixture()
         site = state['owners']['user000']['sites']['s0.user000.test']
         site['bypass_cookies'] = ['membership_*']
-        del state['owners']['user001']['sites']['s0.user001.test']['bypass_cookies']
+        state['owners']['user001']['sites']['s0.user001.test'].pop('bypass_cookies', None)
         after = desired_state(state, inventory, 'varnish')
-        self.assertEqual(after['owners']['user000']['sites']['s0.user000.test'], site)
-        self.assertEqual(after['owners']['user001']['sites']['s0.user001.test']['bypass_cookies'], [])
+        from cookie_migration import migrate_site
+        expected=copy.deepcopy(site);migrate_site(expected)
+        self.assertEqual(after['owners']['user000']['sites']['s0.user000.test'], expected)
+        self.assertNotIn('bypass_cookies', after['owners']['user001']['sites']['s0.user001.test'])
         import administration
         administration.mutate(after, {'scope':'all', 'operation':'set-profile', 'profile':'ultracache'}, 'varnish')
-        self.assertEqual(after['owners']['user000']['sites']['s0.user000.test']['bypass_cookies'], ['membership_*'])
+        self.assertEqual(after['owners']['user000']['sites']['s0.user000.test']['cookie_policies'], expected['cookie_policies'])
 
-    def test_save_is_domain_scoped_and_preserves_other_settings(self):
-        state, _ = fixture()
-        before = copy.deepcopy(state)
-        config = {'origin_ip':'127.0.0.1'}
-        def reconcile(hestia, mutate):
-            candidate = copy.deepcopy(state)
-            mutate(candidate, config)
-            service.render(candidate, config)
-            state.clear(); state.update(candidate)
-            return state, config, {}
-        with patch.object(service, 'reconcile', side_effect=reconcile):
-            response = service.request(None, 'user000', 'configure-cookies',
-                {'domain':'s0.user000.test', 'bypass_cookies':'membership_*\ncurrency'})
-            expected = copy.deepcopy(before)
-            expected['owners']['user000']['sites']['s0.user000.test']['bypass_cookies'] = ['membership_*', 'currency']
-            self.assertEqual(state, expected)
-            self.assertEqual(response['sites'][0]['bypass_cookies'], ['membership_*', 'currency'])
-            with self.assertRaises(ValueError):
+    def test_retired_legacy_form_action_cannot_recreate_a_second_cookie_list(self):
+        with patch.object(service, 'reconcile') as reconcile:
+            with self.assertRaisesRegex(ValueError, 'Unsupported Varnish action'):
                 service.request(None, 'user000', 'configure-cookies',
-                    {'domain':'s0.user001.test', 'bypass_cookies':'*'})
-            with self.assertRaises(ValueError):
-                service.request(None, 'user000', 'configure-cookies',
-                    {'domain':'s0.user000.test', 'bypass_cookies':'*'})
-            self.assertEqual(state, expected)
-            service.request(None, 'user000', 'configure-site',
-                {'domain':'s0.user000.test', 'profile':'basic', 'custom_recv':'return (pass);'})
-            self.assertEqual(state['owners']['user000']['sites']['s0.user000.test']['bypass_cookies'],
-                             ['membership_*', 'currency'])
-            service.request(None, 'user000', 'configure-cookies',
-                {'domain':'s0.user000.test', 'bypass_cookies':''})
-            self.assertEqual(state['owners']['user000']['sites']['s0.user000.test']['bypass_cookies'], [])
+                    {'domain':'s0.user000.test', 'bypass_cookies':'membership_*'})
+            reconcile.assert_not_called()
 
     def test_native_account_role_protects_cookie_action(self):
         with patch.object(addon, 'hestia', return_value={'user000':{'ROLE':'user','SUSPENDED':'no'}}), \
@@ -151,6 +128,8 @@ class CookieRules(unittest.TestCase):
         state = copy.deepcopy(previous)
         site = state['owners']['user000']['sites']['s0.user000.test']
         site['bypass_cookies'] = ['membership_*']
+        from cookie_migration import migrate_site
+        migrate_site(site)
         config = {'origin_ip':'127.0.0.1','origin_port':8080}
         program = service.render(state, config)
         name = 'hvh_gen_'+hashlib.sha256(program.encode()).hexdigest()[:32]
@@ -252,6 +231,8 @@ class NativeRules(unittest.TestCase):
             'example.test':site('a',['alias.example.test'],['membership_*'])}},
             'two':{'enabled':True,'suspended':False,'package':'default','sites':{
             'other.test':site('b',[],[])}}}}
+        from cookie_migration import migrate_state
+        migrate_state(state)
         source=render(state,{'origin_ip':'127.0.0.1','origin_port':8080}).replace('"8080"','"${s1_port}"',1)
         responses,requests=[],[]
         for host in ['example.test','alias.example.test','other.test']:

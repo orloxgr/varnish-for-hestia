@@ -24,6 +24,8 @@ def program(profile, *, backend_response='', bypass_cookies=None, cookie_deliver
         other=copy.deepcopy(state['owners']['alice']['sites']['example.test'])
         other.update(id='c'*32,profile=other_profile,token='C'*32)
         state['owners']['alice']['sites']['other.test']=other
+    from cookie_migration import migrate_state
+    migrate_state(state)
     return render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080}).replace('"8080"', '"${s1_port}"', 1)
 
 

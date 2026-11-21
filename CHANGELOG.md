@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Import legacy website cookie bypasses into visible ordinary Private choices during normal reconciliation, retaining saved profile choices, tokens and scoped inheritance. Remove the separate form/PASS mechanism; keep old backup validation and idempotent upgrade behavior.
 - Apply saved cookie actions before any CMS cookie decision. Move Drupal, Joomla and PrestaShop session/authentication defaults into visible, editable Private rules in bundle `2026.11.21.1`; retain separate private routes/actions. See [scope and native qualification](shared/CMS-COOKIE-CHOICES.md).
 
 ## 0.23.1 · 2026-11-21
