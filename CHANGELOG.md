@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.7 · 2026-11-23 (candidate)
+
+- Expose existing publication-conflict reselection as an explicit version 1 field in successful authenticated UltraCache capability responses. Compatible producers can verify support before avoiding an unnecessary collector URL-wide invalidation. The native module/ABI and actual reselection behavior are unchanged.
+- Preserve Basic responses, failed authentication, invalid capability requests, ordinary responses and non-capability control operations without the new advertised field. Normal purge/Warm operations are unchanged.
+
 ## 0.23.6 · 2026-11-22
 
 - Negotiate complete anonymous publications with UltraCache 3.13.13-dev.1324. Normal Warm refills both guest and stateful parent projections using request-bound HMAC proofs with each active Hestia site's existing credential. Complete eligible guest HITs require no PHP, prepare or origin-backed ESI.

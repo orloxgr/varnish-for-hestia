@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.6** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.7 (candidate)** · GPL-3.0-or-later.
+
+Authenticated UltraCache capability queries now explicitly report the existing
+publication-conflict reselection support. A compatible application can check
+that support before choosing precise publication replacement instead of a wider
+collector invalidation. This capability exposure does not change the native
+module, cache lifetimes, ordinary purge operations or Basic behavior.
 
 With WordPress UltraCache **3.13.13-dev.1324 or newer**, normal Warm publishes
 complete guest HTML and the separate stateful parent in ORIG, WebP and AVIF.
