@@ -3,6 +3,11 @@
 One shared Varnish service, separate site caches and purge tokens, with per-site
 profiles and VCL controls. Version **0.23.7 (candidate)** · GPL-3.0-or-later.
 
+Returning UltraCache cookie contexts release already-consumed backend carrier
+fields before constructing delivery metadata, preserving the browser's actual
+headers and cookies within the normal native header budget. This cleanup does
+not increase Varnish header or workspace limits.
+
 Authenticated UltraCache capability queries now explicitly report the existing
 publication-conflict reselection support. A compatible application can check
 that support before choosing precise publication replacement instead of a wider
