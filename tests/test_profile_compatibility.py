@@ -3,6 +3,7 @@
 Requires native varnishtest. Each test uses ephemeral processes and loopback ports.
 """
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -26,7 +27,11 @@ def program(profile, *, backend_response='', bypass_cookies=None, cookie_deliver
         state['owners']['alice']['sites']['other.test']=other
     from cookie_migration import migrate_state
     migrate_state(state)
-    return render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080}).replace('"8080"', '"${s1_port}"', 1)
+    source = render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080}).replace('"8080"', '"${s1_port}"', 1)
+    module = os.environ.get('SCP_TEST_COOKIE_MODULE')
+    if module:
+        source = source.replace('import cookie_handoff;', 'import cookie_handoff from "'+module+'";')
+    return source
 
 
 def response(path, body, *, headers=(), expect=(), policy='public, max-age=120', status=200):

@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.4** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.5** · GPL-3.0-or-later.
+
+Unrestricted document requests (`Accept: */*` or absent Accept) can reuse the
+warmed original HTML representation. For UltraCache footer-only cookie delivery,
+pair this update with WordPress UltraCache **3.13.13-dev.1322** and renew the
+application's cached publications with its normal clear and warm-up operation.
+See [wildcard document representations](shared/WILDCARD-DOCUMENT-REPRESENTATIONS.md).
 
 UltraCache prepare requests clear completed routing/selection scratch before
 adding their authenticated transport fields, retaining ordinary browser headers

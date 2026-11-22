@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.5 · 2026-11-22
+
+- Reuse an approved warmed original HTML publication for document requests with absent Accept or a sole full-quality wildcard. Preserve the origin Accept header, explicit media preferences, non-document requests and existing response privacy checks. The native module and protocol are unchanged.
+- Pair with WordPress UltraCache 3.13.13-dev.1322 for the separate Warm collector footer-cookie work correction. Existing application publications require normal renewal; the native update does not recreate their missing work marker. Qualify 13 native representation/cookie-only/header-budget tests and 7 Hestia compatibility tests. See [scope and qualification](shared/WILDCARD-DOCUMENT-REPRESENTATIONS.md).
+
 ## 0.23.4 · 2026-11-22
 
 - Clear completed UltraCache CMS/selection scratch before allocating prepare headers, so ordinary browser requests fit the native default `http_max_hdr=64`. Preserve application fields, original cookies, credentials and native representation/Vary inputs. Keep Basic behavior unchanged and do not tune Varnish parameters.
