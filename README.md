@@ -1,7 +1,7 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.7 (candidate)** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.7** · GPL-3.0-or-later.
 
 Returning UltraCache cookie contexts release already-consumed backend carrier
 fields before constructing delivery metadata, preserving the browser's actual
@@ -14,7 +14,7 @@ that support before choosing precise publication replacement instead of a wider
 collector invalidation. This capability exposure does not change the native
 module, cache lifetimes, ordinary purge operations or Basic behavior.
 
-With WordPress UltraCache **3.13.13-dev.1324 or newer**, normal Warm publishes
+With WordPress UltraCache **3.13.13-dev.1326 or newer**, normal Warm publishes
 complete guest HTML and the separate stateful parent in ORIG, WebP and AVIF.
 An eligible first visit with no Cookie or Authorization fields can then receive
 complete HTML from a native HIT without PHP, prepare or origin-backed ESI.
@@ -23,6 +23,13 @@ with cookies retain the existing scoped cookie and private-fragment handling.
 Basic keeps its existing best-effort behavior. After updating both components,
 use UltraCache's normal cache clear and warm-up. See the
 [Hestia qualification](docs/ANONYMOUS-VALIDATION.md).
+
+This VCL update activates centrally through the normal installer. The native
+module, namespace and policy identities are unchanged; isolated activation kept
+the exact cached guest and Basic objects. It does not itself require a manual
+restart or clear/Warm of already current publications. A WordPress upgrade,
+actual content purge or policy change retains its normal invalidation behavior.
+See [the current native qualification](docs/RESELECT-CAPABILITY.md).
 
 A compatible application can report that an old cached publication was retired
 before any provider work ran. The UltraCache profile then retires that exact

@@ -1,6 +1,6 @@
-# Publication reselection capability: Hestia candidate
+# Publication reselection capability: Hestia qualification
 
-The 0.23.7 source candidate adds one explicit response field to the existing
+Version 0.23.7 adds one explicit response field to the existing
 successful authenticated UltraCache capabilities query:
 
 ```
@@ -13,7 +13,7 @@ native module behavior, ABI, purge operation, TTL setting or background worker.
 Basic, failed or malformed control requests, ordinary application responses and
 non-capability control operations do not advertise the field.
 
-The candidate also releases consumed backend-only ESI cookie/opt-in and routing
+The update also releases consumed backend-only ESI cookie/opt-in and routing
 carriers before delivery metadata allocation. The top request keeps its original
 ESI state; real browser cookies and headers remain intact. The Warm support
 scratch field is released after its capability hint is emitted. No header or
@@ -55,8 +55,8 @@ without changing the cleanup runtime.
 These native transport fixtures are separate from real WordPress collector and
 browser qualification. They do not claim that a header by itself fixes an
 application collector defect. No shared service or production site is changed
-by these tests. The candidate is prepared for review and is not a published
-release. The Hestia installer has not been executed against a production server
-as part of this qualification.
+by these tests. Publication does not install the update on a production server.
+The Hestia installer has not been executed against a production server as part
+of this qualification.
 
 See the [shared conflict protocol](../shared/PUBLICATION-RESELECT.md).

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.23.7 · 2026-11-23 (candidate)
+## 0.23.7 · 2026-11-23
 
 - Release consumed backend-only ESI cookie/opt-in and routing carriers before allocating delivery metadata, and release the Warm support scratch field after emitting its capability hint. Preserve request-owned ESI inputs, actual Cookie, credentials, native representation fields and normal header/workspace limits.
 - Expose existing publication-conflict reselection as an explicit version 1 field in successful authenticated UltraCache capability responses. Compatible producers can verify support before avoiding an unnecessary collector URL-wide invalidation. The native module/ABI and actual reselection behavior are unchanged.
