@@ -1,7 +1,23 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.5** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.6** · GPL-3.0-or-later.
+
+With WordPress UltraCache **3.13.13-dev.1324 or newer**, normal Warm publishes
+complete guest HTML and the separate stateful parent in ORIG, WebP and AVIF.
+An eligible first visit with no Cookie or Authorization fields can then receive
+complete HTML from a native HIT without PHP, prepare or origin-backed ESI.
+Actual cookie creation runs through a separate signed browser request; visitors
+with cookies retain the existing scoped cookie and private-fragment handling.
+Basic keeps its existing best-effort behavior. After updating both components,
+use UltraCache's normal cache clear and warm-up. See the
+[Hestia qualification](docs/ANONYMOUS-VALIDATION.md).
+
+A compatible application can report that an old cached publication was retired
+before any provider work ran. The UltraCache profile then retires that exact
+parent and selects the current publication once for the same visitor, preserving
+cookie policy, private fragments and the new publication's actual freshness.
+See [publication conflict reselection](shared/PUBLICATION-RESELECT.md).
 
 Unrestricted document requests (`Accept: */*` or absent Accept) can reuse the
 warmed original HTML representation. For UltraCache footer-only cookie delivery,

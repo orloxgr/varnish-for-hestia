@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.6 · 2026-11-22
+
+- Negotiate complete anonymous publications with UltraCache 3.13.13-dev.1324. Normal Warm refills both guest and stateful parent projections using request-bound HMAC proofs with each active Hestia site's existing credential. Complete eligible guest HITs require no PHP, prepare or origin-backed ESI.
+- Keep actual browser cookie issuance separate from HTML delivery and bind its proof to the actual forwarded host, method, original URI and native canonical URL. Preserve existing cookie choices, private ownership, source/nonce freshness and Basic behavior.
+- Qualify 156 native HTTP, C parser, Hestia compatibility and installer checks, plus actual WordPress guest HITs, browser cookies, WooCommerce/YITH ownership, nonce expiry and restart/autoregistration. See [qualification and practical limits](docs/ANONYMOUS-VALIDATION.md).
+
+- Recover an authenticated early publication conflict through one same-owner public selection. Retire only the exact old site/host/URL/prepare pointer, bind the new complete publication and preserve original visitor inputs and current policies. Keep generic errors, already consumed provider work and insufficient restart budgets outside this transition.
+- Verify strict single-field proof and empty native HTTP framing before reselecting; keep actual mid-provider retirement on its existing once-only snapshot path without inventing new freshness. Compile the updated module against the installed engine and activate it through the existing source identity. Basic retains its existing behavior.
+- Qualify native concurrency, malformed proof, owner isolation, exact retirement, cookie-only work, header budget and continuation regressions; see [protocol and qualification](shared/PUBLICATION-RESELECT.md).
+
 ## 0.23.5 · 2026-11-22
 
 - Reuse an approved warmed original HTML publication for document requests with absent Accept or a sole full-quality wildcard. Preserve the origin Accept header, explicit media preferences, non-document requests and existing response privacy checks. The native module and protocol are unchanged.
