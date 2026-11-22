@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.4 · 2026-11-22
+
+- Clear completed UltraCache CMS/selection scratch before allocating prepare headers, so ordinary browser requests fit the native default `http_max_hdr=64`. Preserve application fields, original cookies, credentials and native representation/Vary inputs. Keep Basic behavior unchanged and do not tune Varnish parameters.
+- Distinguish exhausted backend header slots/workspace and missing capture association from an actual repeated prepare. Keep the no-repeat guard and verify failures happen before provider work. See [qualification](shared/BACKEND-HEADER-BUDGET.md).
+
 ## 0.23.3 · 2026-11-22
 
 - Split Cookie Policies action filtering into independent Basic and UltraCache controls. Each matches its own column; selecting both requires both actions on the same row. Keep search, source filtering and pagination consistent, and reveal newly added or pasted rows by clearing the action filters.

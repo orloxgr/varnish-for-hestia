@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.3** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.4** · GPL-3.0-or-later.
+
+UltraCache prepare requests clear completed routing/selection scratch before
+adding their authenticated transport fields, retaining ordinary browser headers
+and native Vary inputs at the default 64-entry HTTP header limit. Resource
+exhaustion and a real repeated prepare now have distinct diagnostics.
+See [backend header budget](shared/BACKEND-HEADER-BUDGET.md).
 
 Cookie choices apply through one scoped resolver. CMS session defaults are visible
 and editable, and old website bypass lists migrate into ordinary Private rows.
