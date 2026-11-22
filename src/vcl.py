@@ -245,7 +245,8 @@ sub scp_private_document_diagnostics {
 ''')
     # This is an addon-owned Varnish policy file. No application inspection,
     # configuration changes, connection checks or plugin imports are performed.
-    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules), '\n'.join(delivery_authorization),public_selection.compile_rules(response_groups,'X-HVH-Site')))
+    credentials={site['id']:site['token'] for site in sites if site['active'] and site['profile']=='ultracache'}
+    text.insert(4, cookie_policy.shared_policy('\n'.join(cookie_rules), '\n'.join(response_rules), '\n'.join(cms_rules), '\n'.join(delivery_authorization),public_selection.compile_rules(response_groups,'X-HVH-Site',credentials)))
     if cookie_groups:
         text.insert(4, cookie_admin.defaults_vcl())
     text.insert(4, (ROOT / 'profiles/control.vcl').read_text())

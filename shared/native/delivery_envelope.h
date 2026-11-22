@@ -38,6 +38,7 @@ struct delivery_public_selection {
     char *manifest, *target;
     uint64_t occurrences;
     unsigned cookie_delivery;
+    unsigned guest;
     struct delivery_cookie_update *updates;
     struct delivery_header *headers;
     struct delivery_public_parent *parent;
@@ -48,6 +49,10 @@ int delivery_selection_parse(const char *body, size_t length,
     const char *request_id, const char *original_url, const char *policy, const char *wordpress_policy,
     struct delivery_public_selection **selection,
     struct delivery_private_document **document);
+int delivery_guest_selection_parse(const char *body, size_t length,
+    const char *request_id, const char *original_url, const char *policy, const char *wordpress_policy,
+    const char *guest_policy, const char *epoch, const char *scope,
+    struct delivery_public_selection **selection);
 void delivery_selection_free(struct delivery_public_selection *selection);
 /* Ordered action TAB kind TAB literal-name LF, from the effective resolver. */
 int delivery_selection_candidate(const struct delivery_public_selection *selection,
@@ -59,6 +64,8 @@ int delivery_selection_scope_matches(const char *scope, const char *url);
 int delivery_cookie_action(const char *rules, const char *name, size_t length);
 char *delivery_selection_projection(const char *candidate, const char *rules);
 int delivery_selection_digest(const unsigned char *body, size_t length, char digest[65]);
+int delivery_hmac_sha256(const unsigned char *key, size_t key_length,
+    const unsigned char *body, size_t length, char digest[65]);
 
 /* A fixed-schema parser for delivery v1 only. No engine JSON internals.
  * Strings are strict UTF-8/JSON with UTF-16 surrogate-pair decoding. Embedded
