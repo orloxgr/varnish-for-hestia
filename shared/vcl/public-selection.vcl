@@ -2,6 +2,18 @@
 sub scp_selection_context {
     @@PUBLIC_SELECTION_RULES@@
 }
+sub scp_public_source_diagnostic {
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Version;
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Role;
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Outcome;
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Projection-Version;
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Projection;
+    unset resp.http.X-UltraCache-Delivery-Public-Source-Fallback;
+    unset resp.http.X-UltraCache-Public-Source-Outcome;
+    if (cookie_handoff.delivery_public_source_outcome()) {
+        set resp.http.X-UltraCache-Public-Source-Outcome = cookie_handoff.delivery_public_source_outcome();
+    }
+}
 
 # Called only inside the adapters' existing authenticated capabilities branch.
 sub scp_selection_negotiate {
@@ -12,6 +24,19 @@ sub scp_selection_negotiate {
     std.collect(req.http.X-UltraCache-Public-Selection-WordPress-Policy);
     std.collect(req.http.X-UltraCache-Public-Selection-Cookies);
     std.collect(req.http.X-UltraCache-Public-Selection-Scope);
+    std.collect(req.http.X-UltraCache-Public-Selection-Public-Source-Version);
+    std.collect(req.http.X-UltraCache-Public-Selection-Public-Source-Projection-Version);
+    if (req.http.X-UltraCache-Public-Selection-Public-Source-Projection-Version &&
+        (req.http.X-UltraCache-Public-Selection-Public-Source-Projection-Version != "1" ||
+         req.http.X-UltraCache-Public-Selection-Public-Source-Version != "1")) {
+        return (synth(400,"Invalid public source projection declaration"));
+    }
+    if (req.http.X-UltraCache-Public-Selection-Public-Source-Version &&
+        (req.http.X-UltraCache-Public-Selection-Public-Source-Version != "1" ||
+         req.http.X-UltraCache-Public-Selection-Version != "1" ||
+         req.http.X-UltraCache-Public-Selection-Enabled !~ "^[01]$")) {
+        return (synth(400,"Invalid public source declaration"));
+    }
     if (req.http.X-UltraCache-Public-Selection-Version ||
         req.http.X-UltraCache-Public-Selection-Enabled ||
         req.http.X-UltraCache-Public-Selection-WordPress-Policy ||
@@ -59,6 +84,13 @@ sub scp_selection_capabilities {
         }
         set resp.http.X-UltraCache-VCL-Capabilities = resp.http.X-UltraCache-VCL-Capabilities + ",public-selection";
         set resp.http.X-UltraCache-VCL-Public-Selection-Version = "1";
+        if (cookie_handoff.selection_public_source(req.http.X-SCP-Site,req.http.host,req.http.X-SCP-Selection-Scope)) {
+            set resp.http.X-UltraCache-VCL-Public-Selection-Public-Source-Version = "1";
+        }
+        if (cookie_handoff.selection_public_projection(req.http.X-SCP-Site,req.http.host,req.http.X-SCP-Selection-Scope)) {
+            set resp.http.X-UltraCache-VCL-Public-Selection-Public-Source-Projection-Version = "1";
+        }
+        set resp.http.X-UltraCache-VCL-Public-Selection-Canonical-Host = req.http.host;
         set resp.http.X-UltraCache-VCL-Publication-Reselect-Version = "1";
         set resp.http.X-UltraCache-VCL-Guest-Publication-Version = "1";
         unset resp.http.X-UltraCache-VCL-Guest-Publication-Policy;

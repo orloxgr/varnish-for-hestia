@@ -39,11 +39,57 @@ $Function INT pending()
 
 Number of live handoffs, for lifecycle verification (never cookie contents).
 
+$Function BOOL mutation_backend_start(PRIV_TASK, STRING site, STRING native_policy, STRING credential)
+$Restrict vcl_backend_fetch
+
+Called at the normal UltraCache dynamic backend boundary after negotiation.
+Own a request-bound revoke-only receipt context on the existing backend task.
+Unknown identity provenance unbinds only its registered application scope.
+
+$Function BOOL mutation_backend_response(PRIV_TASK)
+$Restrict vcl_backend_response
+
+Validate a receipt against this exact backend
+execution, revoke authority before browser headers, strip its transport fields.
+Never grant CLEAN or change application status, body or Set-Cookie on failure.
+
+$Function BOOL execution_drain_available(STRING site, STRING host, STRING scope)
+$Restrict vcl_synth
+
+Accepted execution-drain dispatch negotiation for this exact application scope.
+
+$Function INT execution_drain_authorize(PRIV_TASK, STRING site, STRING native_policy, STRING credential)
+$Restrict vcl_recv
+
+Authenticate a strict producer dispatch and bind it to the existing client owner.
+Returns HTTP status, never an execution completion or cache admission.
+
+$Function INT execution_drain_backend(PRIV_TASK, STRING credential)
+$Restrict vcl_backend_fetch
+
+Return 1 for an owned metadata backend, 0 for ordinary, -1 for unavailable owner.
+
+$Function INT execution_drain_response(PRIV_TASK)
+$Restrict vcl_backend_response
+
+Return 1 for valid diagnostic 204, 0 for ordinary, -1 for invalid metadata reply.
+
 $Function INT delivery_recv(PRIV_TOP)
 $Restrict vcl_recv
 
 UltraCache only: 1 prepare PASS, 2 prepared fragment synth, -1 abort, 0 ordinary.
 The phase is request-owned, never inferred from client headers.
+
+$Function INT delivery_held_miss(PRIV_TOP)
+$Restrict vcl_miss
+
+Only the same top-request's owned held-read lookup may return 1 to restart.
+Returns 0 for ordinary misses and -1 for an invalid held-read reservation.
+
+$Function INT delivery_held_waiters()
+$Restrict vcl_synth vcl_deliver
+
+Read-only count of owned requests actually on the engine HSH waiting list.
 
 $Function BOOL delivery_guard(PRIV_TOP)
 $Restrict vcl_recv vcl_pass vcl_miss
@@ -67,6 +113,27 @@ $Function BOOL delivery_backend(PRIV_TASK)
 $Restrict vcl_backend_fetch
 
 Bind the single owned prepare request and set its origin wire from native state.
+
+$Function BOOL delivery_public_source_backend(PRIV_TASK)
+$Restrict vcl_backend_fetch
+
+Apply the owning continuation's real source URI/public Cookie wire before its
+execution context is signed. No caller header can create the source phase.
+
+$Function BOOL selection_public_source(STRING site, STRING host, STRING scope)
+$Restrict vcl_synth
+
+Negotiated source-only public parent role on the existing selection owner.
+
+$Function BOOL selection_public_projection(STRING site, STRING host, STRING scope)
+$Restrict vcl_synth
+
+Negotiated actual public tuple/resolver outcome on the same selection owner.
+
+$Function STRING delivery_public_source_outcome(PRIV_TOP)
+$Restrict vcl_deliver vcl_synth
+
+Request-local source diagnostic only, never cached parent or admission metadata.
 
 $Function BOOL delivery_capture(PRIV_TASK)
 $Restrict vcl_backend_response
@@ -250,3 +317,70 @@ $Restrict vcl_backend_fetch
 
 Domain-separated HMAC of the actual POST method, forwarded Host, raw URI and
 native canonical context. The reusable credential is not forwarded to PHP.
+
+$Function BOOL delivery_reuse_available()
+$Restrict vcl_recv vcl_deliver vcl_synth
+
+Experimental resolver build capability, not negotiated producer reuse support.
+False unless the exact engine-source build receipt was explicitly supplied.
+
+$Function BOOL reuse_register(STRING site, STRING host, STRING scope, STRING native_policy, STRING wordpress_policy, STRING reuse_policy, BOOL enabled, STRING coverage_policy = "")
+$Restrict vcl_recv
+
+Authenticated capabilities only. New authority starts UNBOUND. Disabling and
+policy changes revoke scope readiness without forgetting outstanding writers.
+
+$Function INT reuse_control(PRIV_TASK, STRING site, STRING native_policy)
+$Restrict vcl_recv
+
+Called only inside adapter site-token control authentication. Native metadata
+operations return HTTP status and request-owned JSON; no ordinary fill grants
+clean authority. Context creates only UNBOUND tag slots.
+
+$Function BOOL reuse_control_synth(PRIV_TASK)
+$Restrict vcl_synth
+
+Deliver the current authenticated operation JSON without response workspace caps.
+
+$Function INT delivery_reuse_resolve(PRIV_TOP)
+$Restrict vcl_deliver
+
+Experimental existing-owner pre-header resolution of authenticated descriptor
+claims: -1 unavailable/invalid owner, 0 dependencies missing, 1 all pinned.
+Does not create admission, authorize cached delivery or bypass prepare.
+
+$Function INT delivery_reuse_count(PRIV_TOP, BOOL hits)
+$Restrict vcl_deliver
+
+Request-local descriptor counts for isolated qualification; not body occurrence
+counts and not a cache-authority assertion.
+
+$Function BOOL delivery_reuse_materialize(PRIV_TOP)
+$Restrict vcl_deliver
+
+Copy reserved HIT bytes into the existing owner for selective context/replay,
+preserving native absolute expiry. Production VCL does not call these methods.
+
+$Function STRING delivery_reuse_finalize_context(PRIV_TOP)
+$Restrict vcl_deliver
+
+Experimental signed compact context from the actual owned candidate/selected
+parent and original input evidence. NULL declines only this optimization; it
+does not install admission or grant a full composed HIT.
+
+$Function BOOL delivery_reuse_pending(PRIV_TOP)
+$Restrict vcl_miss
+
+True only for an actual owned metadata lookup; preserves the existing handoff.
+
+$Function BOOL delivery_reuse_backend(PRIV_TASK)
+$Restrict vcl_backend_fetch
+
+Authenticate the actual owned finalization source before the normal origin fetch.
+
+$Function BOOL delivery_reuse_response(PRIV_TASK)
+$Restrict vcl_backend_response
+
+Capture metadata from that source into the existing private native namespace.
+
+$Function STRING reuse_coverage_policy(STRING site, STRING host, STRING scope)

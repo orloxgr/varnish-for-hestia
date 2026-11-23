@@ -10,18 +10,27 @@
  * This is an explicit strict-ABI internal-header dependency, not bundled ABI. */
 #include "cache/cache_int.h"
 #include "vcc_if.h"
+#include "delivery_mutation_wire.h"
 
 /* No global cookie cache: each entry is owned and freed by one client task.
  * Backend access is synchronized with delivery and abort finalization. */
 struct fields { struct fields *next; char *line; };
 struct continuation;
+struct mutation_execution;
 struct handoff {
     struct handoff *next;
     uint64_t key;
     struct fields *fields;
     struct continuation *delivery; /* PRIV_TOP-owned; only accessed under lock. */
+    struct delivery_execution_drain *execution_drain; /* same client-task owner */
 };
-struct task { struct handoff *owner; uint64_t key; };
+struct task {
+    struct handoff *owner; uint64_t key;
+    char *control_body; size_t control_length;
+    struct mutation_execution *mutation;
+    unsigned execution_drain_sent;
+};
+static void mutation_task_fini(VRT_CTX, struct task *);
 #define BUCKETS 1024
 static struct handoff *buckets[BUCKETS];
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -40,6 +49,7 @@ static void close_owner(struct task *task) {
         while (*p && *p != task->owner) p = &(*p)->next;
         if (*p) { *p = task->owner->next; --live; }
         clear_fields(task->owner->fields);
+        delivery_execution_drain_free(task->owner->execution_drain);
         free(task->owner);
         task->owner = NULL; task->key = 0;
         pthread_mutex_unlock(&lock);
@@ -48,8 +58,8 @@ static void close_owner(struct task *task) {
 
 static void task_fini(VRT_CTX, void *value) {
     struct task *task = value;
-    (void)ctx;
-    close_owner(task); free(task);
+    mutation_task_fini(ctx,task);
+    close_owner(task); free(task->control_body); free(task);
 }
 
 static const struct vmod_priv_methods methods = {
@@ -68,7 +78,11 @@ static struct task *get_task(struct vmod_priv *priv) {
 
 VCL_VOID vmod_reset(VRT_CTX, struct vmod_priv *priv) {
     (void)ctx;
-    if (priv->priv) { close_owner(priv->priv); free(priv->priv); priv->priv = NULL; }
+    if (priv->priv) {
+        struct task *task = priv->priv;
+        mutation_task_fini(ctx,task);
+        close_owner(task); free(task->control_body); free(task); priv->priv = NULL;
+    }
 }
 
 static void discard_key(uint64_t key) {
@@ -84,7 +98,7 @@ static void discard_key(uint64_t key) {
 VCL_VOID vmod_discard(VRT_CTX, struct vmod_priv *priv) {
     struct task *task = priv->priv;
     (void)ctx;
-    if (task) discard_key(task->key);
+    if (task) { mutation_task_fini(ctx,task); discard_key(task->key); }
 }
 
 VCL_STRING vmod_open(VRT_CTX, struct vmod_priv *priv) {
@@ -120,6 +134,7 @@ VCL_VOID vmod_bind(VRT_CTX, struct vmod_priv *priv, VCL_STRING key) {
     char *end;
     (void)ctx;
     if (!task) { VRT_fail(ctx, "Cookie handoff allocation failed"); return; }
+    mutation_task_fini(ctx,task);
     // A retry retains its backend task after the internal header was stripped.
     // Clear any response from its previous attempt before starting another.
     discard_key(task->key);

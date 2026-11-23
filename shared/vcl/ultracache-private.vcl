@@ -4,6 +4,8 @@ acl uc_private_local { "127.0.0.1"; "::1"; }
 
 # Adapter invokes this ONLY after its native site-secret/control-source gate.
 sub scp_private_lookup {
+    if (req.url ~ "^/__ultracache-native/held-v1/") { return (synth(403, "Native wait source denied")); }
+    if (req.url ~ "^/__ultracache-native/reuse-v1/") { return (synth(403, "Native metadata source denied")); }
     if (req.http.X-SCP-Profile != "ultracache" || req.esi_level > 0 ||
         client.ip !~ uc_private_local ||
         (req.http.X-Real-IP && req.http.X-Real-IP !~ "^(127[.]0[.]0[.]1|::1)$") ||
@@ -51,10 +53,21 @@ sub scp_private_hit {
 }
 
 sub scp_private_miss {
+    set req.http.X-SCP-Delivery-Held = cookie_handoff.delivery_held_miss();
+    if (req.http.X-SCP-Delivery-Held == "1") { return (restart); }
+    if (req.http.X-SCP-Delivery-Held == "-1") { return (synth(503, "Native wait reservation unavailable")); }
+    unset req.http.X-SCP-Delivery-Held;
     if (req.http.X-SCP-Private-Lookup == "1") { return (synth(404, "Private cache miss")); }
 }
 
 sub scp_private_backend_response {
+    if (cookie_handoff.delivery_reuse_response()) {
+        set beresp.do_stream = false;
+        set beresp.grace = 0s;
+        set beresp.keep = 0s;
+        set beresp.filters = "uc_delivery_capture";
+        return (deliver);
+    }
     if (cookie_handoff.delivery_private_source()) {
         set beresp.do_stream = false;
         set beresp.grace = 0s;
@@ -75,5 +88,6 @@ sub scp_private_deliver {
         }
     }
     unset resp.http.X-SCP-Private-Object;
+    unset resp.http.X-SCP-Reuse-Metadata;
     unset resp.http.X-UltraCache-Private-Key;
 }

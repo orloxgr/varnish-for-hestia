@@ -22,7 +22,7 @@ def policy_for_choices(profile,choices):
 
 
 @contextlib.contextmanager
-def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None, ports=(0,0),other_profile=None,daemon_parameters=(),allow_post=False):
+def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None, ports=(0,0),other_profile=None,daemon_parameters=(),allow_post=False,configuration=None):
     """An isolated origin and daemon; never load/restart the installed service."""
     class Origin(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -65,7 +65,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
     try:
         with tempfile.TemporaryDirectory(prefix='hvh-cookie-http-') as folder:
             root = Path(folder)
-            source = program(profile, cookie_delivery=delivery, cookie_policies=policies, site_settings=site_settings,other_profile=other_profile).replace('${s1_port}', str(origin.server_port))
+            source = program(profile, cookie_delivery=delivery, cookie_policies=policies, site_settings=site_settings,other_profile=other_profile,config=configuration).replace('${s1_port}', str(origin.server_port))
             module = os.environ.get('SCP_TEST_COOKIE_MODULE')
             if module:
                 source = source.replace('import cookie_handoff;', 'import cookie_handoff from "'+module+'";')
@@ -123,6 +123,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
                 # Raw HTTP regressions must use the same adapter entry headers.
                 get.request_headers = {'Host': 'example.test', 'X-Forwarded-Proto': 'https'}
                 get.origin_port = origin.server_port
+                get.origin_endpoint = ('127.0.0.1', origin.server_port)
                 get.source = source
                 get.instance = root/'instance'
                 def stop_origin():

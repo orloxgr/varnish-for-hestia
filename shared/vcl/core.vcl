@@ -1,6 +1,34 @@
 # Shared core policy. GPL-3.0-or-later.
 
 sub scp_init {
+    unset req.http.X-UltraCache-Delivery-Public-Source-Version;
+    unset req.http.X-UltraCache-Delivery-Public-Source-Role;
+    unset req.http.X-UltraCache-Delivery-Public-Source-Outcome;
+    unset req.http.X-UltraCache-Delivery-Public-Source-Projection-Version;
+    unset req.http.X-UltraCache-Delivery-Public-Source-Projection;
+    unset req.http.X-UltraCache-Delivery-Public-Source-Fallback;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Public-Source-Projection-Version;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Public-Source-Version;
+    # Only the authenticated native dispatch may create this backend phase.
+    if (req.http.X-UltraCache-Delivery-Phase == "execution-drain") {
+        return (synth(400,"Invalid execution drain ingress"));
+    }
+    unset req.http.X-UltraCache-VCL-Execution-Drain-Version;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Execution-Drain-Version;
+    # Completed classification scratch must release its header slots before
+    # adding the continuation reuse marker, including a full browser request.
+    unset req.http.X-SCP-Admin-Remaining;
+    unset req.http.X-SCP-Admin-Keep;
+    unset req.http.X-SCP-Admin-Matched;
+    # A continuation restarts this same, already classified top request.
+    # Only native phase/site/host/URL ownership plus an unchanged raw Cookie
+    # permits reuse. Client headers, ESI children and ordinary restarts cannot.
+    unset req.http.X-SCP-Admin-Reuse;
+    if (req.http.X-SCP-Admin-Applied == "1" && req.http.Cookie &&
+        req.http.X-SCP-Admin-Input == req.http.Cookie &&
+        cookie_handoff.delivery_resume_authorized(req.http.X-SCP-Site)) {
+        set req.http.X-SCP-Admin-Reuse = "1";
+    }
     cookie_handoff.reset();
     cookie_handoff.guest_ingress();
     unset req.http.X-SCP-Warm-Projection-Supported;
@@ -42,6 +70,26 @@ sub scp_init {
     unset req.http.X-SCP-Private-Lookup;
     unset req.http.X-SCP-Site;
     unset req.http.X-UltraCache-Delivery-Authorization;
+    unset req.http.X-UltraCache-Delivery-Reuse-Candidate-Version;
+    unset req.http.X-UltraCache-Delivery-Reuse-Context;
+    unset req.http.X-UltraCache-Delivery-Reuse-Version;
+    if (req.method != "PURGE" || req.url != "/__ultracache-vcl-contract-v2") {
+        unset req.http.X-UltraCache-Delivery-Execution-Drain-Context;
+        unset req.http.X-UltraCache-Public-Selection-Execution-Drain-Version;
+        unset req.http.X-UltraCache-Public-Selection-Public-Source-Version;
+        unset req.http.X-UltraCache-Public-Selection-Public-Source-Projection-Version;
+        # These selectors also belong to the separately authenticated native
+        # control protocol; ordinary/browser application requests cannot set them.
+        unset req.http.X-UltraCache-Delivery-Reuse-Recipe;
+        unset req.http.X-UltraCache-Private-Request-Id;
+        unset req.http.X-UltraCache-Private-Challenge;
+        unset req.http.X-UltraCache-Private-Coverage-Proof;
+        unset req.http.X-UltraCache-Private-Coverage-Result;
+        unset req.http.X-UltraCache-Private-Coverage-Policy;
+        unset req.http.X-UltraCache-Private-Coverage-Version;
+    }
+    unset req.http.X-UltraCache-Mutation-Context;
+    unset req.http.X-UltraCache-Mutation-Receipt;
     unset req.http.X-UltraCache-Delivery-Manifest;
     unset req.http.X-UltraCache-Delivery-Recovery-Version;
     unset req.http.X-UltraCache-Delivery-Request-Snapshot-Version;
@@ -62,6 +110,9 @@ sub scp_init {
     unset req.http.X-UltraCache-Delivery-WordPress-Policy;
     unset req.http.X-UltraCache-Delivery-Public-Selection-Actions;
     unset req.http.X-UltraCache-VCL-Public-Selection-Version;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Canonical-Host;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Coverage-Version;
+    unset req.http.X-UltraCache-VCL-Public-Selection-Coverage-Policy;
     unset req.http.X-UltraCache-VCL-Public-Selection-Scope;
     unset req.http.X-UltraCache-VCL-Public-Selection-Epoch;
     unset req.http.X-UltraCache-VCL-Public-Selection-Native-Policy;
@@ -69,16 +120,19 @@ sub scp_init {
     unset req.http.X-UltraCache-VCL-Public-Selection-Actions;
     unset req.http.X-UltraCache-Cookie-Settings;
     unset req.http.X-UltraCache-Cookie-Vary;
-    unset req.http.X-SCP-Admin-Remaining;
-    unset req.http.X-SCP-Admin-Applied;
-    unset req.http.X-SCP-Admin-Keep;
-    unset req.http.X-SCP-Admin-Matched;
-    unset req.http.X-SCP-Admin-Filtered;
-    unset req.http.X-SCP-Admin-Variant;
-    unset req.http.X-SCP-Admin-Has-Variant;
-    unset req.http.X-SCP-Admin-Rule;
-    unset req.http.X-SCP-Admin-Scope;
-    unset req.http.X-SCP-Admin-Action;
+    if (req.http.X-SCP-Admin-Reuse != "1") {
+        unset req.http.X-SCP-Admin-Applied;
+        unset req.http.X-SCP-Admin-Filtered;
+        unset req.http.X-SCP-Admin-Variant;
+        unset req.http.X-SCP-Admin-Has-Variant;
+        unset req.http.X-SCP-Admin-Rule;
+        unset req.http.X-SCP-Admin-Scope;
+        unset req.http.X-SCP-Admin-Action;
+        unset req.http.X-SCP-Admin-Input;
+        unset req.http.X-SCP-Admin-Request-Variant;
+        unset req.http.X-SCP-Cookie-Name;
+        unset req.http.X-SCP-Cookie-Role;
+    }
     unset req.http.X-SCP-Profile;
     unset req.http.X-SCP-CMS;
     unset req.http.X-SCP-CMS-Path;
@@ -103,8 +157,6 @@ sub scp_init {
     unset req.http.X-SCP-Fbp-Domain;
     unset req.http.X-SCP-Fbp-Index;
     unset req.http.X-SCP-Fbp-New;
-    unset req.http.X-SCP-Cookie-Name;
-    unset req.http.X-SCP-Cookie-Role;
     unset req.http.X-UltraCache-Cookie-Policy;
     unset req.http.X-UltraCache-Cookie-Delivery;
     unset req.http.X-SCP-Accept-Check;
@@ -168,7 +220,22 @@ sub scp_hit {
     if (req.http.X-SCP-Profile == "ultracache") { call scp_ultracache_hit; }
 }
 sub scp_backend_fetch {
+    unset bereq.http.X-UltraCache-Private-Coverage-Proof;
+    unset bereq.http.X-UltraCache-Private-Coverage-Result;
+    unset bereq.http.X-UltraCache-Private-Coverage-Policy;
+    unset bereq.http.X-UltraCache-Private-Coverage-Version;
     cookie_handoff.bind(bereq.http.X-SCP-Cookie-Handoff);
+    if (cookie_handoff.delivery_public_source_backend()) {}
+    call scp_delivery_authorization;
+    set bereq.http.X-SCP-Execution-Drain = cookie_handoff.execution_drain_backend(bereq.http.X-UltraCache-Delivery-Authorization);
+    if (bereq.http.X-SCP-Execution-Drain == "-1") { return (abandon); }
+    if (bereq.http.X-SCP-Execution-Drain == "1") {
+        unset bereq.http.X-SCP-Execution-Drain;
+        return;
+    }
+    unset bereq.http.X-SCP-Execution-Drain;
+    unset bereq.http.X-UltraCache-Delivery-Authorization;
+    call scp_mutation_backend_fetch;
     unset bereq.http.X-SCP-Cookie-Handoff;
     unset bereq.http.X-UltraCache-Guest-Issuer-Version;
     unset bereq.http.X-UltraCache-Guest-Issuer-Canonical-URL;
@@ -204,6 +271,9 @@ sub scp_backend_fetch {
     unset bereq.http.X-UltraCache-Delivery-WordPress-Policy;
     unset bereq.http.X-UltraCache-Delivery-Public-Selection-Actions;
     unset bereq.http.X-UltraCache-VCL-Public-Selection-Version;
+    unset bereq.http.X-UltraCache-VCL-Public-Selection-Canonical-Host;
+    unset bereq.http.X-UltraCache-VCL-Public-Selection-Coverage-Version;
+    unset bereq.http.X-UltraCache-VCL-Public-Selection-Coverage-Policy;
     unset bereq.http.X-UltraCache-VCL-Public-Selection-Scope;
     unset bereq.http.X-UltraCache-VCL-Public-Selection-Epoch;
     unset bereq.http.X-UltraCache-VCL-Public-Selection-Native-Policy;
@@ -225,6 +295,9 @@ sub scp_backend_fetch {
     unset bereq.http.X-SCP-Private-Check;
     unset bereq.http.X-SCP-Admin-Remaining;
     unset bereq.http.X-SCP-Admin-Applied;
+    unset bereq.http.X-SCP-Admin-Reuse;
+    unset bereq.http.X-SCP-Admin-Input;
+    unset bereq.http.X-SCP-Admin-Request-Variant;
     unset bereq.http.X-SCP-Admin-Keep;
     unset bereq.http.X-SCP-Admin-Matched;
     unset bereq.http.X-SCP-Admin-Filtered;
@@ -274,6 +347,19 @@ sub scp_backend_fetch {
     unset bereq.http.X-SCP-Warm-Projection-Supported;
 }
 sub scp_backend_response {
+    set beresp.http.X-SCP-Execution-Drain = cookie_handoff.execution_drain_response();
+    if (beresp.http.X-SCP-Execution-Drain == "-1") { return (abandon); }
+    if (beresp.http.X-SCP-Execution-Drain == "1") {
+        unset beresp.http.X-SCP-Execution-Drain;
+        set beresp.uncacheable = true;
+        set beresp.ttl = 0s;
+        set beresp.do_esi = false;
+        set beresp.http.Cache-Control = "no-store";
+        set beresp.http.Surrogate-Control = "no-store";
+        return (deliver);
+    }
+    unset beresp.http.X-SCP-Execution-Drain;
+    if (cookie_handoff.mutation_backend_response()) {}
     unset beresp.http.X-UltraCache-Guest-Issuer-Version;
     unset beresp.http.X-UltraCache-Guest-Issuer-Canonical-URL;
     unset beresp.http.X-UltraCache-Guest-Issuer-Authorization;
@@ -284,6 +370,7 @@ sub scp_backend_response {
         unset beresp.http.X-SCP-Guest-Complete;
     }
     if (bereq.http.X-SCP-Profile == "ultracache") { call scp_private_backend_response; }
+    unset beresp.http.X-SCP-Reuse-Metadata;
     unset beresp.http.X-SCP-Delivery-Public-Snapshot;
     unset beresp.http.X-SCP-Personal-Delivery;
     unset beresp.http.X-SCP-Public-Fragment;
@@ -391,6 +478,9 @@ sub scp_deliver {
     unset resp.http.X-UltraCache-Delivery-WordPress-Policy;
     unset resp.http.X-UltraCache-Delivery-Public-Selection-Actions;
     unset resp.http.X-UltraCache-VCL-Public-Selection-Version;
+    unset resp.http.X-UltraCache-VCL-Public-Selection-Canonical-Host;
+    unset resp.http.X-UltraCache-VCL-Public-Selection-Coverage-Version;
+    unset resp.http.X-UltraCache-VCL-Public-Selection-Coverage-Policy;
     unset resp.http.X-UltraCache-VCL-Public-Selection-Scope;
     unset resp.http.X-UltraCache-VCL-Public-Selection-Epoch;
     unset resp.http.X-UltraCache-VCL-Public-Selection-Native-Policy;
@@ -398,6 +488,7 @@ sub scp_deliver {
     unset resp.http.X-UltraCache-VCL-Public-Selection-Actions;
     if (req.http.X-SCP-Profile == "ultracache") { call scp_ultracache_deliver; }
     else { unset resp.http.X-UltraCache-Cookie-Delivery; }
+    call scp_public_source_diagnostic;
     if (req.http.X-SCP-Profile == "ultracache" && req.esi_level == 0 && !cookie_handoff.guest_result()) {
         set resp.http.X-UltraCache-Delivery-Outcome = cookie_handoff.delivery_outcome();
     }

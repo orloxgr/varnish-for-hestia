@@ -12,6 +12,8 @@ struct delivery_fragment {
     char *cache_key; /* optional authenticated application claim, never public */
     char *cache_tags;
     uint64_t cache_ttl;
+    uint64_t occurrences; /* exact authenticated renderer coverage */
+    double cache_deadline; /* optional actual absolute body deadline, never slid */
 };
 struct delivery_public_parent {
     char generation[65];
@@ -33,6 +35,22 @@ struct delivery_header {
     struct delivery_header *next;
     char *line;
 };
+struct delivery_public_projection {
+    char *bucket, *locale, *language;
+    struct delivery_cookie_update *cookies; /* actual sorted Variant wire values */
+};
+void delivery_public_projection_free(struct delivery_public_projection *projection);
+int delivery_public_projection_parse(const char *body, size_t length,
+    struct delivery_public_projection **projection);
+int delivery_public_projection_header_parse(const char *header, size_t length,
+    struct delivery_public_projection **projection);
+char *delivery_public_projection_header(const struct delivery_public_projection *projection);
+int delivery_public_projection_equal(const struct delivery_public_projection *a,
+    const struct delivery_public_projection *b);
+char *delivery_public_projection_cookie(const struct delivery_public_projection *projection,
+    const char *rules);
+int delivery_public_projection_candidate(const struct delivery_public_projection *projection,
+    const char *original, const char *rules, char **candidate);
 struct delivery_public_selection {
     char policy[65], wordpress_policy[65];
     char *manifest, *target;
@@ -43,12 +61,24 @@ struct delivery_public_selection {
     struct delivery_header *headers;
     struct delivery_public_parent *parent;
     struct delivery_fragment *fragments;
+    unsigned source_only; /* explicit public parent role, never private completion */
+    struct delivery_public_projection *resolved;
 };
+enum delivery_projected_role {
+    DELIVERY_PROJECTED_PERSONAL, DELIVERY_PROJECTED_PARENT, DELIVERY_PROJECTED_RESOLVER
+};
+int delivery_projected_selection_parse(const char *body, size_t length,
+    const char *request_id, const char *original_url, const char *policy, const char *wordpress_policy,
+    enum delivery_projected_role role, struct delivery_public_selection **selection,
+    struct delivery_private_document **document, struct delivery_public_projection **resolved_only);
 /* Separate entry/outcome: never weakens delivery_envelope_parse's v1 binding. */
 int delivery_selection_parse(const char *body, size_t length,
     const char *request_id, const char *original_url, const char *policy, const char *wordpress_policy,
     struct delivery_public_selection **selection,
     struct delivery_private_document **document);
+int delivery_public_source_parse(const char *body, size_t length,
+    const char *request_id, const char *source_url, const char *policy, const char *wordpress_policy,
+    struct delivery_public_selection **selection);
 int delivery_guest_selection_parse(const char *body, size_t length,
     const char *request_id, const char *original_url, const char *policy, const char *wordpress_policy,
     const char *guest_policy, const char *epoch, const char *scope,

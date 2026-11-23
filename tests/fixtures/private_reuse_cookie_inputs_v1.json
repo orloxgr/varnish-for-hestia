@@ -1,0 +1,1148 @@
+{
+  "version": 1,
+  "syntheticSecret": "owned-cookie-frame-secret-v1",
+  "provenance": {
+    "scope": "Actual PHP parser and production projection helper. Synthetic cookies only. No native admission/authorization proof.",
+    "sourceSha256": "417319b624691801c08ec1d6e3ee2c507a208185a9d4392aae3d998020525fef",
+    "runtime": "actual PHP-FPM 8.3.37; synthetic inputs only"
+  },
+  "vectors": [
+    {
+      "name": "absent",
+      "cookieHeader": "",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": [],
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e7075740000000000000000"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "b1af532ecb7291149bb6fb47f9ec27998cd23cc03afe4404abe645386f09869d"
+    },
+    {
+      "name": "exact",
+      "cookieHeader": "owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "9e7a08ed366ff8c1e03f30906aec7b0ef966081cb42df1f4c20509f9271fb324"
+    },
+    {
+      "name": "unrelated-shared",
+      "cookieHeader": "tracker=A; owned_input=alpha; another_tracker=B",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "9e7a08ed366ff8c1e03f30906aec7b0ef966081cb42df1f4c20509f9271fb324"
+    },
+    {
+      "name": "two-names",
+      "cookieHeader": "owned_input=alpha; owned_other=beta",
+      "inputs": {
+        "cookieNames": [
+          "owned_input",
+          "owned_other"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input",
+            "owned_other"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ],
+          "owned_other": [
+            [
+              "owned_other",
+              "beta"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000020000000b6f776e65645f696e7075740000000b6f776e65645f6f7468657200000000000000020000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c7068610000000b6f776e65645f6f74686572000000010000000b6f776e65645f6f746865720000000462657461"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "16b083ca16292c08e260e8bce81892991cebcd1cefb4a1f9e57f4431c16f5eca"
+    },
+    {
+      "name": "two-names-reversed",
+      "cookieHeader": "owned_other=beta; owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_other",
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input",
+            "owned_other"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ],
+          "owned_other": [
+            [
+              "owned_other",
+              "beta"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000020000000b6f776e65645f696e7075740000000b6f776e65645f6f7468657200000000000000020000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c7068610000000b6f776e65645f6f74686572000000010000000b6f776e65645f6f746865720000000462657461"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "16b083ca16292c08e260e8bce81892991cebcd1cefb4a1f9e57f4431c16f5eca"
+    },
+    {
+      "name": "duplicate-first-wins",
+      "cookieHeader": "owned_input=alpha; owned_input=beta",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ],
+            [
+              "owned_input",
+              "beta"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000020000000b6f776e65645f696e70757400000005616c7068610000000b6f776e65645f696e7075740000000462657461"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "26ea3757a3d671be7875982cc2509ac498e66686803c90823544b7c6b5108b2e"
+    },
+    {
+      "name": "duplicate-reversed",
+      "cookieHeader": "owned_input=beta; owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "beta"
+            ],
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000020000000b6f776e65645f696e70757400000004626574610000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "32832051f5bd41968c375b78234fc020ac9d07758d8d21e38ab9d018711c7886"
+    },
+    {
+      "name": "php-dot-alias-first",
+      "cookieHeader": "owned.input=ownerB; owned_input=ownerA",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned.input",
+              "ownerB"
+            ],
+            [
+              "owned_input",
+              "ownerA"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000020000000b6f776e65642e696e707574000000066f776e6572420000000b6f776e65645f696e707574000000066f776e657241"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "e9dd65f8c6a6c506dca5f65fed0c84d5974090c904c3ae57a4303bbb4a2d4b21"
+    },
+    {
+      "name": "php-dot-alias-second",
+      "cookieHeader": "owned_input=ownerA; owned.input=ownerB",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "ownerA"
+            ],
+            [
+              "owned.input",
+              "ownerB"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000020000000b6f776e65645f696e707574000000066f776e6572410000000b6f776e65642e696e707574000000066f776e657242"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "e35e4c663cbd71b0e3779302aa47d83d6312d903d12cb34a766b60d9f02efc38"
+    },
+    {
+      "name": "plus-is-not-space",
+      "cookieHeader": "owned_input=A+B",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "A+B"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000003412b42"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "c6eb0e52416aaa8ac031706cdefafe804ca1c5b636d27dd47b62e7533f7c91e7"
+    },
+    {
+      "name": "percent-value",
+      "cookieHeader": "owned_input=%E2%82%AC",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "%E2%82%AC"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000009254532253832254143"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "521d28e57d49ac2f0199898ebf1bd17a6d9abde9d8ec6e7616e1d03fde88d96b"
+    },
+    {
+      "name": "percent-name-not-decoded",
+      "cookieHeader": "owned%5finput=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": [],
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e7075740000000000000000"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "b1af532ecb7291149bb6fb47f9ec27998cd23cc03afe4404abe645386f09869d"
+    },
+    {
+      "name": "empty-value-present",
+      "cookieHeader": "owned_input=",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              ""
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000000"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "b48127b9f9355620d99ba933d96bc59754c40ce5ca81ba0398b7ce05b9f8623c"
+    },
+    {
+      "name": "prefix-absent",
+      "cookieHeader": "tracker=A",
+      "inputs": {
+        "cookieNames": [],
+        "cookiePrefixes": [
+          "owned_family_"
+        ],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [],
+          "cookiePrefixes": [
+            "owned_family_"
+          ],
+          "phpMaxInputVars": 4000
+        },
+        "groups": [],
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa000000000000000010000000d6f776e65645f66616d696c795f00000000"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "370f633fcb5685d1e34ccf874d2beca5625e975b32270836aaf133952df03c2b"
+    },
+    {
+      "name": "new-prefix-input",
+      "cookieHeader": "owned_family_session=actual-value",
+      "inputs": {
+        "cookieNames": [],
+        "cookiePrefixes": [
+          "owned_family_"
+        ],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [],
+          "cookiePrefixes": [
+            "owned_family_"
+          ],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_family_session": [
+            [
+              "owned_family_session",
+              "actual-value"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa000000000000000010000000d6f776e65645f66616d696c795f00000001000000146f776e65645f66616d696c795f73657373696f6e00000001000000146f776e65645f66616d696c795f73657373696f6e0000000c61637475616c2d76616c7565"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "4997e99fc6dd7dbb703324372af843a2cd8ecea89067fd6ef35b6d50d0f4f893"
+    },
+    {
+      "name": "prefix-dot-alias",
+      "cookieHeader": "owned.family.session=actual-value",
+      "inputs": {
+        "cookieNames": [],
+        "cookiePrefixes": [
+          "owned_family_"
+        ],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [],
+          "cookiePrefixes": [
+            "owned_family_"
+          ],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_family_session": [
+            [
+              "owned.family.session",
+              "actual-value"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa000000000000000010000000d6f776e65645f66616d696c795f00000001000000146f776e65645f66616d696c795f73657373696f6e00000001000000146f776e65642e66616d696c792e73657373696f6e0000000c61637475616c2d76616c7565"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "0cd12a83db99407f590de186b4ed340d5e7dca54c9d083c67bc55fe75065339d"
+    },
+    {
+      "name": "array-input",
+      "cookieHeader": "owned_input[x]=alpha; owned_input=beta",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_ambiguous"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "bare-name",
+      "cookieHeader": "owned_input",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_ambiguous"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "space-alias",
+      "cookieHeader": "owned input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_ambiguous"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "declarations-dedup",
+      "cookieHeader": "owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input",
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "9e7a08ed366ff8c1e03f30906aec7b0ef966081cb42df1f4c20509f9271fb324"
+    },
+    {
+      "name": "unmatched-bracket-exact",
+      "cookieHeader": "owned[input=ownerB; owned_input=ownerA",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_ambiguous"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "unmatched-bracket-prefix",
+      "cookieHeader": "owned[family[session=actual-value",
+      "inputs": {
+        "cookieNames": [],
+        "cookiePrefixes": [
+          "owned_family_"
+        ],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_ambiguous"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "unrelated-unmatched-bracket",
+      "cookieHeader": "tracker[broken=value; owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "9e7a08ed366ff8c1e03f30906aec7b0ef966081cb42df1f4c20509f9271fb324"
+    },
+    {
+      "name": "leading-tab-exact",
+      "cookieHeader": "tracker=1;\towned_input=ownerB; owned_input=ownerA",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "ownerB"
+            ],
+            [
+              "owned_input",
+              "ownerA"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000020000000b6f776e65645f696e707574000000066f776e6572420000000b6f776e65645f696e707574000000066f776e657241"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "a5f6d3089b365c1b4b5baa7ab3a6bdbcee468013ada95bc74bc238b8e5bd1aee"
+    },
+    {
+      "name": "leading-tab-prefix",
+      "cookieHeader": "tracker=1;\towned_family_session=actual-value",
+      "inputs": {
+        "cookieNames": [],
+        "cookiePrefixes": [
+          "owned_family_"
+        ],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [],
+          "cookiePrefixes": [
+            "owned_family_"
+          ],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_family_session": [
+            [
+              "owned_family_session",
+              "actual-value"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa000000000000000010000000d6f776e65645f66616d696c795f00000001000000146f776e65645f66616d696c795f73657373696f6e00000001000000146f776e65645f66616d696c795f73657373696f6e0000000c61637475616c2d76616c7565"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "4997e99fc6dd7dbb703324372af843a2cd8ecea89067fd6ef35b6d50d0f4f893"
+    },
+    {
+      "name": "native-budget-consumed-before",
+      "cookieHeader": "owned_input=alpha;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "9e7a08ed366ff8c1e03f30906aec7b0ef966081cb42df1f4c20509f9271fb324"
+    },
+    {
+      "name": "native-budget-consumed-after",
+      "cookieHeader": "n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "error": "ultracache_reuse_input_budget"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": null
+    },
+    {
+      "name": "empty-base-unmatched",
+      "cookieHeader": "[owned_input=discarded-by-native-php",
+      "inputs": {
+        "cookieNames": [
+          "_owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "_owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": [],
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000c5f6f776e65645f696e7075740000000000000000"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "1111111111111111111111111111111111111111111111111111111111111111",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "098988b20dd21740e057bb9bbe9cf76226c4fb98700b193a472ce8313eb69870"
+    },
+    {
+      "name": "other-native-epoch",
+      "cookieHeader": "owned_input=alpha",
+      "inputs": {
+        "cookieNames": [
+          "owned_input"
+        ],
+        "cookiePrefixes": [],
+        "phpMaxInputVars": 4000
+      },
+      "projection": {
+        "inputs": {
+          "cookieNames": [
+            "owned_input"
+          ],
+          "cookiePrefixes": [],
+          "phpMaxInputVars": 4000
+        },
+        "groups": {
+          "owned_input": [
+            [
+              "owned_input",
+              "alpha"
+            ]
+          ]
+        },
+        "frameHex": "0000001b756c74726163616368652d636f6f6b69652d696e707574732d763100000fa0000000010000000b6f776e65645f696e70757400000000000000010000000b6f776e65645f696e707574000000010000000b6f776e65645f696e70757400000005616c706861"
+      },
+      "context": {
+        "siteId": "owned-site",
+        "canonicalHost": "owned.example",
+        "scope": "/",
+        "epoch": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "nativePolicy": "2222222222222222222222222222222222222222222222222222222222222222",
+        "wordpressPolicy": "3333333333333333333333333333333333333333333333333333333333333333",
+        "reusePolicy": "4444444444444444444444444444444444444444444444444444444444444444",
+        "publicationDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+        "representation": "6666666666666666666666666666666666666666666666666666666666666666",
+        "recipeDigest": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "binding": "307f85eaa34aae2bebd67e19a06806180364f7a9dcdd4ce914cd18edc6e133c8"
+    }
+  ]
+}

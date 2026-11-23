@@ -111,6 +111,12 @@ if (
 }
 sub scp_ultracache_backend_fetch {
 if (bereq.http.X-SCP-Private-Key) {
+    if (cookie_handoff.delivery_reuse_backend()) {
+        call scp_delivery_authorization;
+        if (!bereq.http.X-UltraCache-Delivery-Authorization) { return (error(503, "Reuse credential unavailable")); }
+        set bereq.retry_connect = false;
+        return (fetch);
+    }
     if (!cookie_handoff.delivery_private_backend()) {
         return (error(503, "Prepared private source unavailable"));
     }
@@ -379,6 +385,7 @@ sub vcl_backend_error {
     }
 }
 sub vcl_synth {
+    call scp_public_source_diagnostic;
     unset resp.http.X-UltraCache-Delivery-Outcome;
     if (req.http.X-SCP-Profile == "ultracache" && req.esi_level > 0 &&
         req.http.X-SCP-Fragment-HTTP-Failure ~ "^[1-5][0-9][0-9]$") {
