@@ -22,13 +22,17 @@ def policy_for_choices(profile,choices):
 
 
 @contextlib.contextmanager
-def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None, ports=(0,0),other_profile=None,daemon_parameters=(),allow_post=False,configuration=None):
+def proxy(profile, respond, transform=None, delivery=None, policies=None, management=False, site_settings=None, ports=(0,0),other_profile=None,daemon_parameters=(),allow_post=False,configuration=None,request_body=False):
     """An isolated origin and daemon; never load/restart the installed service."""
     class Origin(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
 
         def do_GET(self):
-            result = respond(self.path, self.headers)
+            if request_body:
+                body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
+                result = respond(self.path, self.headers, body)
+            else:
+                result = respond(self.path, self.headers)
             if result is None:
                 self.close_connection = True # owned upstream EOF/fetch-error fixture
                 return
