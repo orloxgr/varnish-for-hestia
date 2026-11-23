@@ -131,7 +131,7 @@ def proxy(profile, respond, transform=None, delivery=None, policies=None, manage
                 get.stop_origin = stop_origin
                 if management:
                     def adm(*args):
-                        result=subprocess.run(['varnishadm','-T','127.0.0.1:'+str(admin_port),'-S',str(secret),*args],capture_output=True,text=True)
+                        result=subprocess.run(['varnishadm','-t','30','-T','127.0.0.1:'+str(admin_port),'-S',str(secret),*args],capture_output=True,text=True)
                         if result.returncode:raise AssertionError(result.stdout+result.stderr)
                         return result.stdout
                     get.adm=adm

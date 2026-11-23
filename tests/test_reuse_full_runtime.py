@@ -262,7 +262,14 @@ class NativeFullReuse(unittest.TestCase):
                 'set resp.http.X-Test-Pending = cookie_handoff.pending();',1)
             # Test-only actual session budget: the normal adapter intentionally
             # raises the daemon default to cover all origin phases.
-            if held_case=='deadline':source=re.sub(r'set sess.send_timeout = [^;]+;', 'set sess.send_timeout = 0.2s;',source)
+            if held_case=='deadline':
+                source,count=re.subn(r'set sess.send_timeout = [^;]+;', 'set sess.send_timeout = 0.2s;',source)
+                if not count:
+                    # Hestia's fixture has no hosting-timeout inventory. Install
+                    # the actual test budget rather than silently testing 1s.
+                    self.assertIn('sub vcl_recv {',source)
+                    source=source.replace('sub vcl_recv {','sub vcl_recv { set sess.send_timeout = 0.2s;',1)
+                self.assertIn('set sess.send_timeout = 0.2s;',source)
             return source
         with proxy('ultracache',origin,transform=actor_policy,policies=policies,
                    management=held_case in ('reload','cancel'),daemon_parameters=(
