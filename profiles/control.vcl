@@ -21,6 +21,7 @@ sub hvh_http_control {
                 return (synth(400, "Invalid capabilities endpoint"));
             }
             call scp_selection_negotiate;
+            call scp_reuse_negotiate;
             return (synth(200, "Cache control capabilities"));
         }
         if (req.http.X-UltraCache-Operation == "exact-purge") {
@@ -33,6 +34,7 @@ sub hvh_http_control {
         if (req.url != "/__ultracache-vcl-contract-v2") {
             return (synth(400, "Invalid cache control request"));
         }
+        call scp_reuse_control;
         # The versioned protocol uses VCL-quoted operands. Extract only the
         # generated host and selector; the expression itself is never executed.
         # Consume plain runs without per-byte captures or backtracking state:
