@@ -12,7 +12,9 @@ import test_mutation_wire as legacy
 POLICY='c'*64
 FIELDS=legacy.FIELDS
 lp=legacy.lp
-KEY=hmac.digest(('b'*64).encode(),b'ultracache-mutation-key-v1','sha256')
+# Runtime helpers use the actual Hestia profile fixture credential. Portable
+# vectors supply their independent synthetic key explicitly.
+KEY=hmac.digest(('A'*32).encode(),b'ultracache-mutation-key-v1','sha256')
 
 def request_frame(context):
     return (lp('ultracache-mutation-request-v2')+b''.join(lp(context[name]) for name in FIELDS[:10])+
