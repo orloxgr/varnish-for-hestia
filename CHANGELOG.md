@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.8 · 2026-11-23
+
+- Route the existing complete raw UltraCache Warm GET shape to the application before hot guest/public lookup. The application still validates its runtime credential; invalid credentials cannot replace a guest object.
+- Preserve original raw collector cookies, including ESI protocol markers, through the existing backend cleanup. Keep partial Warm headers, browser revalidation and Basic lookup unchanged.
+- Qualify 24 real native Hestia VCL tests and 25 isolated installer/deployment/output checks. See [evidence and limits](docs/WARM-SOURCE-VALIDATION.md). No native module, service budget, cookie choice or cache lifetime change.
+
 ## 0.23.7 · 2026-11-23
 
 - Release consumed backend-only ESI cookie/opt-in and routing carriers before allocating delivery metadata, and release the Warm support scratch field after emitting its capability hint. Preserve request-owned ESI inputs, actual Cookie, credentials, native representation fields and normal header/workspace limits.

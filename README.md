@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.7** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.23.8** · GPL-3.0-or-later.
+
+Existing authenticated-at-origin raw UltraCache Warm requests now reach their
+source even while a complete guest publication is hot. Their original cookies
+and source-capture headers survive the backend transport. Ordinary visitor HITs
+and Basic cache selection keep their existing behavior. See the
+[Warm routing qualification](docs/WARM-SOURCE-VALIDATION.md).
 
 Returning UltraCache cookie contexts release already-consumed backend carrier
 fields before constructing delivery metadata, preserving the browser's actual
