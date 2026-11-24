@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.4 · 2026-11-25
+
+- Align the shared native engine and VCL with Webuzo 0.13.12: invalidate actual owner/content dependencies without whole-application execution or identity census holds.
+- Keep unchanged private fragment objects independent of public HTML generation. Preserve exact original fill proofs, recipe/representation, owner inputs, actual dependency revisions and expiry. Pair with UltraCache WordPress dev.1360.
+- Full goal acceptance and Hestia runtime qualification remain tracked in UltraCache #1006; matching source is not a claim of live Hestia verification.
+
 ## 0.24.3 · 2026-11-24
 
 - Correlate missing/rejected native mutation receipts with the actual backend request using only an opaque execution ID and a fixed VSL failure reason. Preserve failure handling, UNKNOWN holds and reuse authority.
