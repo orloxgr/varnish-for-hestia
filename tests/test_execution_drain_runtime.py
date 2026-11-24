@@ -67,8 +67,16 @@ class NativeExecutionDrain(unittest.TestCase):
         with proxy('ultracache',origin,allow_post=True) as get:
             self.register(get);self.ready(get);backend.post(get,PATH);self.ended(get)
             self.assertEqual(self.dispatch(get,seen[0],token=False)[0],403)
+            before=self.observe(get)
             status,_,_=control(get,'private-execution-drain-dispatch',token=False,extra={'X-Hestia-Varnish-Token':'A'*32})
-            self.assertEqual(status,403,'A different control operation must not become a generic site purge')
+            # Hestia accepts its real site token at the outer control gate;
+            # missing signed drain metadata is then a malformed request (400).
+            # A missing site credential above remains403. Neither is a purge.
+            self.assertEqual(status,400,'Authenticated malformed dispatch must not become a generic site purge')
+            after=self.observe(get)
+            for field in ('epoch','incarnation','scopeRevision','scopeState','temporaryHolds','unsettledExecutions'):
+                self.assertEqual(after[field],before[field],field+' unchanged by malformed control request')
+            self.assertEqual(len(seen),1,'Malformed dispatch never executes the application')
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v['execution'].update(challenge='f'*64))[0],409)
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v.update(extra=True))[0],400)
             self.assertEqual(get(PATH,extra={'X-UltraCache-Delivery-Phase':'execution-drain'})[0],400)
