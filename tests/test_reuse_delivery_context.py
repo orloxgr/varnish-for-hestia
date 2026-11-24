@@ -34,12 +34,12 @@ def canonical_origin_hooks(source):
 def exact_authority_origin_hooks(source):
     """Strict owned Lab routing only; production panel hostname policy unchanged."""
     source=all_origin_hooks(source)
-    normal='set req.http.host = std.tolower(regsub(req.http.host, ":[0-9]+$", ""));'
+    normal='set req.http.host = std.tolower(regsub(regsub(req.http.host, ":[0-9]+$", ""), "[.]$", ""));'
     if source.count(normal)!=1:raise AssertionError('Expected one production host normalization')
-    source=source.replace(normal,'set req.http.host = std.tolower(req.http.host);',1)
-    target='set req.http.X-WV-Ban-Host = regsub(regsub(req.http.X-WV-Ban-Host, ":[0-9]+$", ""), "[.]$", "");'
+    source=source.replace(normal,'set req.http.host = std.tolower(regsub(req.http.host, "[.]$", ""));',1)
+    target='set req.http.X-HVH-Ban-Host = regsub(regsub(req.http.X-HVH-Ban-Host, ":[0-9]+$", ""), "[.]$", "");'
     if source.count(target)!=1:raise AssertionError('Expected one production invalidation host binding')
-    source=source.replace(target,'set req.http.X-WV-Ban-Host = regsub(req.http.X-WV-Ban-Host, "[.]$", "");',1)
+    source=source.replace(target,'set req.http.X-HVH-Ban-Host = regsub(req.http.X-HVH-Ban-Host, "[.]$", "");',1)
     if 'req.http.host == "127.0.0.1"' not in source:raise AssertionError('Expected explicit owned Lab site')
     return source.replace('req.http.host == "127.0.0.1"','req.http.host == "127.0.0.1:38751"')
 
