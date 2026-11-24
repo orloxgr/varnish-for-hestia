@@ -69,7 +69,7 @@ class NativeExecutionDrain(unittest.TestCase):
             return 'ordinary',[('Cache-Control','private, no-store'),coverage.response_receipt(c)]
         with proxy('ultracache',origin,allow_post=True) as get:
             first=get(sentinel);cached=get(sentinel)
-            self.assertEqual(first[0],200);self.assertEqual(cached[1].get('X-Cache'),'HIT')
+            self.assertEqual(first[0],200);self.assertEqual(dict(cached[1]).get('X-Cache'),'HIT')
             self.assertEqual(first[2],cached[2]);self.assertEqual(len(sentinel_calls),1)
             self.register(get);self.ready(get);backend.post(get,PATH);self.ended(get)
             self.assertEqual(self.dispatch(get,seen[0],token=False)[0],403)
@@ -85,7 +85,7 @@ class NativeExecutionDrain(unittest.TestCase):
                 self.assertEqual(after[field],before[field],field+' unchanged by malformed control request')
             self.assertEqual(len(seen),1,'Malformed dispatch never executes the application')
             retained=get(sentinel)
-            self.assertEqual(retained[1].get('X-Cache'),'HIT','Malformed dispatch did not purge public cache')
+            self.assertEqual(dict(retained[1]).get('X-Cache'),'HIT','Malformed dispatch did not purge public cache')
             self.assertEqual(retained[2],cached[2]);self.assertEqual(len(sentinel_calls),1)
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v['execution'].update(challenge='f'*64))[0],409)
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v.update(extra=True))[0],400)
