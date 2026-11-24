@@ -494,8 +494,11 @@ static int reuse_control_reply(struct task *task, int status, const char *reason
         if (*scope->coverage_policy) {
             VSB_cat(json,",\"coverageVersion\":1"); reuse_json_field(json,"coveragePolicy",scope->coverage_policy);
         }
-        if (scope->executions) {
+        {
             const struct mutation_execution *execution;
+            /* A complete observation includes explicit emptiness. Concurrent
+             * observers must distinguish the last marker's retirement from a
+             * response that omitted execution state altogether. */
             VSB_cat(json,",\"unsettledExecutions\":[");
             for (execution = scope->executions; execution; execution = execution->next) {
                 if (execution != scope->executions) VSB_putc(json,',');

@@ -49,12 +49,16 @@ class NativeExecutionDrain(unittest.TestCase):
             self.assertEqual(headers.get('X-UltraCache-VCL-Execution-Drain-Version'),'1')
             return 'original body',[('Cache-Control','private, no-store'),coverage.response_receipt(c)]
         with proxy('ultracache',origin,allow_post=True) as get:
-            self.register(get);old=self.ready(get);self.assertEqual(backend.post(get,PATH)[0],200);self.ended(get)
+            self.register(get);old=self.ready(get)
+            self.assertEqual(old['unsettledExecutions'],[], 'Complete initial observation explicitly has no executions')
+            self.assertEqual(backend.post(get,PATH)[0],200);self.ended(get)
             status,h,b=self.dispatch(get,seen[0]);self.assertEqual(status,204,(status,h,b));self.assertEqual(b,b'')
             self.assertFalse(cookies(list(h.items())));self.assertIn('no-store',h['Cache-Control'])
             current=self.observe(get);self.assertEqual(current['temporaryHolds'],1)
             self.assertEqual(len(current['unsettledExecutions']),1);self.assertEqual(current['scopeRevision'],old['scopeRevision'])
-            self.drain(get,seen[0]);self.assertEqual(self.observe(get)['scopeState'],'ready')
+            self.drain(get,seen[0]);retired=self.observe(get)
+            self.assertEqual(retired['scopeState'],'ready')
+            self.assertEqual(retired['unsettledExecutions'],[], 'Complete observation after final retirement explicitly has no executions')
             # Lost ACK retry can reconcile its exact producer journal; never a
             # native fact that the original body is reusable or the journal ended.
             self.assertEqual(self.dispatch(get,seen[0])[0],204)
