@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.1** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.2** · GPL-3.0-or-later.
+
+Provider mutation receipt cleanup now uses the actual native execution owner.
+Unrelated V2 requests do not delay its cleanup; original pending receipts and
+legacy/unbound callers retain their barriers. Stale V2 DIRTY receipts cannot
+recreate collected transactions. Pair with UltraCache WordPress **3.13.13-dev.1348**.
+Missing producer journals and complete zero-PHP acceptance remain open in #1006.
 
 This version also preserves the canonical public Variant key across a private
 prepare return and aligns bound-snapshot browser headers, fixed failure reasons

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.2 · 2026-11-24
+
+- Align exact provider transaction receipt ownership with Webuzo 0.13.7 and WordPress UltraCache 1348. Let an unrelated V2 execution overlap cleanup while preserving the original receipt and conservative legacy/unbound barriers.
+- Reject stale or mismatched V2 DIRTY pairs without recreating collected transactions or granting CLEAN. Full zero-PHP acceptance and missing producer journals remain open.
+
 ## 0.24.1 · 2026-11-24
 
 - Align the bound public/guest snapshot browser-header behavior and canonical projected key across private prepare with the Webuzo native owner. Keep actual shared freshness, surrogate privacy and Basic behavior intact.
