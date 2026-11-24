@@ -1,7 +1,12 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.2** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.3** · GPL-3.0-or-later.
+
+Missing or rejected native mutation receipts now report their opaque execution
+ID and a fixed failure reason in the existing VSL error channel. This allows
+correlation with the failing backend request without logging cookies, credentials
+or signed request proofs. Reuse decisions and failure handling are unchanged.
 
 Provider mutation receipt cleanup now uses the actual native execution owner.
 Unrelated V2 requests do not delay its cleanup; original pending receipts and

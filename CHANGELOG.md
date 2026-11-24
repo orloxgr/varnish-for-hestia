@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.3 · 2026-11-24
+
+- Correlate missing/rejected native mutation receipts with the actual backend request using only an opaque execution ID and a fixed VSL failure reason. Preserve failure handling, UNKNOWN holds and reuse authority.
+
 ## 0.24.2 · 2026-11-24
 
 - Align exact provider transaction receipt ownership with Webuzo 0.13.7 and WordPress UltraCache 1348. Let an unrelated V2 execution overlap cleanup while preserving the original receipt and conservative legacy/unbound barriers.
