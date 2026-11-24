@@ -1,6 +1,7 @@
 """Hestia adapter for the unchanged, panel-independent HTTP parity runner."""
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -23,4 +24,7 @@ sites['example.test'].update(args.site_settings)
 state = {'owners': {'alice': dict(enabled=True, suspended=False, package='default', sites=sites)}}
 source = render(state, {'origin_ip': '127.0.0.1', 'origin_port': 8080})
 source = source.replace('"8080"', '"${s1_port}"', 1)
+module = os.environ.get('SCP_TEST_COOKIE_MODULE')
+if module:
+    source = source.replace('import cookie_handoff;', 'import cookie_handoff from "' + module + '";')
 print(json.dumps(dict(vcl=source, get_headers={}, purge_headers={'X-UltraCache-Token': 'b' * 64})))
