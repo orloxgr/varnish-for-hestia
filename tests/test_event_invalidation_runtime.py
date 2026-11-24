@@ -205,7 +205,7 @@ class NativeEventInvalidation(unittest.TestCase):
             after = self.call(get, 'private-authority-context', tag=owner_tag('B'))
             self.assertEqual((after['revision'], after['generation']), (b['revision'], b['generation']))
             key = hashlib.sha256((PRIVATE + 'A2').encode()).hexdigest()
-            self.assertEqual(exchange(get, 'PURGE', PRIVATE, key, 'b' * 64)[0], 200)
+            self.assertEqual(exchange(get, 'PURGE', PRIVATE, key, 'A' * 32)[0], 200)
             calls.clear(); self.assertEqual(get(PARENT, 'owner=A')[2], updated)
             self.assertEqual(calls, [(PARENT, 'prepare'), (PARENT, 'reuse-finalize')],
                              'A genuinely missing private body still needs an actual fill')
