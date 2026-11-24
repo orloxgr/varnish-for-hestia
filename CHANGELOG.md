@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.1 · 2026-11-24
+
+- Align the bound public/guest snapshot browser-header behavior and canonical projected key across private prepare with the Webuzo native owner. Keep actual shared freshness, surrogate privacy and Basic behavior intact.
+- Report fixed first-failure reasons for rejected native delivery without request values. Add explicit authenticated identity, exact execution/transaction and complete quiescence observations; preserve complete legacy replies and all native fences.
+- Pair with current UltraCache WordPress 3.13.13-dev.1342 for journal/recovery fixes. Full goal release acceptance remains open in #1006.
+
 ## 0.24.0 · 2026-11-24
 
 - Support native reuse of complete public HTML and owner-isolated private fragments through the existing application/proxy contract. Preserve real provider identity, mutation/expiry handling and explicit Ajax choices.

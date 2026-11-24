@@ -1,7 +1,11 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.0** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.1** · GPL-3.0-or-later.
+
+This version also preserves the canonical public Variant key across a private
+prepare return and aligns bound-snapshot browser headers, fixed failure reasons
+and purpose-scoped native authority observations with Webuzo.
 
 The UltraCache profile uses its application's existing storage approval while
 preserving browser cache headers. Projected Variant lookup and publication use
@@ -10,7 +14,7 @@ for hashing rather than repeatedly copying large classification/Vary headers.
 The native private-cache integration can reuse complete public HTML and scoped
 personal fragments while valid. Raw cookies, saved choices, Basic and native
 resource limits retain their existing behavior. Pair with WordPress UltraCache
-**3.13.13-dev.1329** for the browser-header update. See
+**3.13.13-dev.1342** for the browser-header update. See
 [application policy](docs/application-cache-policy-1022.md) and
 [projected lookup](docs/projected-variant-lookup-1023.md).
 
