@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.0 · 2026-11-24
+
+- Support native reuse of complete public HTML and owner-isolated private fragments through the existing application/proxy contract. Preserve real provider identity, mutation/expiry handling and explicit Ajax choices.
+- Give positive UltraCache application cacheable/TTL approval priority over ordinary browser Cache-Control/Pragma while preserving those browser fields. Keep Basic and active cookie choices unchanged; subtract upstream Age from freshness.
+- Use the existing canonical Variant codec for initial projected lookup and publication. Keep the key on its owning request frame for hashing without replacing large classification/Vary headers during continuation. No workspace, worker or TTL increase.
+- Pair the browser-header behavior with WordPress UltraCache 3.13.13-dev.1329. Full goal acceptance and release qualification remain tracked in UltraCache #1006, #1022 and #1023.
+
 ## 0.23.8 · 2026-11-23
 
 - Route the existing complete raw UltraCache Warm GET shape to the application before hot guest/public lookup. The application still validates its runtime credential; invalid credentials cannot replace a guest object.

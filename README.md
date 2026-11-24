@@ -1,7 +1,18 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.23.8** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.0** · GPL-3.0-or-later.
+
+The UltraCache profile uses its application's existing storage approval while
+preserving browser cache headers. Projected Variant lookup and publication use
+the same existing serializer; the canonical key stays on the request-owned frame
+for hashing rather than repeatedly copying large classification/Vary headers.
+The native private-cache integration can reuse complete public HTML and scoped
+personal fragments while valid. Raw cookies, saved choices, Basic and native
+resource limits retain their existing behavior. Pair with WordPress UltraCache
+**3.13.13-dev.1329** for the browser-header update. See
+[application policy](docs/application-cache-policy-1022.md) and
+[projected lookup](docs/projected-variant-lookup-1023.md).
 
 Existing authenticated-at-origin raw UltraCache Warm requests now reach their
 source even while a complete guest publication is hot. Their original cookies
@@ -30,7 +41,7 @@ Basic keeps its existing best-effort behavior. After updating both components,
 use UltraCache's normal cache clear and warm-up. See the
 [Hestia qualification](docs/ANONYMOUS-VALIDATION.md).
 
-This VCL update activates centrally through the normal installer. The native
+The earlier 0.23.7 VCL update activated centrally through the normal installer. Its native
 module, namespace and policy identities are unchanged; isolated activation kept
 the exact cached guest and Basic objects. It does not itself require a manual
 restart or clear/Warm of already current publications. A WordPress upgrade,
