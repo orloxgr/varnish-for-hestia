@@ -60,23 +60,33 @@ class NativeExecutionDrain(unittest.TestCase):
             self.assertEqual(self.dispatch(get,seen[0])[0],204)
             self.assertEqual(self.observe(get).get('temporaryHolds',0),0);self.assertEqual(len(workers),2)
     def test_invalid_dispatch_auth_schema_original_identity_and_phase_never_fall_into_application(self):
-        seen=[]
+        seen=[];sentinel_calls=[];sentinel='/owned-control-sentinel/'
         def origin(path,headers):
+            if path==sentinel:
+                sentinel_calls.append(path)
+                return 'cached public sentinel',[('Cache-Control','public, max-age=120')]
             c=coverage.context(self,headers,'POST',path);seen.append(c)
             return 'ordinary',[('Cache-Control','private, no-store'),coverage.response_receipt(c)]
         with proxy('ultracache',origin,allow_post=True) as get:
+            first=get(sentinel);cached=get(sentinel)
+            self.assertEqual(first[0],200);self.assertEqual(cached[1].get('X-Cache'),'HIT')
+            self.assertEqual(first[2],cached[2]);self.assertEqual(len(sentinel_calls),1)
             self.register(get);self.ready(get);backend.post(get,PATH);self.ended(get)
             self.assertEqual(self.dispatch(get,seen[0],token=False)[0],403)
             before=self.observe(get)
-            status,_,_=control(get,'private-execution-drain-dispatch',token=False,extra={'X-Hestia-Varnish-Token':'A'*32})
+            status,_,body=control(get,'private-execution-drain-dispatch',token=False,extra={'X-Hestia-Varnish-Token':'A'*32})
             # Hestia accepts its real site token at the outer control gate;
             # missing signed drain metadata is then a malformed request (400).
             # A missing site credential above remains403. Neither is a purge.
             self.assertEqual(status,400,'Authenticated malformed dispatch must not become a generic site purge')
+            self.assertIn(b'Execution drain dispatch rejected',body,'Dedicated drain parser refuses the request')
             after=self.observe(get)
             for field in ('epoch','incarnation','scopeRevision','scopeState','temporaryHolds','unsettledExecutions'):
                 self.assertEqual(after[field],before[field],field+' unchanged by malformed control request')
             self.assertEqual(len(seen),1,'Malformed dispatch never executes the application')
+            retained=get(sentinel)
+            self.assertEqual(retained[1].get('X-Cache'),'HIT','Malformed dispatch did not purge public cache')
+            self.assertEqual(retained[2],cached[2]);self.assertEqual(len(sentinel_calls),1)
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v['execution'].update(challenge='f'*64))[0],409)
             self.assertEqual(self.dispatch(get,seen[0],change=lambda v:v.update(extra=True))[0],400)
             self.assertEqual(get(PATH,extra={'X-UltraCache-Delivery-Phase':'execution-drain'})[0],400)
