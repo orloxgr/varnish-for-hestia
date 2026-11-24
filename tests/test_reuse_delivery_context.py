@@ -164,7 +164,7 @@ class NativeDeliveryReuseContext(unittest.TestCase):
                     ('X-UltraCache-Mutation-Receipt',receipt(signed,'none',()))]
             fields=[('X-UltraCache-Mutation-Receipt',receipt(signed,'none',()))] if signed else []
             return (BODY,META+fields) if path==PARENT else ('ordinary child',[('Cache-Control','private, no-store'),*fields])
-        settings={'domain':'127.0.0.1','names':['127.0.0.1']}
+        settings={'aliases':['127.0.0.1']}
         with proxy('ultracache',origin,transform=canonical_origin_hooks,site_settings=settings) as original:
             def get(path,cookie=None,extra=None):
                 headers={'Host':'127.0.0.1:38751','X-Forwarded-Proto':'http'};headers.update(extra or {})
@@ -191,7 +191,7 @@ class NativeDeliveryReuseContext(unittest.TestCase):
                 self.assertEqual(context['canonicalHost'],'127.0.0.1:38751');seen.append(context)
                 return envelope(headers,'actual-authority'),[('Cache-Control','private, no-store')]
             return (BODY,META) if path==PARENT else ('ordinary',[('Cache-Control','private, no-store')])
-        settings={'domain':'127.0.0.1','names':['127.0.0.1']}
+        settings={'aliases':['127.0.0.1']}
         with proxy('ultracache',origin,transform=exact_authority_origin_hooks,site_settings=settings) as original:
             def get(path,cookie=None,extra=None):
                 headers={'Host':'127.0.0.1:38751','X-Forwarded-Proto':'http'};headers.update(extra or {})

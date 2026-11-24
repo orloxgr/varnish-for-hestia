@@ -46,7 +46,7 @@ class GuestWarmProjection(unittest.TestCase):
             'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8')
         with proxy('ultracache',app,transform=exact_authority_origin_hooks,
-            site_settings={'domain':'127.0.0.1','names':['127.0.0.1']}) as original:
+            site_settings={'aliases':['127.0.0.1']}) as original:
             def get(path,cookie=None,extra=None):
                 headers={'Host':authority,'X-Forwarded-Proto':'http'};headers.update(extra or {})
                 return original(path,cookie,headers)
