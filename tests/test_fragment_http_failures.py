@@ -59,11 +59,15 @@ class FragmentHTTPFailures(unittest.TestCase):
                 self.assertEqual(body,'<html>before['+error_component(503)+']middle[sibling]tail</html>')
                 self.assertEqual(cookies(headers),[]);self.assertNotIn(SCRATCH,dict(headers))
             if shutil.which('varnishlog'):
-                trace=subprocess.check_output(['varnishlog','-n',str(get.instance),'-d','-g','vxid',
-                    '-q','ReqURL eq "'+CHILD+'" and ReqHeader:X-Owned-Failure-Case eq "failed"',
+                # ESI transactions are hidden by the reader unless -E is used;
+                # this is a log-reader flag, not a server feature setting.
+                trace=subprocess.check_output(['varnishlog','-n',str(get.instance),'-d','-E','-g','vxid',
+                    '-q','ReqURL eq "'+CHILD+'"',
                     '-i','ReqURL,RespStatus'],text=True)
                 statuses=re.findall(r'\bRespStatus\s+(\d+)',trace)
+                self.observed_child_statuses=[int(value) for value in statuses]
                 self.assertTrue(statuses,trace)
+                self.assertIn('200',statuses,'The warm healthy child must be included in the native trace')
                 self.assertEqual(statuses[-1],'503','Actual final ESI child status must not become synthetic200')
             fault=False;recovered=True
             for _ in range(2):
