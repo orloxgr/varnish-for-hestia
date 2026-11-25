@@ -4,8 +4,10 @@
 
 ## 0.24.14 - 2026-11-25
 
-- Prepare the coordinated single-HTML candidate for WordPress UltraCache dev.1383. Native Hestia adapter checks passed; paired WordPress/media/browser acceptance is still pending. No Hestia production rollout is implied.
+- Release the coordinated single-HTML integration with WordPress UltraCache dev.1384 and Varnish for Webuzo 0.13.23. Keep the existing v1 projection with the canonical `html` identity; no new enum restriction or capability gate.
 - Mirror Webuzo's shared unified-HTML policy: remove image-format Accept carriers and preserve the origin's actual HTTP variation. A compatible UltraCache producer publishes one HTML identity across image capabilities; Cookie, locale, owner isolation, native representation binding and exact Warm request authentication remain intact.
+- Qualify generated Hestia Basic/UltraCache VCL and the matching native engine with focused mock-producer tests and 15 common HTTP parity cases. Actual paired WordPress/browser checks on Webuzo covered independent homepage/product visits, image delivery, cart ownership, gallery changes and native wishlist isolation. No Hestia production deployment was performed.
+- Keep the separately tracked dashboard Warm HTTP 504 issue open; the single-HTML change does not claim to resolve it and does not change server timeouts.
 - Anonymize a customer reference in qualification notes, link to public plugin/acceptance documentation, and add public-data/secret checks and main-only collaboration guidance. No cache-policy or native runtime change.
 - Remove the separate cookie-database status panel, its inventory metadata and obsolete status/update actions. Keep the Cookie policies editor, bundled recognition/defaults and distributed attribution unchanged.
 - Reorganize the README around installation, update, supported features and Basic versus UltraCache. State the compatible WordPress UltraCache dependency explicitly; remove the claim that every profile works independently of plugins.
