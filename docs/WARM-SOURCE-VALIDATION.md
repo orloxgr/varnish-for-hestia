@@ -24,7 +24,7 @@ engine into an owned test directory; no system module was replaced.
 
 ## Application evidence and its scope
 
-The identical shared correction was installed on authorized live Princefrog
+The identical shared correction was installed on an authorized deployment
 through Webuzo0.12.11's canonical package lifecycle and normal Refresh sites.
 The previously failing hot Warm succeeded, as did normal targeted Clear/Warm.
 An additional real normal capability redetection was necessary because the

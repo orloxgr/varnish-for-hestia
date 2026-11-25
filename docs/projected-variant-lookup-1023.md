@@ -1,6 +1,7 @@
 # Projected Variant first-lookup identity
 
-Tracked by https://github.com/orloxgr/ultracache-dev/issues/1023 under #1006.
+Projected variant integration checkpoint #1023 under the coordinated #1006 work.
+See the [public functional acceptance summary](functional-acceptance.md).
 
 The shared native change and five-case fixture are byte-identical to Webuzo.
 Before the initial registered/projected lookup, vmod_selection_begin now uses

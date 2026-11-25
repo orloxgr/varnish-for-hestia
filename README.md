@@ -6,7 +6,7 @@ cookie policies and per-site profiles. Administrators manage all accounts;
 hosting users manage their own websites.
 
 Use **Basic** for ordinary HTTP caching without a WordPress plugin. Use
-**UltraCache** with the compatible **[UltraCache WordPress plugin](https://github.com/orloxgr/ultracache-dev)** to combine
+**UltraCache** with the compatible **[UltraCache WordPress plugin](https://github.com/orloxgr/UltraCache)** to combine
 cached public pages with each visitor's personal fragments on the server.
 
 [Latest release](https://github.com/orloxgr/varnish-for-hestia/releases/latest) ·

@@ -1,6 +1,7 @@
 # Application storage approval and browser cache headers
 
-Tracked by https://github.com/orloxgr/ultracache-dev/issues/1022 under #1006.
+Application policy integration checkpoint #1022 under the coordinated #1006 work.
+See the [public functional acceptance summary](functional-acceptance.md).
 
 The shared VCL application-policy increment is identical to Webuzo. An approved
 UltraCache HTML response uses its existing cacheable/TTL contract for storage

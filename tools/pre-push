@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+"${PYTHON:-python3}" tools/check-public-tree.py
+"${GITLEAKS:-gitleaks}" git --config .gitleaks.toml --redact --log-opts=--all .

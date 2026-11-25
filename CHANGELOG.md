@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Anonymize a customer reference in qualification notes, link to public plugin/acceptance documentation, and add public-data/secret checks and main-only collaboration guidance. No cache-policy or native runtime change.
 - Remove the separate cookie-database status panel, its inventory metadata and obsolete status/update actions. Keep the Cookie policies editor, bundled recognition/defaults and distributed attribution unchanged.
 - Reorganize the README around installation, update, supported features and Basic versus UltraCache. State the compatible WordPress UltraCache dependency explicitly; remove the claim that every profile works independently of plugins.
 - Move detailed site controls and cookie synchronization guidance to `docs/site-settings.md`. Describe cookie recognition and executable defaults as one bundled addon update, without a separate daily database workflow. No runtime or policy changes.
@@ -11,7 +12,7 @@
 - Explain native optional metadata finalization acceptance and refusal with fixed Debug reason labels and status, matching Webuzo0.13.21.
 - Preserve the original response on failure and the existing masked default; no cookie values, request identifiers or proofs enter the new records.
 - Qualify refusal, recovery, complete reuse and default masking with two current native HTTP methods per adapter. This is diagnostic support for UltraCache #1054, not a fix claim for its original browser failure. No Hestia live deployment.
-- Final coordinated release: Hestia 0.24.13, Webuzo 0.13.21 and WordPress UltraCache dev.1381. Main integration and published packages are complete; [functional acceptance](https://github.com/orloxgr/ultracache-dev/blob/main/docs/GOAL-1006-ACCEPTANCE1381.md) distinguishes native adapter tests, actual WordPress/browser evidence and retained earlier failures. The earlier intermediate open-gate notes describe their original checkpoints. No Hestia live deployment was performed.
+- Final coordinated release: Hestia 0.24.13, Webuzo 0.13.21 and WordPress UltraCache dev.1381. Main integration and published packages are complete; [functional acceptance](docs/functional-acceptance.md) distinguishes native adapter tests, actual WordPress/browser evidence and retained earlier failures. The earlier intermediate open-gate notes describe their original checkpoints. No Hestia live deployment was performed.
 
 ## 0.24.12 - 2026-11-25
 

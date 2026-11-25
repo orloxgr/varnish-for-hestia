@@ -1,0 +1,28 @@
+title = "Varnish for Hestia: default secret rules with reviewed synthetic exceptions"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Official public APT signing-key download checksum, not a private key"
+condition = "AND"
+paths = ['''(^|/)src/repository\.py$''']
+regexTarget = "secret"
+regexes = ['''^eea1110e5aa0afc0e8cfe872f0f5bbf0778d95e811227e19835c02378dd03ff2$''']
+
+[[rules.allowlists]]
+description = "Fixed HMAC outputs in three explicitly synthetic wire vectors"
+condition = "AND"
+paths = ['''(^|/)tests/fixtures/private_mutation_wire_v1\.json$''', '''(^|/)tests/fixtures/private_reuse_finalize(_producer)?_v1\.json$''']
+regexTarget = "secret"
+regexes = ['''^97b40e3ddeaa64262d6d74d5a503b324084332b088779f5c10091ce1eb3e5e95$''', '''^5546871d5b11c357056b27b4c141fbb71c27b4d88badc9c7427dc98272dc3943$''']
+
+[[rules.allowlists]]
+description = "Historical CSRF fixture: repeated synthetic hex sequence only"
+condition = "AND"
+paths = ['''(^|/)tests/test_cms_tokens\.py$''']
+regexTarget = "secret"
+regexes = ['''^(0123456789abcdef){2}$''']
