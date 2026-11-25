@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.6 · 2026-11-25
+
+- Settle the existing original fragment producer after authenticated snapshot recovery, before completing its response.
+- Keep original publication, cookie input, provider, authentication and nonce validation.
+
 ## 0.24.5 · 2026-11-25
 
 - Align projected publication conflict recovery with Webuzo 0.13.13: use the same ordinary public tuple key after verified reselection as on the next visit. Keep cold input validation and actual owner/nonce/proof checks unchanged.

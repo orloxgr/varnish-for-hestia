@@ -1,7 +1,11 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.5** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.6** · GPL-3.0-or-later.
+
+Version0.24.6 settles original private fragment production after the authenticated
+parent snapshot is received, aligned with Webuzo0.13.14. This avoids a redundant
+prepare/finalize cycle on the next visit; original validation remains intact.
 
 Version0.24.5 aligns projected publication reselection with Webuzo0.13.13.
 The replacement rejoins the same ordinary public tuple key as the next visit;
