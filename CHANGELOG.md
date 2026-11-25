@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.24.14 - 2026-11-25
+
+- Prepare the coordinated single-HTML candidate for WordPress UltraCache dev.1383. Native Hestia adapter checks passed; paired WordPress/media/browser acceptance is still pending. No Hestia production rollout is implied.
 - Mirror Webuzo's shared unified-HTML policy: remove image-format Accept carriers and preserve the origin's actual HTTP variation. A compatible UltraCache producer publishes one HTML identity across image capabilities; Cookie, locale, owner isolation, native representation binding and exact Warm request authentication remain intact.
 - Anonymize a customer reference in qualification notes, link to public plugin/acceptance documentation, and add public-data/secret checks and main-only collaboration guidance. No cache-policy or native runtime change.
 - Remove the separate cookie-database status panel, its inventory metadata and obsolete status/update actions. Keep the Cookie policies editor, bundled recognition/defaults and distributed attribution unchanged.
