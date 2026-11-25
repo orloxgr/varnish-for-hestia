@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.11 - 2026-11-25
+
+- Separate content revisions from ACK control-CAS cleanup, matching Webuzo0.13.19 and WordPress dev.1370.
+- Preserve real content invalidation and delayed completed-BEGIN fencing; no new global observation, cookie rule or lifetime.
+- Native mock-producer qualification is separate from live WordPress acceptance tracked in UltraCache #1052/#1006. No Hestia live deployment.
+
 ## 0.24.10 - 2026-11-25
 
 - Align authenticated parent Warm for public cookie inputs with Webuzo0.13.18. Keep existing HMAC/route/phase/authentication and normal cookie classification.

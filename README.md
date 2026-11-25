@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.10** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.11** · GPL-3.0-or-later.
+
+Version0.24.11 separates private content identity from ACK retry fencing,
+aligned with Webuzo0.13.19 and WordPress dev.1370. Actual writes still invalidate
+content; control CAS and delayed-BEGIN rejection remain intact. Native causal
+regressions are distinct from real WordPress/live acceptance. No Hestia live
+deployment is included.
 
 Version0.24.10 accepts authenticated parent Warm with active public cookie inputs,
 aligned with Webuzo0.13.18. Existing signature, route, phase, authentication and
