@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.9 - 2026-11-25
+
+- Align existing complete guest lookup/fill with actual public Vary tuples, matching Webuzo0.13.17 and WordPress dev.1369.
+- Preserve typed source projection/provenance, original provider-input equality and normal personal fallback; literal no-cookie guest input evidence remains optional.
+- Full live acceptance remains tracked in UltraCache #1006/#1051; no Hestia live deployment.
+
 ## 0.24.7 · 2026-11-25
 
 - Preserve the original public cache lookup tuple when an issuer resolves a different public publication; align with Webuzo0.13.15 without changing private input proofs.

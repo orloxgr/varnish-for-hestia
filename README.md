@@ -1,7 +1,13 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.8** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.9** · GPL-3.0-or-later.
+
+Version0.24.9 aligns complete guest delivery at actual public cookie tuples with
+Webuzo0.13.17 and WordPress dev.1369. The existing projected source and provider
+input owners are reused; original personal inputs retain their normal fallback.
+Native controlled-producer qualification is distinct from live WordPress proof.
+No Hestia live deployment is included.
 
 Version0.24.8 reports actual native private cache HIT/FILL separately from
 correct fragment delivery, aligned with Webuzo0.13.16. WordPress dev.1365 uses
