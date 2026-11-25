@@ -1,9 +1,14 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.4** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.5** · GPL-3.0-or-later.
 
-This version aligns the shared native/VCL owner with Webuzo 0.13.12 and
+Version0.24.5 aligns projected publication reselection with Webuzo0.13.13.
+The replacement rejoins the same ordinary public tuple key as the next visit;
+existing cold input validation and original fill/auth/nonce checks remain.
+Runtime qualification is tracked in UltraCache #1049.
+
+Version0.24.4 aligned the shared native/VCL owner with Webuzo0.13.12 and
 UltraCache WordPress dev.1360. Actual dependency events invalidate their own
 objects; unrelated application executions do not hold complete private HITs.
 Unchanged private objects survive public HTML rebuilds while retaining exact

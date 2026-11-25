@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.5 · 2026-11-25
+
+- Align projected publication conflict recovery with Webuzo 0.13.13: use the same ordinary public tuple key after verified reselection as on the next visit. Keep cold input validation and actual owner/nonce/proof checks unchanged.
+- Track actual runtime qualification in UltraCache #1049; this entry alone does not establish live acceptance.
+
 ## 0.24.4 · 2026-11-25
 
 - Align the shared native engine and VCL with Webuzo 0.13.12: invalidate actual owner/content dependencies without whole-application execution or identity census holds.
