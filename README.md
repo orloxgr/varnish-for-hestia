@@ -1,7 +1,11 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.9** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.10** · GPL-3.0-or-later.
+
+Version0.24.10 accepts authenticated parent Warm with active public cookie inputs,
+aligned with Webuzo0.13.18. Existing signature, route, phase, authentication and
+ordinary cookie classification remain authoritative. No Hestia live deployment.
 
 Version0.24.9 aligns complete guest delivery at actual public cookie tuples with
 Webuzo0.13.17 and WordPress dev.1369. The existing projected source and provider

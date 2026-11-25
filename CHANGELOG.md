@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.10 - 2026-11-25
+
+- Align authenticated parent Warm for public cookie inputs with Webuzo0.13.18. Keep existing HMAC/route/phase/authentication and normal cookie classification.
+- Live WordPress acceptance remains tracked in UltraCache #1006/#1051; no Hestia live deployment.
+
 ## 0.24.9 - 2026-11-25
 
 - Align existing complete guest lookup/fill with actual public Vary tuples, matching Webuzo0.13.17 and WordPress dev.1369.
