@@ -1,7 +1,11 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.7** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.8** · GPL-3.0-or-later.
+
+Version0.24.8 reports actual native private cache HIT/FILL separately from
+correct fragment delivery, aligned with Webuzo0.13.16. WordPress dev.1365 uses
+the diagnostic to verify Warm readiness; ordinary admission is unchanged.
 
 Version0.24.7 preserves the original public lookup tuple across actual issuer
 resolution, aligned with Webuzo0.13.15. Original publication and private input
