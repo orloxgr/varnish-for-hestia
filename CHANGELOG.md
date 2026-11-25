@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.12 - 2026-11-25
+
+- Connect existing authenticated guest recipe declarations to their exact source parent discovery, matching Webuzo0.13.20.
+- Reuse an already valid private admission/body after targeted Warm without a prepare merely to learn the recipe; genuinely missing owner data still fills normally.
+- Preserve actual owner input, authority, body and lifetime checks; no new endpoint, setting, cookie rule or mandatory guest condition. No Hestia live deployment.
+
 ## 0.24.11 - 2026-11-25
 
 - Separate content revisions from ACK control-CAS cleanup, matching Webuzo0.13.19 and WordPress dev.1370.

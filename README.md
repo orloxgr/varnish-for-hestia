@@ -1,7 +1,14 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.11** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.12** · GPL-3.0-or-later.
+
+Version0.24.12 connects authenticated complete-guest recipe declarations to
+their exact source parent for private lookup after targeted Warm, aligned with
+Webuzo0.13.20. Existing owner admission, inputs, authority, body and lifetime
+checks remain unchanged. No new endpoint, setting or guest HIT requirement.
+Native controlled-producer qualification is separate from live WordPress
+acceptance. No Hestia live deployment is included.
 
 Version0.24.11 separates private content identity from ACK retry fencing,
 aligned with Webuzo0.13.19 and WordPress dev.1370. Actual writes still invalidate
