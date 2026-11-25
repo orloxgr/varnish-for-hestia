@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.7 · 2026-11-25
+
+- Preserve the original public cache lookup tuple when an issuer resolves a different public publication; align with Webuzo0.13.15 without changing private input proofs.
+
 ## 0.24.6 · 2026-11-25
 
 - Settle the existing original fragment producer after authenticated snapshot recovery, before completing its response.
