@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'src'))
+sys.path.insert(0, str(ROOT/'shared'))
 import administration
 import addon
 
@@ -74,7 +75,9 @@ class Administration(unittest.TestCase):
         self.assertTrue(self.state['owners']['bob']['suspended'])
 
     def test_overview_never_includes_credentials_or_full_vcl(self):
-        response = administration.overview(self.state, {}, 'varnish')
+        with patch('cookie_database.database', side_effect=AssertionError('Overview must not load cookie data')):
+            response = administration.overview(self.state, {}, 'varnish')
+        self.assertNotIn('cookie_database', response)
         self.assertEqual(response['total_accounts'], 2)
         self.assertEqual(response['total_sites'], 3)
         for account in response['accounts']:
@@ -88,7 +91,7 @@ class Administration(unittest.TestCase):
             with patch.object(addon, 'hestia', return_value={'alice': {'ROLE': role, 'SUSPENDED': suspended}}), \
                  patch.object(administration, 'request') as request:
                 for action in ('admin-bulk','admin-server-settings','admin-memory','admin-memory-size',
-                               'admin-cookie-database-settings','admin-cookie-database-update'):
+                               'admin-cookie-policies','admin-cookie-policies-save'):
                     with self.assertRaises(addon.RequestError):
                         addon.dispatch({'actor': 'alice', 'owner': 'alice', 'action': action, 'admin': True})
                 request.assert_not_called()

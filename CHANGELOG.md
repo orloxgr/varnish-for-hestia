@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Remove the separate cookie-database status panel, its inventory metadata and obsolete status/update actions. Keep the Cookie policies editor, bundled recognition/defaults and distributed attribution unchanged.
 - Reorganize the README around installation, update, supported features and Basic versus UltraCache. State the compatible WordPress UltraCache dependency explicitly; remove the claim that every profile works independently of plugins.
 - Move detailed site controls and cookie synchronization guidance to `docs/site-settings.md`. Describe cookie recognition and executable defaults as one bundled addon update, without a separate daily database workflow. No runtime or policy changes.
 

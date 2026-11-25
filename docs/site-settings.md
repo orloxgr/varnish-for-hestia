@@ -92,9 +92,9 @@ affected site caches; editing a description alone does not purge pages.
 ### Bundled data
 
 Recognition descriptions and executable defaults ship together in a reviewed
-addon version. The central **Cookie database · reviewed rules** section shows
-the source revision, record count and rules version. Update the addon to receive
-a new bundle; there is no separate daily database download or update button.
+addon version. The Cookie policies editor uses that bundle directly. Update the
+addon to receive a new bundle; there is no separate database status panel, daily
+download or update button.
 
 The original recognition dataset is
 [Open Cookie Database](https://github.com/jkwakman/Open-Cookie-Database), licensed

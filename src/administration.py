@@ -4,7 +4,6 @@ import re
 import server_settings
 import browser_cache
 import profile_settings
-import cookie_database
 import cookie_admin
 
 
@@ -79,13 +78,14 @@ def overview(state, config, kind):
                          'suspended': owner['suspended'], 'allowed': allowed, 'sites': sites})
     return {'ok': True, 'admin': True, 'service_installed': True, 'accounts': accounts,
             'server_settings': server_settings.choices(state),
-            'cookie_database': cookie_database.status(),
             'hosting_timeouts': state.get('hosting_timeouts'),
             'browser_cache': browser_cache.defaults(state), 'profile_settings': profile_settings.choices(state), 'memory_budget_mb': config.get('memory_mb'),
             'total_accounts': len(accounts), 'total_sites': sum(len(row['sites']) for row in accounts)}
 
 
 def request(hestia, action, payload, kind):
+    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-policies', 'admin-cookie-policies-save'):
+        raise ValueError('Invalid administrator action')
     import service
     def show_default(result, config):
         if result['server_settings']['first_byte_timeout_seconds'] is None and not result.get('hosting_timeouts'):
@@ -93,8 +93,6 @@ def request(hestia, action, payload, kind):
             match = re.search(rb'Value is:\s*([0-9]+(?:\.[0-9]+)?)', native.stdout)
             result['service_first_byte_timeout_seconds'] = float(match[1]) if match else None
         return result
-    if action not in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'):
-        raise ValueError('Invalid administrator action')
     if action in ('admin-cookie-policies', 'admin-cookie-policies-save'):
         from cookie_views import view
         def save(state, config):
@@ -103,16 +101,6 @@ def request(hestia, action, payload, kind):
                                       cookie_scope='all' if action.endswith('-save') else None)
         result = view(state)
         result['cookie_policy_saved'] = action.endswith('-save')
-        return result
-    if action in ('admin-cookie-database-settings', 'admin-cookie-database-update'):
-        config = service.settings()
-        state = json.loads((service.STORE/'applied.json').read_text())
-        if action == 'admin-cookie-database-settings':
-            cookie_database.configure(payload.get('cookie_database_automatic'))
-        else:
-            cookie_database.update(force=True)
-        result = overview(state, config, kind)
-        result['cookie_database_notice'] = cookie_database.status()['message']
         return result
     if action in ('admin-memory', 'admin-memory-size'):
         restarted = False

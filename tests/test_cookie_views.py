@@ -17,8 +17,7 @@ class CookieViews(unittest.TestCase):
             'cookie_policies':choices,'bypass_cookies':bypass or [],'aggressive':aggressive}}}}}
         from cookie_migration import migrate_site
         migrate_site(state['owners']['alice']['sites']['example.test'])
-        with patch.object(cookie_views.cookie_database,'database',return_value={'records':[]}), \
-             patch.object(cookie_views.cookie_database,'directory',return_value=ROOT/'shared/cookie-recognition'):
+        with patch.object(cookie_views.cookie_database,'database',return_value={'records':[]}):
             return cookie_views.view(state,None if central else 'alice',None if central else 'example.test')
 
     def test_basic_cart_rule_reports_the_saved_shared_choice(self):

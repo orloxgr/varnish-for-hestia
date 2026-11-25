@@ -83,13 +83,10 @@ if (in_array($action, ['admin-cookie-policies-save', 'configure-cookie-policies'
     }
 }
 if (str_starts_with((string)$action, 'admin-')) {
-    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'], true)) {
+    if (!$isAdmin || !in_array($action, ['admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-policies', 'admin-cookie-policies-save'], true)) {
         $respond(403, ['ok' => false, 'error' => 'Administrator access required.']);
     }
     $adminOverview = true;
-    if ($action === 'admin-cookie-database-settings') {
-        $request['cookie_database_automatic'] = ($_POST['cookie_database_automatic'] ?? '') === '1';
-    }
     if ($action === 'admin-server-settings') {
         $request['first_byte_timeout_seconds'] = ($_POST['first_byte_timeout_seconds'] ?? '') === '' ? null : filter_var($_POST['first_byte_timeout_seconds'], FILTER_VALIDATE_FLOAT);
     }

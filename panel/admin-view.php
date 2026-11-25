@@ -36,16 +36,6 @@ $profiles = ['basic' => 'Basic', 'ultracache' => 'UltraCache'];
             <p class="u-mb10" title="Native malloc cache storage counters. These values describe cache storage, rather than the total RAM used by the Varnish process.">Cache used: <strong><?= $escape($mib($data['memory']['used_bytes'])) ?> MiB</strong> · Free cache space: <strong><?= $escape($mib($data['memory']['free_bytes'])) ?> MiB</strong> · Budget: <strong><?= $escape($data['memory']['budget_mb']) ?> MiB</strong></p>
         <?php endif; ?>
     </section>
-    <?php $cookieDb = $data['cookie_database'] ?? []; ?>
-    <details class="box-collapse u-mb20">
-        <summary class="box-collapse-header" title="Cookie descriptions and executable defaults ship together in a reviewed plugin version.">Cookie database · reviewed rules</summary>
-        <div class="box-collapse-content">
-            <?php if (!empty($data['cookie_database_notice'])): ?><p role="status"><?= $escape($data['cookie_database_notice']) ?></p><?php endif; ?>
-            <p class="u-mb10"><strong><?= $escape($cookieDb['version'] ?? '') ?></strong> · <?= $escape($cookieDb['records'] ?? 0) ?> recognition records · <?= $escape($cookieDb['rules'] ?? 0) ?> executable default rules</p>
-            <p class="u-mb10">Descriptions and reviewed cache actions update together when you update this plugin. Your central and website choices keep precedence. There is no separate daily database download.</p>
-            <p><a href="https://github.com/jkwakman/Open-Cookie-Database" target="_blank" rel="noopener noreferrer" title="Attribution for the bundled recognition data.">Open Cookie Database</a> · Apache-2.0 · Source revision: <code><?= $escape($cookieDb['revision'] ?? '') ?></code></p>
-        </div>
-    </details>
     <section class="u-mb20">
         <h2 class="u-mb20">Browser cache · central defaults</h2>
         <form method="post">

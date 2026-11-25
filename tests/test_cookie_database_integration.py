@@ -1,4 +1,6 @@
-"""Retired metadata-only updates report the bundled lifecycle without fetching."""
+"""Retired status actions are refused; cron upgrades retain reconciliation."""
+from contextlib import redirect_stdout
+import io
 import json
 import os
 from pathlib import Path
@@ -9,37 +11,29 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
+sys.path.insert(0,str(ROOT/'shared'))
 import administration
-import cookie_database
-import maintenance
-import service
-from test_administration import fixture
+import addon
 
 
 class CookieDatabaseIntegration(unittest.TestCase):
-    def test_legacy_update_calls_report_bundle_without_reconcile_or_fake_update(self):
-        with tempfile.TemporaryDirectory() as directory:
-            store = Path(directory)
-            (store/'applied.json').write_text(json.dumps(fixture()))
-            for action in ('admin-cookie-database-settings','admin-cookie-database-update'):
-                with patch.object(service,'STORE',store), patch.object(service,'settings',return_value={}), \
-                     patch.object(service,'reconcile') as reconcile, patch.object(cookie_database,'configure') as configure, \
-                     patch.object(cookie_database,'update') as update:
-                    result = administration.request(None,action,{'cookie_database_automatic':False},'varnish')
-                    self.assertTrue(result['ok'])
-                    self.assertIn('Update the plugin',result['cookie_database_notice'])
-                    self.assertNotIn('cookie_database_updated',result)
-                    self.assertFalse(result['cookie_database']['automatic'])
-                    reconcile.assert_not_called()
-                    if action.endswith('-settings'):
-                        configure.assert_called_once_with(False)
-                        update.assert_not_called()
-                    else:
-                        update.assert_called_once_with(force=True)
-                        configure.assert_not_called()
+    def test_retired_status_actions_are_refused_before_loading_service(self):
+        for action in ('admin-cookie-database-settings','admin-cookie-database-update'):
+            with self.subTest(action=action), patch.dict(sys.modules,{'service':None}):
+                with self.assertRaisesRegex(ValueError,'Invalid administrator action'):
+                    administration.request(None,action,{'cookie_database_automatic':False},'varnish')
+
+    def test_retired_update_command_reports_failure_without_reconciling(self):
+        output=io.StringIO()
+        with patch.object(sys,'argv',['addon.py','update-cookie-database']), \
+             patch.object(addon.os,'geteuid',return_value=0,create=True), \
+             patch.dict(sys.modules,{'service':None}), redirect_stdout(output):
+            self.assertEqual(addon.locked_main(),1)
+        self.assertFalse(json.loads(output.getvalue())['ok'])
 
     @unittest.skipUnless(sys.platform == 'linux' and os.geteuid() == 0, 'Native owned cron file')
     def test_upgrade_removes_daily_download_keeps_reconciliation_and_is_idempotent(self):
+        import maintenance
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/'addon-cron'
             path.write_text(maintenance.MARKER+'\n17 3 * * * root v-varnish-hestia update-cookie-database\n')

@@ -42,7 +42,7 @@ def dispatch(request):
     actor_data = hestia('v-list-user', actor, 'json').get(actor)
     action = request.get('action', 'inventory')
     is_admin = bool(actor_data and actor_data.get('ROLE') == 'admin' and actor_data.get('SUSPENDED') != 'yes')
-    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-database-settings', 'admin-cookie-database-update', 'admin-cookie-policies', 'admin-cookie-policies-save'):
+    if action in ('admin-inventory', 'admin-bulk', 'admin-server-settings', 'admin-memory', 'admin-memory-size', 'admin-browser-cache', 'admin-profile-settings', 'admin-cookie-policies', 'admin-cookie-policies-save'):
         if not is_admin:
             raise RequestError('Administrator access required.')
         from administration import request as admin_request
@@ -88,13 +88,6 @@ def locked_main(raw=None):
     try:
         if os.geteuid() != 0:
             raise RequestError('This bridge must be invoked through the Hestia panel or by root.')
-        if sys.argv[1:] == ['update-cookie-database']:
-            from maintenance import root_only
-            root_only()
-            from cookie_database import update
-            result = update()
-            print(json.dumps({'ok': result['result'] != 'error', 'cookie_database': result}))
-            return int(result['result'] == 'error')
         if sys.argv[1:] in (['reconcile'], ['refresh-cms']):
             from service import reconcile
             state, config, result = reconcile(hestia, cms_scope='all' if sys.argv[1:] == ['refresh-cms'] else None)
@@ -141,16 +134,5 @@ def locked_main(raw=None):
 if __name__ == '__main__':
     from operations import exclusive
     raw = None if sys.argv[1:] else sys.stdin.buffer.read()
-    try:
-        candidate = json.loads(raw) if raw is not None else {}
-    except (ValueError, UnicodeError):
-        candidate = {}
-    # Recognition downloads use their own lock. They must not hold the Varnish
-    # operation lock while waiting on GitHub. dispatch still verifies native role.
-    independent = (sys.argv[1:] == ['update-cookie-database'] or
-                   isinstance(candidate, dict) and candidate.get('action') in
-                   ('admin-cookie-database-settings', 'admin-cookie-database-update'))
-    if independent:
-        raise SystemExit(locked_main(raw))
     with exclusive():
         raise SystemExit(locked_main(raw))

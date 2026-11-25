@@ -2,32 +2,32 @@
 import json
 from pathlib import Path
 import sys
-import tempfile
 import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
+sys.path.insert(0,str(ROOT/'shared'))
 import cookie_database
 import cookie_recognition
+import cookie_views
 
 
 class BundledCookies(unittest.TestCase):
-    def test_old_download_is_not_used_and_legacy_update_does_not_fetch(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory)
-            snapshot=root/'recognition-state.json'
-            original=b'old downloaded snapshot preserved for rollback'
-            snapshot.write_bytes(original)
-            with patch.object(cookie_database,'directory',return_value=root), \
-                 patch.object(cookie_recognition,'fetch',side_effect=AssertionError('No runtime fetch')):
-                status=cookie_database.update(force=True)
-                self.assertEqual(status['result'],'bundled')
-                self.assertFalse(status['automatic'])
-                self.assertGreater(status['rules'],2000)
-                self.assertIn('Update the plugin',status['message'])
-                self.assertEqual(cookie_database.database(),json.loads(cookie_database.BUNDLED.read_text(encoding='utf-8')))
-                self.assertEqual(snapshot.read_bytes(),original)
+    def test_editor_keeps_bundled_provider_descriptions_and_profile_actions_without_fetching(self):
+        with patch.object(cookie_recognition,'fetch',side_effect=AssertionError('No runtime fetch')):
+            database=cookie_database.database()
+            self.assertGreater(len(database['records']),2000)
+            self.assertEqual(database,json.loads(cookie_database.BUNDLED.read_text(encoding='utf-8')))
+            result=cookie_views.view({'owners':{}})
+        entry=database['records'][0]
+        editorial=json.loads((ROOT/'shared/cookie-assessments.json').read_text(encoding='utf-8'))['records'][entry['id']]
+        row=next(row for row in result['cookie_policy_rows'] if row['id']=='ocd:'+entry['id'])
+        self.assertEqual(row['provider'],entry['provider'])
+        self.assertEqual(row['description'],editorial['description'])
+        self.assertEqual(set(row['profile_actions']),{'basic','ultracache'})
+        self.assertTrue(all(action['effective_action'] in ('shared','variant','private')
+                            for action in row['profile_actions'].values()))
 
 
 if __name__=='__main__':unittest.main()
