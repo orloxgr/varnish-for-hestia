@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.13 - 2026-11-25
+
+- Explain native optional metadata finalization acceptance and refusal with fixed Debug reason labels and status, matching Webuzo0.13.21.
+- Preserve the original response on failure and the existing masked default; no cookie values, request identifiers or proofs enter the new records.
+- Qualify refusal, recovery, complete reuse and default masking with two current native HTTP methods per adapter. This is diagnostic support for UltraCache #1054, not a fix claim for its original browser failure. No Hestia live deployment.
+
 ## 0.24.12 - 2026-11-25
 
 - Connect existing authenticated guest recipe declarations to their exact source parent discovery, matching Webuzo0.13.20.

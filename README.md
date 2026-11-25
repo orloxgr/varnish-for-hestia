@@ -1,7 +1,14 @@
 # Varnish for Hestia
 
 One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.12** · GPL-3.0-or-later.
+profiles and VCL controls. Version **0.24.13** · GPL-3.0-or-later.
+
+Version0.24.13 adds value-free acceptance/rejection reasons for native optional
+metadata finalization under the existing masked Debug log, aligned with
+Webuzo0.13.21. Original delivery, cookie handling and cache decisions are
+unchanged. Two current native HTTP methods pass on each adapter, including
+refusal, recovery and masked defaults. The initial WordPress/YITH browser
+failure tracked in UltraCache #1054 is still unresolved.
 
 Version0.24.12 connects authenticated complete-guest recipe declarations to
 their exact source parent for private lookup after targeted Warm, aligned with
