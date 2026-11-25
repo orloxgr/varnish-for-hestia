@@ -1,622 +1,225 @@
 # Varnish for Hestia
 
-One shared Varnish service, separate site caches and purge tokens, with per-site
-profiles and VCL controls. Version **0.24.13** · GPL-3.0-or-later.
+Manage Varnish caching from HestiaCP. The addon places one shared Varnish service
+between Nginx and Apache/PHP-FPM, with separate website caches, purge tokens,
+cookie policies and per-site profiles. Administrators manage all accounts;
+hosting users manage their own websites.
 
-Version0.24.13 adds value-free acceptance/rejection reasons for native optional
-metadata finalization under the existing masked Debug log, aligned with
-Webuzo0.13.21. Original delivery, cookie handling and cache decisions are
-unchanged. Two current native HTTP methods pass on each adapter, including
-refusal, recovery and masked defaults. The initial WordPress/YITH browser
-failure tracked in UltraCache #1054 is still unresolved.
+Use **Basic** for ordinary HTTP caching without a WordPress plugin. Use
+**UltraCache** with the compatible **[UltraCache WordPress plugin](https://github.com/orloxgr/ultracache-dev)** to combine
+cached public pages with each visitor's personal fragments on the server.
 
-Version0.24.12 connects authenticated complete-guest recipe declarations to
-their exact source parent for private lookup after targeted Warm, aligned with
-Webuzo0.13.20. Existing owner admission, inputs, authority, body and lifetime
-checks remain unchanged. No new endpoint, setting or guest HIT requirement.
-Native controlled-producer qualification is separate from live WordPress
-acceptance. No Hestia live deployment is included.
+[Latest release](https://github.com/orloxgr/varnish-for-hestia/releases/latest) ·
+[Changelog](CHANGELOG.md) · [Administration](docs/administration.md) ·
+[License](LICENSE)
 
-Version0.24.11 separates private content identity from ACK retry fencing,
-aligned with Webuzo0.13.19 and WordPress dev.1370. Actual writes still invalidate
-content; control CAS and delayed-BEGIN rejection remain intact. Native causal
-regressions are distinct from real WordPress/live acceptance. No Hestia live
-deployment is included.
+## Requirements
 
-Version0.24.10 accepts authenticated parent Warm with active public cookie inputs,
-aligned with Webuzo0.13.18. Existing signature, route, phase, authentication and
-ordinary cookie classification remain authoritative. No Hestia live deployment.
+- An existing **Ubuntu amd64** server with HestiaCP and **Nginx → Apache/PHP-FPM**.
+  The documented fresh-install platform is **Ubuntu 26.04 with Hestia 1.10.x**;
+  fresh package installation uses the official Ubuntu `resolute` repository.
+- **Nginx 1.29.3 or newer** for native response-header inheritance.
+- Administrator SSH access for installation and updates.
+- For the UltraCache profile: an installed, enabled, compatible **UltraCache
+  WordPress plugin**, configured for this website's Varnish connection and token.
+  Use the matching component versions listed in the
+  [release notes](https://github.com/orloxgr/varnish-for-hestia/releases/latest).
 
-Version0.24.9 aligns complete guest delivery at actual public cookie tuples with
-Webuzo0.13.17 and WordPress dev.1369. The existing projected source and provider
-input owners are reused; original personal inputs retain their normal fallback.
-Native controlled-producer qualification is distinct from live WordPress proof.
-No Hestia live deployment is included.
+The installer installs the signed Varnish package when needed and builds the
+addon's native extension against the installed Varnish SDK. An existing unmanaged
+Varnish installation requires [explicit adoption](docs/administration.md#adopt-an-existing-native-cache).
 
-Version0.24.8 reports actual native private cache HIT/FILL separately from
-correct fragment delivery, aligned with Webuzo0.13.16. WordPress dev.1365 uses
-the diagnostic to verify Warm readiness; ordinary admission is unchanged.
+## Install
 
-Version0.24.7 preserves the original public lookup tuple across actual issuer
-resolution, aligned with Webuzo0.13.15. Original publication and private input
-validation remain intact.
-
-Version0.24.6 settles original private fragment production after the authenticated
-parent snapshot is received, aligned with Webuzo0.13.14. This avoids a redundant
-prepare/finalize cycle on the next visit; original validation remains intact.
-
-Version0.24.5 aligns projected publication reselection with Webuzo0.13.13.
-The replacement rejoins the same ordinary public tuple key as the next visit;
-existing cold input validation and original fill/auth/nonce checks remain.
-Runtime qualification is tracked in UltraCache #1049.
-
-Version0.24.4 aligned the shared native/VCL owner with Webuzo0.13.12 and
-UltraCache WordPress dev.1360. Actual dependency events invalidate their own
-objects; unrelated application executions do not hold complete private HITs.
-Unchanged private objects survive public HTML rebuilds while retaining exact
-recipe/representation, owner input bindings, actual tag invalidation and natural
-expiry. Original producer/finalization proofs still bind their publication.
-The full #1006 acceptance and Hestia runtime qualification remain incomplete.
-
-Missing or rejected native mutation receipts now report their opaque execution
-ID and a fixed failure reason in the existing VSL error channel. This allows
-correlation with the failing backend request without logging cookies, credentials
-or signed request proofs. Reuse decisions and failure handling are unchanged.
-
-Provider mutation receipt cleanup now uses the actual native execution owner.
-Unrelated V2 requests do not delay its cleanup; original pending receipts and
-legacy/unbound callers retain their barriers. Stale V2 DIRTY receipts cannot
-recreate collected transactions. Pair with UltraCache WordPress **3.13.13-dev.1348**.
-Missing producer journals and complete zero-PHP acceptance remain open in #1006.
-
-This version also preserves the canonical public Variant key across a private
-prepare return and aligns bound-snapshot browser headers, fixed failure reasons
-and purpose-scoped native authority observations with Webuzo.
-
-The UltraCache profile uses its application's existing storage approval while
-preserving browser cache headers. Projected Variant lookup and publication use
-the same existing serializer; the canonical key stays on the request-owned frame
-for hashing rather than repeatedly copying large classification/Vary headers.
-The native private-cache integration can reuse complete public HTML and scoped
-personal fragments while valid. Raw cookies, saved choices, Basic and native
-resource limits retain their existing behavior. Pair with WordPress UltraCache
-**3.13.13-dev.1342** for the browser-header update. See
-[application policy](docs/application-cache-policy-1022.md) and
-[projected lookup](docs/projected-variant-lookup-1023.md).
-
-Existing authenticated-at-origin raw UltraCache Warm requests now reach their
-source even while a complete guest publication is hot. Their original cookies
-and source-capture headers survive the backend transport. Ordinary visitor HITs
-and Basic cache selection keep their existing behavior. See the
-[Warm routing qualification](docs/WARM-SOURCE-VALIDATION.md).
-
-Returning UltraCache cookie contexts release already-consumed backend carrier
-fields before constructing delivery metadata, preserving the browser's actual
-headers and cookies within the normal native header budget. This cleanup does
-not increase Varnish header or workspace limits.
-
-Authenticated UltraCache capability queries now explicitly report the existing
-publication-conflict reselection support. A compatible application can check
-that support before choosing precise publication replacement instead of a wider
-collector invalidation. This capability exposure does not change the native
-module, cache lifetimes, ordinary purge operations or Basic behavior.
-
-With WordPress UltraCache **3.13.13-dev.1326 or newer**, normal Warm publishes
-complete guest HTML and the separate stateful parent in ORIG, WebP and AVIF.
-An eligible first visit with no Cookie or Authorization fields can then receive
-complete HTML from a native HIT without PHP, prepare or origin-backed ESI.
-Actual cookie creation runs through a separate signed browser request; visitors
-with cookies retain the existing scoped cookie and private-fragment handling.
-Basic keeps its existing best-effort behavior. After updating both components,
-use UltraCache's normal cache clear and warm-up. See the
-[Hestia qualification](docs/ANONYMOUS-VALIDATION.md).
-
-The earlier 0.23.7 VCL update activated centrally through the normal installer. Its native
-module, namespace and policy identities are unchanged; isolated activation kept
-the exact cached guest and Basic objects. It does not itself require a manual
-restart or clear/Warm of already current publications. A WordPress upgrade,
-actual content purge or policy change retains its normal invalidation behavior.
-See [the current native qualification](docs/RESELECT-CAPABILITY.md).
-
-A compatible application can report that an old cached publication was retired
-before any provider work ran. The UltraCache profile then retires that exact
-parent and selects the current publication once for the same visitor, preserving
-cookie policy, private fragments and the new publication's actual freshness.
-See [publication conflict reselection](shared/PUBLICATION-RESELECT.md).
-
-Unrestricted document requests (`Accept: */*` or absent Accept) can reuse the
-warmed original HTML representation. For UltraCache footer-only cookie delivery,
-pair this update with WordPress UltraCache **3.13.13-dev.1322** and renew the
-application's cached publications with its normal clear and warm-up operation.
-See [wildcard document representations](shared/WILDCARD-DOCUMENT-REPRESENTATIONS.md).
-
-UltraCache prepare requests clear completed routing/selection scratch before
-adding their authenticated transport fields, retaining ordinary browser headers
-and native Vary inputs at the default 64-entry HTTP header limit. Resource
-exhaustion and a real repeated prepare now have distinct diagnostics.
-See [backend header budget](shared/BACKEND-HEADER-BUDGET.md).
-
-Cookie choices apply through one scoped resolver. CMS session defaults are visible
-and editable, and old website bypass lists migrate into ordinary Private rows.
-See [CMS choices](shared/CMS-COOKIE-CHOICES.md).
-
-A compatible UltraCache application and native Varnish now report the completed
-request's prepared private fragment outcome separately from parent cache HIT.
-The outcome works with Debug off; Debug retains its separate optional value-free
-VSL diagnostic. Native Varnish never generates provider cookie identifiers.
-See the [delivery outcome contract](shared/DELIVERY-OUTCOME.md).
-
-Registered UltraCache applications now prepare their public representation on
-an eligible cold MISS even without resolver-cookie variants. Plain warm HITs
-retain zero backend work. See [cold public selection](shared/COLD-PUBLIC-SELECTION.md).
-
-Observed server-cookie publications can negotiate a separate
-[cookie-only delivery contract](shared/COOKIE-ONLY-DELIVERY.md). A marked HIT
-reuses public HTML and executes its actual application issuer once per visitor,
-including its real consent and lifecycle decisions. Original cookie fields stay
-request-owned. Unmarked plain pages keep their zero-backend path; Basic keeps
-its existing best-effort behavior without ESI. Existing old WordPress publications
-need the application's normal capability redetection, cache clear and warm-up
-after both compatible components are upgraded. A native addon update does not
-rebuild an old local application snapshot. See the [qualification record](shared/COOKIE-WARM-VALIDATION.md).
-
-The UltraCache profile supports request-owned cookie delivery before private
-fragment composition, scoped private-fragment TTL, actual application-private
-documents, and exact public-fragment TTL/error containment. **Basic stays best
-effort without ESI.** Cookie Database remains the sole cookie classification
-authority. Profiles provide independent cookie choices and
-[application-scoped public selection](shared/PUBLIC-SELECTION.md), including
-actual provider context before lookup and private streaming/range delivery.
-Common bundle `2026.11.21.1` keeps personal commenter, YITH, Recently Viewed,
-cart/session and User Switching defaults Private in Basic and Shared in the integrated UC profile;
-manual choices still win. The [current qualification record](shared/COOKIE-WARM-VALIDATION.md)
-separates native, application and installation checks; [earlier evidence](shared/ESI-VALIDATION.md)
-remains the historical record for 0.22.0/0.11.0.
-
-## Quick start
-
-Requires **Ubuntu 26.04 amd64 with Hestia 1.10.x already installed**, using
-**Nginx -> Apache/PHP-FPM** (Nginx 1.29.3+ for native response-header inheritance). Run commands over SSH as an administrator. The
-installer also installs the signed Varnish package selected by APT from the
-official repository for this distribution; do not install the service separately.
-
-1. **Get the code. Choose one command:**
-
-   For a **new installation**, clone the repository:
-
-   ```sh
-   sudo git clone https://github.com/orloxgr/varnish-for-hestia.git /usr/local/src/varnish-for-hestia
-   ```
-
-   To **update an existing checkout**, pull instead:
-
-   ```sh
-   sudo git -C /usr/local/src/varnish-for-hestia pull --ff-only
-   ```
-
-   Wait for Git to finish successfully before continuing.
-
-2. **Install or apply the update.**
-
-   For a **new installation** with an 8 GiB cache budget:
-
-   ```sh
-   sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py --memory-mb 8192
-   ```
-
-   For an **update**, retain the existing memory budget:
-
-   ```sh
-   sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
-   ```
-
-   Pulling the code alone does not apply the update; run the installer too.
-
-3. **Check that Varnish is running.** The output should be `active`.
-
-   ```sh
-   sudo systemctl is-active varnish
-   ```
-
-4. **Log into Hestia as the site owner. Click Plugins → Varnish in the top bar.**
-
-   Sites start enabled with **Basic**. Choose **Basic** for WordPress/WooCommerce
-   without UltraCache (also best effort for other HTTP sites), or **UltraCache**
-   for the same policy with ESI/async integration, then save. Administrators see all accounts
-   and websites, with bulk profile and enable/disable controls.
-
-Done. Existing users and sites are added during installation; new ones are picked
-up automatically within a minute. Each owner can edit the supported VCL sections,
-change purge tokens, clear cache, or disable Varnish for a site or their account.
-All profiles work with plain PHP or WordPress, independently of installed plugins.
-
-The **8 GiB budget is shared by all sites**, not allocated per user. This example
-is sized for a **32 GB server**: Varnish also uses RAM outside cache storage,
-and PHP, databases and other services need their own RAM. Hestia's existing code
-and templates are not replaced.
-
-This repository is public; cloning does not require GitHub credentials.
-
-## Server cache and CMS rules
-
-Each website has **Server cache and CMS rules** in its existing accordion.
-**Enable aggressive caching** is off by default and works with Basic and
-UltraCache. When enabled, anonymous public HTML uses the selected positive
-**Server cache duration (seconds)**, including when generic origin cache headers
-request private/no-store or a shorter lifetime. The original browser cache headers
-are restored on delivery. This option does not change browser cache settings.
-
-Aggressive caching does not change cookie actions. The same bundled defaults and
-saved per-profile Shared HTML, Public variant and Private choices apply, including
-Private defaults for `PHPSESSID` and `__Secure-PHPSESSID`. CMS-discovered opaque
-cookie names are no longer silently Shared; ordinary selected rules and functional
-Vary handling apply. Private routes/actions remain separate. Original request URL
-and cookies reach the origin unchanged. Only Shared response cookies use the
-request-owned handoff; their fields never become part of a replayed object.
-
-CMS detection uses Hestia's native document root, including custom document
-roots and nested installations. Known WordPress/WooCommerce, Joomla, Drupal,
-Magento and PrestaShop private paths and query actions are added automatically.
-Static Magento backend aliases and read-only WordPress/WooCommerce, Joomla and
-PrestaShop database route metadata enrich these rules where available. Detection
-shows its status and retains last valid configured routes when metadata fails.
-Use **Additional private path prefixes** only for custom URL prefixes, one per line.
-Use **Excluded CMS directories** in the same website form for retired copies,
-for example `/old-site/httpdocs`. Each literal path is relative to that website's
-native document root and skips the entire subtree before configuration reads or
-database queries. Saving retires its detected routes and cookie names, including
-previously retained metadata; files and URL access are unchanged. Other sites and
-the active CMS at `/` remain eligible for detection. `/` excludes all detection.
-
-Installation, saving cache behavior and **Refresh CMS detection** read metadata
-as the hosting account without running customer PHP. Normal panel reads and
-minute reconciliation do not recursively scan sites or query route databases.
-A native document-root change triggers one refresh; failed discovery after such
-a change pauses that website's cache with `cms-document-root-changed` until
-detection succeeds. Root can explicitly refresh all websites with:
+Run these commands separately over SSH, continuing after each succeeds:
 
 ```sh
-sudo /usr/local/hestia/bin/v-varnish-hestia refresh-cms
+sudo git clone https://github.com/orloxgr/varnish-for-hestia.git /usr/local/src/varnish-for-hestia
 ```
 
-Aggressive request handling runs entirely in VCL. A warm public HIT requires
-no Python worker, session database query, token fetch or origin request. Joomla
-cookie names are recognized statically during CMS detection. HTML is cached
-unchanged, including any application-generated tokens already inside it; this
-mode does not verify opaque session authentication or personalize those tokens.
-Known login markers, private routes and explicit cookie choices still apply.
-The former CMS session service is removed after the new VCL activates during an
-upgrade, with owned-resource recovery retained for a failed apply.
+```sh
+sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py --memory-mb 1024
+```
 
-## Cookies on cached pages
+```sh
+sudo systemctl is-active varnish
+```
 
-**Cookie policies** opens the searchable editor. Administrators have central
-choices under **All accounts**; account owners edit only their own websites.
-The table shows literal cookie names/prefixes, descriptions and concrete cache
-actions. Internal IDs stay hidden. Compact controls and a multiline description keep rows readable; the
-Why / precedence button opens the full-width behavior, evidence and priority. You can add rows, paste
-tab-separated rows from Excel, select rows for bulk changes, and reset local
-choices to the inherited policy. Save validates and compiles the actual VCL.
+The example allocates **1 GiB of cache storage shared by all websites**. Choose
+a budget appropriate for your server; Varnish also uses RAM outside cache
+storage, and PHP, databases and other services need their own RAM.
 
-- **Shared HTML:** omit this value from Cookie variation, preserving the real
-  cookie in the browser and origin request.
-- **Public variant:** include the selected cookie pairs in lookup even without
-  origin `Vary: Cookie`; tell downstream caches about Cookie variation too.
-- **Private:** pass the request to the application and deliver it as no-store.
+Open **Hestia → Plugins → Varnish**. The initial default profile is Basic. Choose
+the profile for each website and save. Existing accounts and sites are discovered
+during installation; newly added ones are picked up by automatic reconciliation.
 
-Site choices precede central choices; exact names precede longer-to-shorter
-prefixes within each scope. Core login/session/cart and origin privacy still
-apply. Every bundled cookie has our prefilled, executable decision. Estimates
-are labeled as inferred; categories never select an action. Legacy Automatic
-choices resolve to the matching bundled decision, or Public variant when none
-exists. A prefix never borrows the decision of its first child. Upstream updates do
-not overwrite saved choices. Only executable changes invalidate the affected
-website cache; editing a description does not purge pages.
+For WordPress with UltraCache, install and configure the compatible WordPress
+plugin first, connect it using the website's Varnish token, then select the
+UltraCache profile. Redetect its Varnish capabilities and use its normal cache
+clear and Warm operation to populate the application cache.
 
-The cookie editor has independent **Basic** and **UltraCache** columns. Each
-uses Shared HTML, Public variant or Private, with its own central/site overrides
-and Reset. Commenter cookies default to Private in Basic and Shared in UltraCache;
-other cookie defaults are identical. Old saved choices remain explicit in both
-columns. Only the active profile is projected into the existing WordPress sync.
+## Basic vs UltraCache
 
-Basic remains independent of WordPress. The optional per-site **WordPress
-integration** targets an explicitly configured compatible UltraCache control
-endpoint using the existing site token. A compatible UltraCache installation
-applies the same scoped policy in its PHP/drop-in and Apache Static delivery.
-The native transaction prepares, commits and recovers the application snapshot
-alongside the VCL; an authenticated application failure reports its specific
-stage and cause. An owner can inspect or reset the managed WordPress snapshot
-with `wp ultracache cookie-policy status --format=json` or
-`wp ultracache cookie-policy reset --format=json`. Reset invalidates the configured
-native Varnish site and keeps panel choices, which an explicit Save can reapply.
-An actually selected unsupported native consumer, currently LiteSpeed with
-managed Variant/Private rules, reports that concrete capability limitation.
-An inactive engine preference does not block working PHP/Apache consumers.
+| | Basic | UltraCache |
+| --- | --- | --- |
+| Intended use | WordPress without UltraCache and other HTTP applications | WordPress with the compatible UltraCache plugin |
+| WordPress plugin required | No | **Yes: UltraCache** |
+| Public HTML and HTTP caching | Yes | Yes, with application-approved storage and freshness |
+| Cookie policies | Independent Basic choices | Independent UltraCache choices, with application integration |
+| Personal content | Delivered by the application; matching private requests bypass shared caching | Public HTML and separately cached personal fragments composed into one response |
+| ESI composition | No | Yes, using the application's includes and authenticated fragment endpoints |
+| Valid complete HIT without WordPress | Public responses eligible for Basic caching | Public parent and personal fragments when all required objects and owner/lifetime inputs remain valid |
 
-Matching connected origin policies avoid unnecessary tracking-ID variation.
-If the application reports a different effective policy and `Vary: Cookie`,
-Varnish retains that complete variation and still caches each representation;
-an older Shared choice cannot collapse newer application variants. Connection
-does not provide a generic cookie issuer or replace the actual provider integration.
+### Basic
 
-Every cookie, including Meta `_fbp`, uses the same cookie-policy editor.
-The proxy does not mint provider-specific identifiers. Applications/providers
-create, renew and delete their own cookies under their actual consent rules.
-Shared HTML applies to both request variation and response storage. When every
-Set-Cookie field has a Shared action, an otherwise public response stores its
-HTML without those fields and delivers the original fields only to the visitor
-who caused the fetch. Duplicate fields, attributes, renewal and deletion remain
-unchanged. A later HIT never replays another visitor’s cookies. Providers use
-their existing browser or private application delivery path to issue cookies
-on a HIT; this mechanism does not invent identifiers or grant consent. Old per-site `cookie_delivery` settings are retired on reconciliation.
+Basic is best-effort HTTP caching and works without UltraCache or any other
+WordPress plugin. It caches eligible public responses, follows HTTP freshness
+and the selected cookie policies, and keeps known administrative, authenticated
+and cart/checkout actions out of shared caching.
 
-The bundled assessment covers 2,288 source records, with 2,293 editable rows
-including the additional reviewed rules. Every row has Shared HTML, Public
-variant or Private handling. The evidence distinguishes reviewed rules from
-inferences; an inference is not a claim of site-specific verification. Where
-the source does not establish identical initial HTML, our concrete decision is
-a Public variant, without forcing a bypass. Original cookies, consent, core
-privacy and the verified WooCommerce/ESI contract remain authoritative.
+It does not split a page into personal fragments, regenerate WordPress nonces
+or turn private application output into a shared page. A visitor with private
+state may therefore reach PHP even when an anonymous visitor receives a HIT.
+Basic also supports other HTTP applications, with CMS-specific private routes
+where detected.
 
-Recognition descriptions and executable defaults ship together in a reviewed
-plugin version. Central/site choices survive updates and retain precedence.
-There is no separate daily download of descriptions without corresponding rules.
-Maintainers rebuild the pinned source:
-`python3 tools/build-cookie-assessments.py --source open-cookie-database.csv --revision <full-upstream-commit> --output shared/cookie-assessments.json`.
-This writes both assessments and the exact generated `cookie-defaults.json`
-snapshot. It records source SHA-256, revision, reasons and confidence. It never
-contacts installed websites. A connected WordPress installation receives that
-same flattened default/admin snapshot plus its site overrides through the
-existing signed prepare/commit protocol. Its committed snapshot remains frozen
-until the next successful synchronization. Disconnect sends an empty signed
-clear and returns the application runtime to its standalone bundled defaults.
-The signed empty snapshot identity remains separate from its actual runtime
-digest, so recovery can restore the previous managed ownership and choices.
+### UltraCache
 
-### Cookie database updates
+**Do not select this profile on a WordPress site without the compatible
+UltraCache WordPress plugin installed, enabled and connected.** The profile
+depends on the application's cache policy, authenticated publications, fragment
+endpoints and invalidation events. Selecting it alone does not add those
+features; missing or incompatible integration can cause failed delivery or
+incorrect handling of personal content. Use Basic until the integration is ready.
 
-**All accounts → Cookie database · reviewed rules** shows the bundled source
-revision, record count, executable rule count and rules version. Updating this
-plugin installs the reviewed descriptions and functional choices together.
-Existing downloaded-only snapshots are preserved for rollback but no longer
-supply extra undecided rows. Central and website choices remain authoritative.
-The old `update-cookie-database` command reports this lifecycle without fetching
-or claiming that a download updated cache behavior.
+With the application connected, the profile provides:
 
-The request-owned native cookie-handoff extension is built locally using `varnish-dev` matching
-the installed engine. Installation does not upgrade or restart Varnish. The
-package dependency keeps those headers aligned during future APT upgrades;
-a systemd pre-start step rebuilds the extension if the engine ABI changed. Running
-visitor requests never read a database or contact GitHub.
+- **Server-side page composition:** cached public HTML combined with personal
+  content such as supported cart, wishlist and nonce fragments. This mode does
+  not require a new browser Ajax request to complete the HTML and works without
+  JavaScript for supported server-rendered fragments.
+- **Personal fragment reuse:** complete, valid cached pages and fragments can
+  be delivered without calling WordPress prepare/finalize on every HIT.
+  Missing, expired or invalidated objects refill through the application.
+- **Visitor isolation:** personal objects retain their actual owner/session,
+  cookie inputs, content dependencies and natural expiry. Real provider events
+  invalidate the affected objects rather than requiring all application work
+  to stop before a valid HIT.
+- **Application-aware caching:** the application's explicit storage approval and
+  lifetime govern eligible UltraCache output while browser cache headers retain
+  their purpose. Original, WebP and AVIF HTML representations remain separate
+  where required.
+- **Cookie lifecycle integration:** providers create, renew and delete their own
+  cookies. A cached page never replays another visitor's personal Set-Cookie
+  values, and the proxy does not invent tracking identifiers or grant consent.
+- **Optional async cart support:** when explicitly enabled in UltraCache, its
+  existing async cart path remains available instead of server-side composition.
 
-Inspect `X-Cache-Cookie-Names`, `X-Cache-Cookie-Role`,
-`X-Cache-Cookie-Policy` beside `X-Cache` to see the
-applied policy. These diagnostics contain names and decisions, never cookie
-values. See [the common contract](shared/CONTRACT.md) for the wire protocol.
+These features apply to content and providers supported by the WordPress
+integration. Enabling the profile does not automatically make every dynamic
+plugin or every private response cacheable.
+
+## What you can manage
+
+### Websites and cache invalidation
+
+Enable or disable caching per website or account, choose profiles, change
+website purge tokens and clear caches from Hestia. Administrators also have bulk
+controls and a default profile for newly discovered websites. Accounts and
+website cache keys remain separate; aliases follow their website settings.
+
+Supported exact PURGE and batch/regex BAN operations let connected applications
+invalidate their own cached content. Central and per-site VCL additions provide
+further control without editing Hestia's core files.
+
+### Cookie policies
+
+Open **Cookie policies** for central defaults or a website's overrides. Search
+cookie names, providers and descriptions; edit rows, add custom cookies, paste
+tab-separated rows from a spreadsheet or apply bulk choices. Basic and
+UltraCache have independent columns and action filters.
+
+| Action | Effect |
+| --- | --- |
+| **Shared** (currently **Shared HTML** in the panel) | Share public HTML across the cookie's values while preserving the original cookie for the visitor and application. Personal response-cookie values are not stored for replay. |
+| **Vary** (currently **Public variant** in the panel) | Keep separate cached representations for the cookie's values. |
+| **Private** | Deliver matching requests through the application without sharing their response bodies. |
+
+Website choices override central choices, which override bundled defaults.
+**Why / precedence** explains the effective choice and its evidence. Optional
+WordPress policy synchronization applies the active profile's choices to the
+compatible application's supported cache engines using the same site token.
+
+**The cookie database is bundled with the addon.** Descriptions and executable
+default rules are updated together when you update this plugin. There is no
+separate cookie-database download or daily update to schedule. Your central and
+website overrides survive updates. Recognition data is attributed to
+[Open Cookie Database](https://github.com/jkwakman/Open-Cookie-Database);
+recognizing a cookie does not create it or provide consent.
+
+### CMS rules, URLs and representations
+
+CMS detection adds known private routes for WordPress/WooCommerce, Joomla,
+Drupal, Magento and PrestaShop. You can refresh detection, exclude retired
+installation directories or add custom private path prefixes.
+
+Known campaign parameters such as `utm_*`, `gclid` and `fbclid` are omitted from
+an internal lookup URL so tracking links can share a page. The application still
+receives the original URL on a MISS. Functional query parameters, language and
+cookie variants retain their distinctions. Public search, REST and Ajax GETs
+can cache when their actual context and response allow it.
+
+### Server and browser cache settings
+
+Administrators can change the shared cache budget, inspect native cache storage
+usage on demand and set the backend first-byte timeout. Changing the cache size
+restarts Varnish and empties cached content.
+
+Browser caching has central defaults and per-site overrides, with separate
+settings for ordinary static files and declared content-hashed immutable paths.
+Files already served directly by Nginx stay on that route.
+
+An optional **aggressive caching** setting uses a chosen server TTL for anonymous
+HTML even when generic origin headers would prevent caching. It is off by
+default, retains explicit cookie/private-route choices and does not personalize
+HTML or embedded tokens. See the [site settings guide](docs/site-settings.md)
+before enabling it.
 
 ## Update
 
-Run these commands separately. First, download the latest code:
+Download the latest code, then run the installer to apply it:
 
 ```sh
 sudo git -C /usr/local/src/varnish-for-hestia pull --ff-only
 ```
 
-After Git finishes successfully, apply the update:
-
 ```sh
 sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py
 ```
 
-Updates retain existing tokens, site settings and memory budget.
-Version 0.21.0 keeps aggressive request handling entirely in VCL and retires the
-former CMS session service after successful activation. It uses a fresh cache
-namespace so old Joomla token templates cannot be reused; pages refill on demand.
-Aggressive caching remains off unless explicitly enabled for that website.
-The installer prints timestamped stages and actual account/domain counts to
-stderr as it works. During a slow native command or lock wait it reports the
-current stage every ten seconds; this does not set an execution deadline.
-The default final output is a readable summary with the installed version, actual
-result details and elapsed time. Add `--json` for a single machine-readable JSON
-result on stdout; progress remains on stderr. Panel/API and cron interfaces keep
-their existing JSON contract and do not emit installer progress. To keep both progress and the result in a local terminal log:
-
 ```sh
-set -o pipefail
-sudo python3 /usr/local/src/varnish-for-hestia/tools/install.py 2>&1 | tee varnish-install.log
+sudo systemctl is-active varnish
 ```
 
-Version **0.16.0** ships the same shared Basic/UltraCache policy source as Webuzo.
-Existing General, WordPress and WooCommerce selections become Basic automatically.
-Site IDs, tokens, enable settings, cookie rules, browser settings and local VCL
-are retained. Former central profile rules are prepended to the corresponding
-sites' local VCL, retaining their original scope and execution order. UltraCache
-selections and their central rules remain UltraCache. The conversion is idempotent.
+Keep these commands separate and continue after success. Pulling the source
+alone does not update the running addon. Updates preserve tokens, profile
+assignments, local rules, cookie overrides and the saved memory budget. The
+installer shows progress and applies the generated VCL and managed routes;
+no manual per-domain rebuild is needed. Refresh Hestia after the update.
 
-The installer regenerates the VCL and managed domain routes. Version 0.16.0 uses
-a new cache namespace for the normalized lookup URL and shared representation
-policy; pages refill on demand. No Varnish restart or manual domain rebuild is
-needed. Refresh Hestia with **Ctrl+F5**.
+For UltraCache sites, also follow the matching WordPress plugin's update,
+capability-redetection and cache clear/Warm instructions. Release ZIPs and any
+version-specific upgrade instructions are available on the
+[releases page](https://github.com/orloxgr/varnish-for-hestia/releases).
 
-## Cache behavior
+## Documentation
 
-**Basic** supplies public HTTP caching and the common WordPress/WooCommerce
-private-state handling. **UltraCache** adds ESI composition and explicitly approved
-shared parents using exactly that same base policy. No application detection or
-extra protection switches are required.
+- [Site settings and cookie-policy details](docs/site-settings.md)
+- [Administration, adoption, backup, restore and removal](docs/administration.md)
+- [Shared integration contract](shared/CONTRACT.md)
+- [Development and testing](docs/testing.md)
+- [Release history](CHANGELOG.md)
 
-There is no addon TTL cap or forced grace/keep duration. With aggressive caching
-off, freshness follows the origin and native Varnish, with explicit central/site
-VCL additions retained. Aggressive mode uses the selected website server TTL.
-Uncacheable-response markers use the running Varnish's `uncacheable_ttl` setting.
-Otherwise public responses whose Set-Cookie names are all Shared can cache
-without storing personal cookie fields. Mixed Private/Variant/unknown response
-cookies retain uncached delivery. Origin private/no-store is never rewritten
-to public. Personal ESI/session responses retain their privacy
-headers. The native freshness of errors is retained; a positive administrator
-TTL is not vetoed merely because a response is HTTP 400 or above. Incomplete
-standalone responses are not stored as complete pages.
-
-Public searches (`s=`), REST GETs (`/wp-json/` and `rest_route`), XMLHttpRequest GETs,
-and `ref=` are cache candidates. The original URL, query values and cookies still
-reach the application on a miss. An internal copy of the URL omits known campaign
-parameters (`utm_*`, `gclid`, `fbclid` and related click IDs) from the lookup key.
-Different tracking IDs can reuse the same page. Functional parameters, including
-search, language, currency and `ref`, remain distinct. Browser analytics still
-see the original landing URL; PHP tracking on every landing needs a separate
-tracking request/integration because PHP does not run on a cache HIT.
-Private/no-store responses and response cookies without Shared approval
-are delivered without sharing their bodies. Account/cart/checkout routes, cart
-mutations, authentication/nonces, login and private session cookies remain private.
-Store API cart/checkout reads are private too; public product REST reads can cache.
-
-`Vary: Accept` retains real HTML/JSON/XML/image negotiation and `q=0`. An internal
-copy normalizes equivalent unquoted header whitespace. Simple media lists also
-share variants across token case and equivalent quality notation (`q=0.900` /
-`q=0.9`, implicit quality 1 / `q=1.000`). Simple `Accept-Language` lists receive
-the same treatment for language-tag case, spacing and quality notation. Both
-original headers reach the origin; browsers retain the public `Vary` headers.
-Different languages, weights and preference order remain distinct. Media
-parameter values, quoted values and nonstandard syntax retain their existing
-variation. These improvements work in Basic without any application plugin;
-requests with other syntax continue normally without the extra normalization.
-The rules follow [HTTP negotiation semantics](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.4).
-Recognized stored UltraCache HTML additionally groups
-equivalent AVIF/WebP capabilities, so matching warmup/browser requests reuse the
-same representation.
-This includes Apache static snapshots and actual PHP page-cache responses marked
-`X-Ultra-Cache: HIT`, including stored ESI parents. The existing public, cacheable,
-variant and no-Set-Cookie conditions still apply. Newly rendered `STORE` responses
-and other dynamic negotiation retain their real Accept dimensions.
-With `Vary: Cookie`, an internal variant key omits only the known analytics IDs
-listed in [`shared/cache-policy.vcl`](shared/cache-policy.vcl).
-Unknown, consent, referral and language
-cookies still select separate variants. Cookies are not stripped from origin
-requests; downstream responses retain `Vary: Cookie`. Without an origin Vary,
-ordinary unknown cookies do not cause a cache bypass.
-
-Both `X-Hestia-Varnish` and `X-Cache` consistently report **HIT**, **MISS** or
-**PASS**. `X-Hestia-Varnish-Reason` reports a concrete request/origin reason,
-such as `cookie-policy-private`, `private-rest-context`, `origin-set-cookie`
-or `origin-cache-policy`. Public hits/misses report `cached-response`/
-`fetch-required`.
-
-The shared file contains the request/privacy/session/ESI, representation and
-lookup-key rules unchanged in both panel integrations. Hestia supplies the
-host/backend, scoped tokens, native transport and administrator additions.
-Each distribution includes the full file and works independently. See the
-[shared contract](shared/CONTRACT.md) for hooks and canonical invalidation URLs.
-Exact PURGE accepts any tracking URL; regex/batch BAN selects canonical lookup
-URLs. The shared parity fixtures exercise both generated adapters.
-
-The native `esi_ignore_other_elements` feature allows literal includes inside HTML
-attributes to be composed as well as includes in inline JavaScript and JSON within HTML.
-Fresh starts use the managed unit flag; upgrades add it through the authenticated
-native CLI without restarting Varnish or replacing other runtime feature flags.
-Parent privacy and private-fragment cookie rules remain unchanged. This does not
-enable ESI for standalone JSON responses. Parents fetched before enabling the
-parser feature retain their old parsed body until invalidated or refetched;
-rewarm those pages through the application when testing the new nonce feature.
-
-Basic's URL, cookie and header cache-key improvements work without UltraCache.
-Basic does not enable ESI composition. The UltraCache preset can also compose
-standard ESI from another application, but the application must produce the
-includes, fragment endpoints and suitable cache policy. Enabling a Varnish parser
-feature alone cannot turn ordinary WordPress nonces into private fragments.
-
-## Cookie choices per website
-
-Open **Plugins → Varnish → your domain → Cookie cache policies**. Each exact
-cookie name or literal trailing-star prefix has independent Basic and UltraCache
-**Shared HTML**, **Public variant** or **Private** actions. Website choices take
-precedence over central choices; reset resumes inheritance. Cookies reach the
-application unchanged. Origin private responses and private routes/actions have
-separate exclusions.
-
-Normal upgrade converts old **Cookies that bypass cache** entries into visible
-Private rows with an import description. Existing explicit website choices keep
-precedence independently in each profile. The old form and separate runtime PASS
-list are removed. Imported rows can be edited/reset in the same cookie editor;
-no second list overrides it. Tokens and other website settings are retained.
-
-Existing static-file routing is retained: files served directly by Nginx remain
-there. Both presets handle public assets that reach Varnish without changing routing.
-
-## Change cache size in Hestia
-
-1. Open **Plugins → Varnish → All accounts** as administrator.
-2. Under **Server settings · all websites**, enter the **Varnish cache size (MiB)**,
-   for example **8192** for 8 GiB shared by all sites.
-3. Click **Apply size and restart Varnish**.
-
-Changing size restarts Varnish and clears its cached content. The new size is
-verified against the running Varnish process and retained through updates and backups.
-An unchanged size does not restart the service.
-
-## Change the server timeout in Hestia
-
-1. Open **Plugins → Varnish** as administrator, in **All accounts**.
-2. Under **Server settings · all websites**, enter **300** in
-   **Backend first-byte timeout (seconds)**.
-3. Click **Apply server timeout**.
-
-This is the time Varnish allows Apache to start responding, including cache
-bypasses. Leave the field blank to follow the loaded native Nginx hosting read
-allowance. Saved explicit values, including zero and fractions, remain overrides.
-The addon also inherits native connect/send/read allowances and gives its front
-Nginx proxy and Varnish delivery enough time to complete the exchange. It does
-not change Apache/PHP execution limits. Native changes are picked up at the next
-reconciliation, including the existing discovery cron; no statistics collector
-or application requests are needed. Managed timeout directives are excluded
-from discovery, preventing cumulative growth on subsequent reconciliations.
-
-## Static browser caching
-
-Administrators: **All accounts → Browser cache · central defaults**. Owners:
-**your domain → Browser cache**. Each domain can inherit central defaults or save
-an override; aliases share its policy. Every control has mouse-over help.
-
-Ordinary existing static files default to 30 days. Only declared content-hashed
-paths receive the one-year `immutable` policy. Enter one path per line, for
-example `/assets/app-{hash}.js`; `*` matches within a path segment. The UltraCache
-profile automatically includes its CSS-bundle path without replacing custom
-paths. A query such as `?ver=1` alone does not declare content immutable.
-
-Zero seconds sends `no-cache` so browsers revalidate with ETag/Last-Modified.
-Disabling headers removes the addon's static Cache-Control policy. Existing
-files stay directly on Nginx, missing files retain the existing origin fallback,
-and dynamic application responses keep their own headers. Native parent headers
-are retained using `add_header_inherit merge`; an explicit custom parent
-`add_header Cache-Control` remains a separate native policy and should not be
-combined with an overlapping addon policy. These settings cannot
-clear a copy already stored by a visitor: use a new/versioned URL when replacing
-an asset that must update immediately.
-
-## Central profile additions
-
-Administrators can add supported request and backend-response VCL per profile.
-These run before the corresponding site additions and retain tenant and response
-privacy checks. Applying rules invalidates only sites whose effective profile
-rules changed; other profiles keep their warm cache. The default-profile selector
-only affects newly discovered domains, retaining existing assignments and the
-existing Hestia enable/disable policy.
-
-## UltraCache async cart
-
-The UltraCache profile recognizes an origin-approved warmed public parent marked
-`X-UltraCache-Woo-Async-Parent: 1`. With the existing explicit request opt-in,
-cart/session visitors can HIT that parent and fetch their personal cart
-asynchronously. A private cold miss still requires the established ESI handshake;
-login, private cart endpoints, `private/no-store`, Set-Cookie and Vary separation
-remain enforced. Ordinary unknown cookies and query strings do not create a
-general cache bypass; functional query values remain separate cache keys.
-
-Hover over controls to see their purpose and scope. **Show memory usage** reads
-one native `varnishstat` snapshot only when clicked. It shows malloc cache storage
-used/free and the configured budget, rather than total process RSS. There is no
-background statistics collector, request-log analysis or automatic polling.
-
-For VCL details, backup, restore, removal or importing an existing Varnish,
-see the [administration reference](docs/administration.md).
-
-See the [changelog](CHANGELOG.md) for completion, native controls and compatibility changes. Existing service budgets and credentials are preserved on update.
+Licensed under GPL-3.0-or-later. Shared cache-policy/native sources are coordinated
+with [Varnish for Webuzo](https://github.com/orloxgr/varnish-for-webuzo); this addon
+installs and operates independently on Hestia.

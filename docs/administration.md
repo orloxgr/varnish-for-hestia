@@ -5,11 +5,11 @@ two presets, owner VCL editing and automatic native account/domain discovery.
 The addon adds its own files and templates; existing Hestia scripts, pages and
 vendor templates are not changed.
 
-Version **0.16.0**.
-
 Source repository: [orloxgr/varnish-for-hestia](https://github.com/orloxgr/varnish-for-hestia).
 
-For the four-step installation, see [Quick start](../README.md#quick-start).
+For installation, profile selection and normal updates, see the
+[README](../README.md). Detailed website controls are in
+[Site settings and cookie policies](site-settings.md).
 
 ## Server controls
 
@@ -55,14 +55,15 @@ into the retained source checkout:
 ```sh
 sudo git clone https://github.com/orloxgr/varnish-for-hestia.git /usr/local/src/varnish-for-hestia
 cd /usr/local/src/varnish-for-hestia
-sudo python3 tools/install.py --memory-mb 8192
+sudo python3 tools/install.py --memory-mb 1024
 ```
 
 Keep `/usr/local/src/varnish-for-hestia` for future updates and recovery.
 
 With no existing Varnish, the installer uses the official signed Ubuntu repository
 and its signed APT candidate, with separate addon-owned repository files.
-The quick-start command sets an 8 GiB shared cache budget. Rerun without memory options to update
+The example command sets a 1 GiB shared cache budget; choose a size appropriate
+for the server. Rerun without memory options to update
 addon files/templates and reconcile accounts, preserving credentials and choices.
 Complete code generations live in `/opt/varnish-for-hestia.releases/`; an atomic
 `/opt/varnish-for-hestia` pointer selects the active version. A failed ordinary
@@ -103,20 +104,24 @@ and **Manage website** open the existing owner controls without impersonation.
 Varnish profile changes preserve each site's optional VCL sections and purge token.
 Bulk website enable/disable retains the separate account enable/disable choice.
 Native hosting suspension and package restrictions continue to apply.
-Bulk changes affect the current websites; newly created sites start with General.
+Bulk changes affect the current websites; newly discovered sites use the
+configured default profile, initially Basic.
 
 Each owner can:
 
-- Select General, WordPress, WooCommerce or UltraCache for Hestia per site.
+- Select Basic or UltraCache per site.
 - Edit the site's request and backend-response VCL sections.
 - View/change only that site's HTTP purge token and clear its cache/aliases.
 - Disable one site or the whole account, retaining individual site choices.
 
-Every profile is selectable without inspecting installed applications, plugins or
-application connections. The selected profile is not automatically replaced or
-disabled based on application presence or connectivity. No WordPress/UltraCache
-files, settings or credentials are changed. Applications configure their
-connections separately. HTTP purge uses
+The selector does not verify that the application is installed or connected.
+Basic works without a WordPress plugin. On WordPress, select UltraCache only
+after installing, enabling and connecting the compatible UltraCache plugin;
+otherwise its personal-content delivery contract is unavailable and requests
+can fail or behave incorrectly. Configure the application's Varnish connection
+with the website token. Optional cookie-policy synchronization is an explicit
+connection described in the [site settings guide](site-settings.md#wordpress-synchronization).
+HTTP purge uses
 `127.0.0.1:6081`, the selected domain's Host header, and either
 `X-Hestia-Varnish-Token` or `X-UltraCache-Token`. The global administrator secret is
 never provided to a hosting user. Personal tokens contain 12-256 letters, digits,
@@ -130,18 +135,23 @@ Exact PURGE invalidates both protocol variants; BAN is composed by the server fo
 the authenticated site and its aliases. Caller-supplied BAN expressions are ignored.
 Public proxy requests cannot use either invalidation method.
 
-Basic and UltraCache share one public HTTP/WordPress/WooCommerce policy. Search,
-public REST GET, XMLHttpRequest GET and referral parameters do not cause PASS by
-their names. All query values remain in the request/key, preserving attribution
-and functional distinctions. Login, previews, nonces/authentication, personal
-cookies, account/cart/checkout and cart-changing operations remain private.
-Store API cart/checkout reads also pass. Response Set-Cookie, private/no-store,
-Vary: * and nonpositive TTL are mandatory uncacheable decisions.
+Basic and UltraCache share common HTTP/WordPress/WooCommerce policy code, with
+independent cookie choices. Public search, REST GET, XMLHttpRequest GET and
+referral parameters do not cause PASS merely by name. Original query values
+reach the origin; an internal lookup URL omits known campaign parameters while
+keeping functional distinctions. Private routes and actions retain their handling.
+In Basic, response eligibility follows HTTP policy and the selected cookie
+actions unless the site's aggressive mode is explicitly enabled. In UltraCache,
+approved output uses its application storage/TTL contract and supported personal
+fragment integration while preserving browser headers. Shared response-cookie
+values are delivered only to their visitor and never replayed from shared storage.
 
 Static files served directly by Nginx retain their existing routing. Public HTML,
 CSS and other assets that reach Varnish use the selected preset's cache policy.
-The UltraCache preset adds ESI and explicitly approved async parents to this
-same common base. There is no separate permissive Woo/session implementation.
+The UltraCache profile adds server-side ESI composition, cached personal
+fragments and explicitly approved async parents through the compatible
+application. Basic does not enable ESI. See the
+[profile comparison](../README.md#basic-vs-ultracache).
 
 ### Cookie choices and imported exclusions
 
