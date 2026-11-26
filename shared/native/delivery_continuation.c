@@ -898,13 +898,18 @@ static void delivery_prepare_backend_scratch(VRT_CTX, const struct continuation 
     http_Unset(ctx->http_bereq,HDR("X-SCP-Vary-Accept-Language"));
     http_Unset(ctx->http_bereq,HDR("X-SCP-Vary-Cookie"));
     http_Unset(ctx->http_bereq,HDR("X-SCP-Vary-ESI-Cookie"));
+    /* The batch request/continuation already owns its exact identity. This
+     * uncacheable producer envelope is not the later stored fragment object;
+     * copying its internal hash carrier to PHP only duplicates the full ticket.
+     * Ordinary fetches and the subsequent native object dispatch retain theirs. */
+    if (d->fragment_batch) http_Unset(ctx->http_bereq,HDR("X-SCP-Key-URL"));
 }
 
 VCL_BOOL vmod_delivery_backend(VRT_CTX, struct vmod_priv *priv) {
     struct task *task = priv->priv;
     struct handoff *entry;
     struct continuation *d;
-    int owned = 0, repeated = 0, association_failed = 0;
+    int owned = 0, repeated = 0, association_failed = 0, header_failed = 0;
     if (!task || !task->key) return 0;
     pthread_mutex_lock(&lock);
     entry = delivery_entry(task->key); d = entry ? entry->delivery : NULL;
@@ -934,7 +939,9 @@ VCL_BOOL vmod_delivery_backend(VRT_CTX, struct vmod_priv *priv) {
                 http_ForceHeader(ctx->http_bereq,h_cookie_delivery,"1");
             else http_Unset(ctx->http_bereq,h_cookie_delivery);
             http_ForceHeader(ctx->http_bereq,h_request,d->request_id);
-            http_ForceHeader(ctx->http_bereq,h_original,d->source_stage == SOURCE_CAPTURE ? d->source_url : d->url);
+            if (!backend_task_header(task,ctx->http_bereq,h_original,
+                d->source_stage == SOURCE_CAPTURE ? d->source_url : d->url))
+                d->failed = header_failed = 1;
             if (d->source_stage == SOURCE_CAPTURE || d->source_stage == SOURCE_RESOLVER) {
                 http_ForceHeader(ctx->http_bereq,HDR("X-UltraCache-Delivery-Public-Source-Version"),"1");
                 http_ForceHeader(ctx->http_bereq,HDR("X-UltraCache-Delivery-Public-Source-Role"),
@@ -959,7 +966,10 @@ VCL_BOOL vmod_delivery_backend(VRT_CTX, struct vmod_priv *priv) {
             if (d->phase == D_PREPARE && !d->selection_entry && !d->reselect_attempted && !d->fragment_batch)
                 http_ForceHeader(ctx->http_bereq,h_reselect_version,"1");
             else http_Unset(ctx->http_bereq,h_reselect_version);
-            if (d->manifest && !d->guest_complete) http_ForceHeader(ctx->http_bereq,h_manifest,d->manifest);
+            if (d->manifest && !d->guest_complete) {
+                if (!backend_task_header(task,ctx->http_bereq,h_manifest,d->manifest))
+                    d->failed = header_failed = 1;
+            }
             else http_Unset(ctx->http_bereq,h_manifest);
             if (d->selection_entry && d->phase == D_PREPARE) {
                 http_ForceHeader(ctx->http_bereq,h_selection_version,"1");
@@ -995,6 +1005,8 @@ VCL_BOOL vmod_delivery_backend(VRT_CTX, struct vmod_priv *priv) {
         else filter->priv = &task->key;
     }
     if (repeated) VRT_fail(ctx,"UltraCache prepare cannot be repeated");
+    else if (header_failed)
+        VRT_fail(ctx,"UltraCache backend protocol header allocation failed");
     else if (WS_Overflowed(ctx->ws))
         VRT_fail(ctx,"UltraCache backend header slots or workspace exhausted");
     else if (association_failed)

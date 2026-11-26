@@ -145,10 +145,18 @@ def ensure_cookie_handoff():
     engine = native_version()
     development = subprocess.run(['dpkg-query','-W','-f=${Version} ${db:Status-Status}',
                                   'varnish-dev'],capture_output=True,text=True)
-    if development.stdout.strip() != engine+' installed':
-        progress.stage('Installing development headers for the existing native Varnish ABI')
+    dependencies = []
+    if development.returncode or development.stdout.strip() != engine+' installed':
+        dependencies.append('varnish-dev='+engine)
+    for package in ('zlib1g-dev', 'zlib1g'):
+        installed = subprocess.run(['dpkg-query','-W','-f=${db:Status-Status}',package],
+                                   capture_output=True,text=True)
+        if installed.returncode or installed.stdout.strip() != 'installed':
+            dependencies.append(package)
+    if dependencies:
+        progress.stage('Installing native Varnish headers and zlib build/runtime dependencies')
         env=dict(os.environ,DEBIAN_FRONTEND='noninteractive',NEEDRESTART_MODE='l')
-        packages=('varnish='+engine,'varnish-dev='+engine)
+        packages=('varnish='+engine,*dependencies)
         preview=run('apt-get','-s','--no-remove','install',*packages,env=env).stdout.decode()
         if any(line.startswith('Remv ') or re.match(r'Inst varnish(?::[^ ]+)? ',line)
                for line in preview.splitlines()):

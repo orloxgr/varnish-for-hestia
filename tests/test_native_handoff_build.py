@@ -59,7 +59,10 @@ class NativeHandoffBuild(unittest.TestCase):
             with patch.object(module,'command',side_effect=run):
                 library=module.build()
                 def transform(source):
-                    return source.replace('import cookie_handoff;','import cookie_handoff from "'+str(library)+'";').replace(
+                    # This test owns two exact builds; a suite-level isolated
+                    # module override must not replace either test library.
+                    return re.sub(r'import cookie_handoff(?: from "[^"]+")?;',
+                        lambda _: 'import cookie_handoff from "'+str(library)+'";',source,count=1).replace(
                         'call scp_deliver;','call scp_deliver; set resp.http.X-Test-Module = cookie_handoff.pending();')
                 with proxy('basic',origin,transform=transform,management=True) as get:
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as workers:

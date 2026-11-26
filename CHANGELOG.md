@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.18-dev.6 - 2026-11-27 (development candidate)
+
+- Negotiate authenticated `deflate-v1` self-contained fragment batch tickets through the existing registered capability contract. Verify the native MAC before output allocation/inflation; preserve legacy tickets, application signatures, individual fragment keys, owner/content authority and lifetimes.
+- Own zlib development/runtime dependencies in the normal installer and include its version/link flags in native build receipts. Preserve the installed Varnish engine during dependency installation.
+- Keep the exact producer Original-URL and Manifest in backend task-owned heap storage, unsetting their HTTP references before cleanup. Remove the redundant internal Key-URL carrier only from the uncacheable fragment preparation envelope; retain ordinary fetches and later individual-object dispatch.
+- Reproduce and resolve native backend workspace exhaustion and a separate downstream header-buffer packing failure without increasing server limits. Qualify both generated profiles, focused native/parser/lifecycle checks and the actual application Warm path; Basic gains no ESI or application dependency. See [qualification and remaining application checks](docs/fragment-delivery.md).
+- Preserve earlier candidate archives. No Hestia live deployment, tag or public release accompanies this development integration.
+
 ## 0.24.18-dev.5 - 2026-11-26 (development candidate)
 
 - Keep explicitly anonymous fragment identity separate from product/content dependencies. Tagged anonymous schema2 claims require their actual current per-URL content authority closure, including revision/generation and writer validation before fill and release; stateless claims still require empty tags and empty authority. Personal and legacy schema1 claims are unchanged.

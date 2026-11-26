@@ -26,3 +26,10 @@ condition = "AND"
 paths = ['''(^|/)tests/test_cms_tokens\.py$''']
 regexTarget = "secret"
 regexes = ['''^(0123456789abcdef){2}$''']
+
+[[rules.allowlists]]
+description = "Derived key for the public fixture-only compression interoperability vector"
+condition = "AND"
+paths = ['''(^|/)tests/fixtures/fragment-batch-compression-v1\.json$''']
+regexTarget = "secret"
+regexes = ['''^7c4f0ce45f67a732e58ecabe1b536868bb858bee3c83b5cc9043af2eba3273d7$''']

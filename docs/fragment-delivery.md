@@ -107,6 +107,71 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.6
+
+This candidate adds the shared authenticated compression contract and backend
+header ownership correction to dev.5, through the canonical
+[Webuzo 54740e5c](https://github.com/orloxgr/varnish-for-webuzo/commit/54740e5c1d986566ccb9536110e7d3931de12798)
+implementation. The normal installer builds against the
+installed engine and installs missing matching headers and zlib dependencies;
+it does not upgrade the engine as a side effect. The exact framing and
+authentication order are specified in the
+[shared protocol](../shared/FRAGMENT-DELIVERY.md#compressed-self-contained-batch-tickets).
+No header, workspace, request or application limit is raised.
+
+The first compressed implementation still reproduced intermittent backend
+workspace exhaustion with a coalesced producer response. Task-owned heap storage
+for the exact Original-URL and Manifest resolves that allocation failure. HTTP
+references are explicitly unset before their owner frees the storage. A
+deterministic three-run comparison failed 3/3 on the preceding compressed module
+and passed 3/3 with this correction, using the same response bytes and defaults.
+
+A separate actual application request had a 7,062-byte URI, a 7,062-byte
+Original-URL, a 7,022-byte Manifest and a repeated 7,062-byte internal Key-URL.
+Individual fields were below 8 KB, but the default Nginx header-buffer packing
+still rejected the preparation envelope. Removing only that redundant internal
+carrier from the uncacheable preparation operation reduced total header bytes
+from 23,934 to 16,855. Original-URL, Manifest and authorization remained intact.
+The exact application Warm then passed 3/3 common representations in one batch
+(118 ms), through the same default Nginx/PHP-FPM fixture. The owning request and
+later native fragment-object hashing retain their original identity.
+
+Before the carrier-only follow-up, 56 distinct focused native/parser/build and
+lifecycle methods ultimately passed, including both profile compiles. The first
+run contained one C-only upgrade test fixture failure: its library substitution
+did not handle an already isolated module import. Correcting that test's import
+selection and rerunning that method passed; runtime code did not change for the
+fixture correction. The carrier follow-up passed all eleven native batch methods
+and the Basic/UltraCache literal-ESI regression. A mistyped extra test name caused
+one loader error in the initial follow-up invocation; the correctly named method
+passed separately. Fifteen installer tests also passed. These are final method
+outcomes, not a claim that every initial invocation was error-free.
+
+The carrier follow-up build signature is
+`dfad8489d57315a0d48f092a05c0830377a0d451c9d14485f104aee217fa23fe`;
+Lab DSO SHA256 is
+`7b90761e64f28d125a538dff0dc77b98de2b7f0bd05621ca4643e8c51ebdd3d2`.
+The receipt includes zlib 1.3.1 and `-lz`. Local dependency versions can produce
+different valid build receipts. Installed Lab modules and system services were
+not changed; each application test restored its original settings.
+
+With the normal WordPress development ZIP 3.13.13-dev.1424, an independent
+direct-Apache/PHP-FPM test passed Warm and the actual browser/cart assertions
+under normal Delay and after-load behavior: two fresh native HTML HITs (3.4 and
+1.9 ms), identical parent bytes across five visits, owner quantity two versus
+another visitor's empty cart, and a completed native remove operation followed
+by an empty reload. Removal was observed before clicking, and required the
+actual batch operation's successful response rather than an optimistic badge.
+
+That application run is a **partial result**, not clean final acceptance.
+Ancillary favicon requests executed the fixture template and exposed a PHP
+output-buffer fatal under WordPress 7.2's template enhancement callback. A
+separate YITH REST request returned 401. These are distinct from a parent cache
+miss and from the resolved transport failure; they remain application-owner
+qualification work. The original failure receipts are retained privately. No
+live Hestia installation, public release or final companion designation is
+claimed here.
+
 ### Development candidate 0.24.18-dev.5
 
 The six shared files match
