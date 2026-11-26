@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.24.15 - 2026-11-26
+
+- Align authenticated UltraCache parent warming with Webuzo 0.13.24. A hot parent Warm skips personal delivery; a cold Warm retains the validated public source through the existing snapshot backend without a personal origin execution.
+- Disable ESI only for the authenticated Warm response, preserving the stored ESI parent and normal visitors' private composition. Report `public-parent-only`, `not-executed` and `NOT-APPLICABLE` without claiming private fragments were warmed. Pair with WordPress UltraCache dev.1389 or a compatible public-parent-only verifier.
+- Qualify Hestia's direct-Apache VCL with 17 distinct native methods and no final skips, including complete private reuse. Paired WordPress/Webuzo functional acceptance passed; the separate 5–15-second full Warm performance target remains unmet. No Hestia live installation was performed. See [parent Warm behavior and qualification](docs/parent-warm.md).
+
 ## 0.24.14 - 2026-11-25
 
 - Release the coordinated single-HTML integration with WordPress UltraCache dev.1384 and Varnish for Webuzo 0.13.23. Keep the existing v1 projection with the canonical `html` identity; no new enum restriction or capability gate.
