@@ -10,6 +10,7 @@ def main():
     parser.add_argument('--other',type=Path,required=True)
     parser.add_argument('--left-report',type=Path)
     parser.add_argument('--right-report',type=Path)
+    parser.add_argument('--source-only',action='store_true',help='Compare product sources without historical test fixtures')
     args=parser.parse_args()
     if bool(args.left_report)!=bool(args.right_report):parser.error('Supply both parity reports together')
     root=Path(__file__).resolve().parents[1]
@@ -17,20 +18,25 @@ def main():
     for name in ('shared/native/cookie_handoff.c','shared/native/cookie_handoff.vcc','shared/native/delivery_continuation.c','shared/native/delivery_snapshot_backend.c','shared/native_build.py',
                  'shared/native/delivery_envelope.c','shared/native/delivery_envelope.h',
                  'shared/native/delivery_selection.c','shared/native/public_selection_registry.c','shared/native/selection_digest.c',
+                 'shared/native/delivery_fragments_wire.c','shared/native/delivery_fragments_wire.h','shared/native/delivery_fragments_runtime.c',
+                 'shared/native/delivery_reuse_runtime.c','shared/native/reuse_authority.c','shared/native/mutation_backend.c',
                  'shared/cache-policy.vcl','shared/vcl/core.vcl','shared/vcl/cookies.vcl',
-                 'shared/vcl/cookie-delivery.vcl','shared/vcl/http-cache.vcl',
+                 'shared/vcl/cookie-delivery.vcl','shared/vcl/fragment-delivery.vcl','shared/vcl/http-cache.vcl',
                  'shared/vcl/aggressive.vcl','shared/vcl/cms-routes.vcl',
                  'shared/aggressive.py','shared/cms_routes.py','shared/cms_discovery.py','shared/cms_metadata.py','shared/cms_cookies.py',
                  'shared/vcl/representations.vcl','shared/public_selection.py','shared/vcl/public-selection.vcl','shared/vcl/ultracache-esi.vcl','shared/vcl/ultracache-private.vcl',
                  'shared/vcl_source.py','shared/VCL-ARCHITECTURE.md',
                  'shared/cookie_admin.py','shared/cookie_defaults.py','shared/cookie-defaults.json','shared/cookie_control.py','shared/cookie-assessments.json',
-                 'shared/cookie-policies.json','shared/cookie_catalogue.py','shared/cookie_recognition.py',
-                 'shared/CONTRACT.md','shared/PUBLIC-SELECTION.md','shared/ESI-DELIVERY-DRAFT.md','shared/ESI-VALIDATION.md','shared/PRIVATE-TTL-DRAFT.md','shared/COOKIE-CONTROL.md','shared/cookie-recognition/recognition.json',
+                 'shared/cookie-policies.json','shared/cookie_catalogue.py',
+                 'shared/CONTRACT.md','shared/FRAGMENT-DELIVERY.md','shared/PUBLIC-SELECTION.md','shared/ESI-DELIVERY-DRAFT.md','shared/ESI-VALIDATION.md','shared/PRIVATE-TTL-DRAFT.md','shared/COOKIE-CONTROL.md','shared/cookie-recognition/recognition.json',
                  'shared/cookie-recognition/Open-Cookie-Database-LICENSE.txt',
                  'tests/shared_policy_cases.json','tests/shared_policy_parity.py','tests/test_cookie_wire_contract.py',
+                 'tests/test_fragment_batch_wire.py','tests/fixtures/fragment-delivery-wire-v1.json',
                  'tests/cookie_upgrade_case.py','tests/fixtures/cookie-defaults-2026.11.20.9.json','tests/fixtures/cookie-defaults-2026.11.20.10.json',
                  'tests/test_delivery_continuation.py','tests/test_delivery_envelope.py','tests/test_public_selection.py','tests/test_public_selection_runtime.py','tests/test_delivery_authorization.py','tests/test_private_fragment_ttl.py','tests/test_cold_personal_delivery.py','tests/test_private_document.py','tests/test_public_fragment_ttl.py','tests/test_fragment_http_failures.py','tests/test_recently_viewed_defaults.py',
                  'tests/test_request_no_store.py','tests/test_comment_cookie_defaults.py','tests/test_wcml_cookie_defaults.py','tests/test_aelia_cookie_defaults.py','tests/test_yith_cookie_defaults.py','tests/test_woocommerce_cart_defaults.py','tests/test_user_switching_defaults.py','tests/test_cookie_profiles.py','tests/cookie_profile_ui.mjs','tools/build-cookie-assessments.py'):
+        if args.source_only and name.startswith('tests/'):
+            continue
         left=(root/name).read_bytes();right=(args.other/name).read_bytes()
         if left!=right:raise SystemExit('Different shared content: '+name)
         digests[name]=hashlib.sha256(left).hexdigest()

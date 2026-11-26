@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Integrate the shared fragment-only continuation from Webuzo `1e18268e`: browser batches and ESI reuse the same individual native objects, canonical fragment URLs, application claims and remaining lifetimes. Private batches require one authenticated WordPress authority operation; native HIT does not imply zero PHP.
+- Negotiate the independent fragment caching flag through authenticated installation capabilities. OFF bypasses retained fragment reads/fills and fragment reuse while preserving ordinary parent HTML caching and cookie policies.
+- Add strict batch framing, schema2 result/authority validation, current-generation checks and sanitized browser JSON without exposing infrastructure credentials or private cache claims. Keep the legacy schema1 parser and Basic behavior.
+- Qualify the actual Hestia renderer with 47 disposable Lab methods and six local source/render checks. Matching WordPress producer, frontend and standalone acceptance remain coordinated work; no release or live Hestia deployment is claimed. See [qualification](docs/fragment-delivery.md).
+
+## Unreleased
+
 ## 0.24.17 - 2026-11-26
 
 - Review exactly five cookie defaults as Shared in both Basic and UltraCache: `wp-settings-`, `wp-settings-time-`, `wp_lang`, `cmplz_saved_categories` and `cmplz_saved_services`. Use the existing catalogue, assessment generator and scoped resolver with pinned WordPress/Complianz source evidence; no runtime exception or new policy owner.

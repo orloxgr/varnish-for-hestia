@@ -65,7 +65,9 @@ class DeliveryAuthorization(unittest.TestCase):
         branch=source.split('if (cookie_handoff.delivery_backend()) {',1)[1].split('} else {',1)[0]
         self.assertIn('call scp_delivery_authorization;',branch)
         self.assertIn('Delivery credential unavailable',branch)
-        self.assertEqual(source.count('call scp_delivery_authorization;'),1)
+        # Prepare, private reuse, guest issuer, execution-drain and ordinary
+        # covered backend execution all use the same backend-only credential.
+        self.assertEqual(source.count('call scp_delivery_authorization;'),5)
         for scope in ('req','bereq','beresp','resp'):
             for name in ('Authorization','Manifest'):
                 self.assertIn('unset '+scope+'.http.X-UltraCache-Delivery-'+name+';',source)
@@ -81,10 +83,12 @@ class DeliveryAuthorization(unittest.TestCase):
         self.assertIn('set resp.http.X-'+vendor+'-Varnish = "PASS";',body)
         self.assertIn('set resp.http.X-'+vendor+'-Varnish-Reason = "application-private-document";',body)
 
-    def test_empty_signed_child_response_uses_native91_synth_body_assignment(self):
+    def test_signed_child_http_failure_uses_native91_synth_body_assignment(self):
         source,_,_=render_sites()
         self.assertNotRegex(source,r'\bsynthetic\s*\(', 'The old primitive is absent from the exact native 9.1 compiler')
-        self.assertRegex(source,r'(?s)sub vcl_synth\s*\{\s*if \(req.http.X-SCP-Profile == "ultracache" && req.esi_level > 0 &&.*?set resp.body = "";')
+        synth='\n'.join(re.findall(r'sub vcl_synth\s*\{(.*?)\n\}',source,re.S))
+        self.assertRegex(synth,r'(?s)if \(req.http.X-SCP-Profile == "ultracache" && req.esi_level > 0 &&.*?set resp.body = "<span role=alert')
+        self.assertIn('set resp.status = std.integer(req.http.X-SCP-Fragment-HTTP-Failure,503);',synth)
 
 
 if __name__=='__main__':unittest.main()

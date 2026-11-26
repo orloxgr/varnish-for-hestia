@@ -174,6 +174,7 @@ def render(state, config):
   if (req.http.X-HVH-Disabled == "1") {
     set req.http.X-SCP-Reason = "site-disabled"; return (pass);
   }
+  call scp_fragment_recv;
   ''' + '\n'.join(custom_recv) + '''
   call scp_recv;
   return (hash);
