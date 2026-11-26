@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.24.17 - 2026-11-26
+
+- Review exactly five cookie defaults as Shared in both Basic and UltraCache: `wp-settings-`, `wp-settings-time-`, `wp_lang`, `cmplz_saved_categories` and `cmplz_saved_services`. Use the existing catalogue, assessment generator and scoped resolver with pinned WordPress/Complianz source evidence; no runtime exception or new policy owner.
+- Explain admin preferences/login language versus public HTML and Complianz consent-record bookkeeping versus active consent. Preserve administrator/site choices, authentication, private routes and provider privacy. Keep `cmplz_id` and all other decisions unchanged. See [reviewed defaults](docs/reviewed-cookie-defaults.md).
+
 ## 0.24.16 - 2026-11-26
 
 - Negotiate and authenticate the explicit public-parent-only Warm opt-in with the canonical v2 message, matching Webuzo 0.13.25. Preserve the original v1 proof and normal personal parent behavior for legacy clients.
