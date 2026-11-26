@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.24.16 - 2026-11-26
+
+- Negotiate and authenticate the explicit public-parent-only Warm opt-in with the canonical v2 message, matching Webuzo 0.13.25. Preserve the original v1 proof and normal personal parent behavior for legacy clients.
+- Reuse the existing owner and snapshot backend to fill a genuine COMPLETE guest object and its verified raw ESI parent. Preserve independent source bindings, ordinary keys, deadlines, cookie policies and invalidation. Report guest population only after a real insertion; the warmer must still verify ordinary GET/HIT bodies.
+- Qualify 20 distinct Hestia native methods with no final skips, including legacy/tampered opt-in, paired fill, ordinary projected guests, source flow and full private reuse. Paired WordPress dev.1391/Webuzo 0.13.25 application acceptance passed for all ten contexts and independent guest browsers. The reported 89.734-second full Warm remains above the 5–15-second target. No Hestia live deployment. See [qualification](docs/parent-warm.md).
+
 ## 0.24.15 - 2026-11-26
 
 - Align authenticated UltraCache parent warming with Webuzo 0.13.24. A hot parent Warm skips personal delivery; a cold Warm retains the validated public source through the existing snapshot backend without a personal origin execution.

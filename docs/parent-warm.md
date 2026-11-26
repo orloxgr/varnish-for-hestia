@@ -1,65 +1,70 @@
-# Authenticated public-parent warming
+# Authenticated public-parent and guest warming
 
-Hestia 0.24.15 shares its native/VCL implementation with Varnish for Webuzo
-0.13.24. Use a compatible WordPress UltraCache warmer, starting with
-3.13.13-dev.1389, that verifies a public parent without requiring personal
-fragment delivery from the same Warm response. Basic is unchanged.
+Hestia 0.24.16 shares its native/VCL implementation with Varnish for Webuzo
+0.13.25. A compatible WordPress UltraCache warmer, starting with
+3.13.13-dev.1391, negotiates the public-only delivery capability before using it.
+Clients without the opt-in retain the original v1 signed message and normal
+personal parent delivery. Basic is unchanged.
 
 ## Behavior
 
-The existing authenticated `parent-v1` request warms the public HTML parent.
-On a fresh parent HIT it performs no origin or private composition work. On a
-cold request, the existing public-source resolver and source capture validate
-the publication and retain it through the native snapshot backend. They do not
-perform a personal prepare merely to populate the public parent.
+The existing authenticated `parent-v1` request can explicitly select
+`public-parent-only` delivery. The selection is part of the signed canonical
+v2 message; it cannot be added, removed or changed without invalidating its
+authentication. See the exact [Warm protocol](WARM-PROTOCOL.md).
 
-ESI processing is disabled only for this Warm response. The stored parent keeps
-its parsed ESI capability; subsequent ordinary visitors receive normal private
-fragments and cookie delivery. Plain parents and ESI comments retain their exact
-public bytes in the Warm response.
+On a fresh public parent HIT, public-only Warm performs no origin or private
+composition work. On a cold request with the supported source projection, the
+same owner validates the real public source, executes the application's real
+anonymous guest compilation, and stores both as ordinary native cache objects
+through the existing snapshot backend. Each object retains its own source
+binding, actual context, expiry and invalidation rules. A declined anonymous
+compilation may still populate the verified parent without claiming a guest fill.
 
-A successfully completed authenticated Warm reports:
+ESI processing is disabled only for the opted-in Warm response. The stored
+parent retains ESI capability; subsequent ordinary visitors still receive
+normal private fragments and cookie delivery. Plain parents and ESI comments
+retain their exact public bytes in the Warm response.
 
-```text
-X-UltraCache-Warm-Projection: parent-v1
-X-UltraCache-Warm-Delivery: public-parent-only
-X-UltraCache-Delivery-Outcome: not-executed
-X-UltraCache-Private-Cache: NOT-APPLICABLE
-```
+A completed public-only Warm reports `X-UltraCache-Warm-Delivery:
+public-parent-only`, personal delivery `not-executed` and private cache status
+`NOT-APPLICABLE`. `X-UltraCache-Warm-Guest: populated` additionally reports a
+genuine COMPLETE guest insertion by this same owner. It is absent when no such
+insertion occurred. The warmer must still verify a fresh real parent HIT and
+an ordinary guest GET/HIT with complete HTML. These observations do not claim
+that personal fragments were warmed.
 
-These are native request-owned observations. They do not assert that personal
-fragments were filled or verified. Caller-provided or origin-provided markers
-cannot authenticate a Warm request. Existing Cookie policies, actual Accept
-context, request identity, source validation, expiry and owner isolation remain
-in force. No new endpoint, queue, setting or cookie exception is introduced.
+Existing Cookie choices, raw Accept context, source validation, owner isolation
+and ordinary visitor behavior remain effective. No new endpoint, queue, setting
+or cookie exception is introduced.
 
 ## Installation
 
-Use the normal addon update and installer described in the [README](../README.md).
-The installer builds the matching native module and activates the generated
-VCL. Do not patch VCL manually or deactivate the addon to update it. Update the
-WordPress warmer to the compatible version before testing public-parent Warm.
+Use the normal addon update and installer in the [README](../README.md). The
+installer builds the matching native module and activates generated VCL. Do not
+patch VCL manually or deactivate the addon to update it. A compatible WordPress
+warmer negotiates the new capability; older v1 clients retain their previous flow.
 
 ## Qualification boundary
 
-The Hestia adapter passed 17 distinct native methods on Varnish 9.1 using its
-actual direct-Apache VCL renderer and mock HTTP application producers. Both
-Basic and UltraCache generated VCL compiled. Coverage includes cold source and
-projected-source capture, zero-origin hot Warm, exact parent bytes, authenticated
-authority and real request contexts, forged proofs, invalidation, subsequent
-independent private owners, normal source fallback and full private cache reuse.
-The installed Lab module directory and services were unchanged.
+Native adapter qualification uses Hestia's actual direct-Apache VCL renderer and
+mock HTTP application producers on Varnish 9.1. It is separate from paired
+WordPress/browser acceptance and from a Hestia production installation. Passing
+functional checks does not establish the separate 5–15-second full Warm target.
 
-The shared native build identity and library hash matched the independently
-qualified Webuzo candidate. An imported test initially used Webuzo site settings
-instead of Hestia's existing alias fixture; correcting that fixture made the
-authority test pass without a shared runtime change.
+The candidate passed 20 distinct native methods with no final skips. Both Basic
+and UltraCache generated VCL compiled. Coverage includes four paired/protocol
+methods, twelve Warm authentication/context methods, ordinary projected guest
+fill, normal public-source handling and two full private reuse methods. Native
+build identity and library hash match the qualified Webuzo candidate. Installed
+Lab module files and services were unchanged.
 
-Paired WordPress dev.1389 and Webuzo 0.13.24 application acceptance was reported
-successful: ten Warm contexts verified exact public parent bodies without
-private execution, and independent browser visits received complete HTML HITs
-with separate empty carts. This was not a Hestia production deployment.
+Paired WordPress dev.1391 and Webuzo 0.13.25 application acceptance was reported
+successful: all ten real contexts verified their parent bodies, observed genuine
+guest population and completed refill. Two independent cookie-free browsers
+received complete HTML HITs with matching bodies, empty carts and no raw ESI,
+component or image failures. This was not a Hestia production installation.
 
-The reported full Warm time improved from 123.3 to 106.6 seconds, but the
-5–15-second performance target remains unmet. These functional checks do not
-establish that the complete performance goal is achieved.
+The reported full Warm took 89.734 seconds, improved from the previous
+106.6-second candidate and 123.3-second baseline. The 5–15-second target remains
+unmet; functional acceptance is not completion of that performance goal.
