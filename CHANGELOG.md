@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.18-dev.4 - 2026-11-26 (development candidate)
+
+- Add read-only `cacheScope` to successful browser fragment results after normal native object dispatch and final authority validation: anonymous/private for retained objects, none for request-local output. Errors/retired results do not receive it; producer inputs, permissions, keys, TTLs and cookie policy are unchanged.
+- Pass two focused native methods proving anonymous/private storage with actual lookup-before/after, caching OFF with no retained scope, and writer-retired output without body or metadata. Twenty-five parser/wire methods also pass, with both profiles compiled and zero skips. This supplies evidence for the coordinated WordPress Warm work; it does not implement or claim that WordPress feature by itself.
+- Prepare a distinct installable development ZIP, preserving earlier archives. The new Warm companion version remains pending coordinated WordPress work; no Hestia deployment, tag or GitHub release is performed.
+
 ## 0.24.18-dev.3 - 2026-11-26 (development candidate)
 
 - Route canonical public fragment Ajax outside full-document selection after ordinary ingress, route and cookie checks. Origin descriptor/scope validation and ordinary HTTP freshness remain required; no cache admission is inferred from the query.

@@ -107,6 +107,36 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.4
+
+The exact shared delta from
+[Webuzo ee5c0bc3](https://github.com/orloxgr/varnish-for-webuzo/commit/ee5c0bc343775754393e54c1264eebafc31f9f60)
+adds only the read-only `cacheScope` success-result metadata and its contract.
+It reports anonymous/private after completed native dispatch, positive object
+lifetime and final authority validation, or none for request-local output.
+Caching OFF removes the claim and yields none. Failed/retired items have neither
+body nor cacheScope. It is not a producer input, permission, identity assertion
+or new cache grant; no key, lifetime, policy, VCL or ABI change accompanies it.
+
+A disposable Hestia run passed exactly two focused native methods plus 25
+portable parser/wire methods, with zero failures/errors/skips and both profiles
+compiled. Actual private lookups returned404 before dispatch and200 after it for
+both anonymous/private objects; storage OFF returned404 and reported none.
+A real writer retired the other tested result without exposing body/metadata.
+Native build signature:
+`fff50dd5831b99d888e91d15a82cc3688e932f0c7b250675b2a125f2c15d4fe4`;
+Lab DSO SHA256:
+`8f981f13ee9ca626dbfd0a41872ba7545e3672f1f045191707e04709ea33afc5`.
+Both match the canonical Webuzo standard build. Installed modules/services
+remain unchanged.
+
+The candidate declares `0.24.18-dev.4` through the existing addon metadata.
+WordPress dev.1412 remains the last identified companion baseline; the matched
+WordPress increment consuming this evidence for Warm is still pending, so no
+version or completed Warm behavior is inferred here. Use the normal installer
+commands below during coordinated installation. No Hestia deployment, tag or
+public release accompanies this candidate; prior ZIP bytes remain unchanged.
+
 ### Development candidate 0.24.18-dev.3
 
 The exact shared correction from
