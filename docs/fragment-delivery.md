@@ -55,6 +55,25 @@ distinct method to the 47 above. The shared change is VCL-only; C/build inputs
 and native module identity are unchanged. Installed modules/services remain
 untouched.
 
+The subsequent [Webuzo 721c0dcd](https://github.com/orloxgr/varnish-for-webuzo/commit/721c0dcd6ebb35e14bff69e8415e9419b66f0683)
+delta keeps the existing parent-delivery gate separate from valid fragment
+participation. A complete fragment declaration retains the same metadata and
+authority owner with parent delivery OFF or fragment storage OFF. Partial
+declarations fail before metadata changes. Full teardown omits the fragment
+declaration and retains normal authority revocation.
+
+On this delta, all seven native batch methods plus the Hestia scoped-ingress
+method passed in a fourth disposable run, with zero failures/errors/skips and
+both profiles compiled. The new control scenario proves parent OFF with a
+fragment HIT and unchanged authority revisions/remaining expiry, storage OFF
+with fresh request-local delivery, and complete teardown. It adds one distinct
+method to the prior checks; earlier results retain their original source scope.
+The matching native build signature is
+`ab861ead2317b1187187542f2b39b74b3d4c31b609dee4c4d7cdd2c5e76bfcdb`;
+DSO SHA256 is
+`c1ba6fe1acd2ee9c094da156cbcddd2d62b1b48497c22aa1640c5dea27f9ddea`,
+identical to the canonical Webuzo build. Installed modules/services were unchanged.
+
 Every one of the twenty shared delta files was checked against its base hash
 before application, then against the immutable canonical target. The product
 source comparison also passes. Historical test-fixture comparison is separate:
