@@ -107,6 +107,36 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.2
+
+This candidate adds only the two-file shared correction from
+[Webuzo d0171d0c](https://github.com/orloxgr/varnish-for-webuzo/commit/d0171d0ce917aad4913078b683e19e7650665db8)
+to the qualified development runtime. During a native-owned finalizer return,
+the temporary metadata request deliberately lacks Cookie. The request may reuse
+its original classification only with the existing native phase/site/host/URI/
+restart proof and the same captured original input. Ordinary missing, changed,
+duplicate or forged cookie input is not an authorization to reuse.
+
+The exact synthetic fixture reproduced 503 and `regsub: Out of workspace` against
+the immutable dev.1 source at native default workspace. With the correction,
+fourteen methods passed without skips/failures/errors, and both profiles compiled:
+the same thirteen-placement/1678-byte-Cookie finalizer fixture, three retained/
+forged/changed-cookie workspace methods, all eight fragment batch methods, one
+normal complete-reuse method and the Hestia scoped-ingress method. The fixture
+asserts one classification per original request and distinct-owner reuse. No
+workspace or header limit was raised. Webuzo global-gateway fixtures are specific
+to that adapter and are not presented as Hestia gateway acceptance.
+
+The matching native build signature is
+`648c5d27614dbc45e324cd2e01a5f70f52700580d174b19b8d340d92003e737a`;
+Lab DSO SHA256 is
+`115905c320c8581ad3488b42571b2df6b10d1cd9f5d61a23e7aacbbe51c3dffa`.
+Installed Lab modules/services remain unchanged. The installable ZIP declares
+`0.24.18-dev.2` through the same addon metadata consumed by installer/panel status.
+Use the normal update commands below with matching WordPress development
+candidate 3.13.13-dev.1408. No Hestia live deployment, tag or public release is
+performed; dev.1 archive bytes remain unchanged.
+
 ### Development candidate 0.24.18-dev.1
 
 The installable development ZIP contains the committed Hestia sources and

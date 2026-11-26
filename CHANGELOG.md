@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.18-dev.2 - 2026-11-26 (development candidate)
+
+- Preserve the original cookie classification during an exactly owned cookie-free finalizer return. Reuse requires native phase/site/host/URI/restart proof and matching captured cookie input; ordinary missing, changed, duplicate or forged inputs do not gain reuse.
+- Reproduce the previous 503 and `regsub: Out of workspace` with thirteen private placements at native default workspace, then pass the same fixture with exactly one classification per original request. Fourteen targeted Hestia native methods pass, including changed/forged cookie requests, fragment batches and complete reuse. No workspace, header, nonce, policy or product limit changes.
+- Package a distinct installable development ZIP, preserving dev.1 and existing public releases. No Hestia live installation, tag or GitHub release is performed. See [qualification](docs/fragment-delivery.md).
+
 ## 0.24.18-dev.1 - 2026-11-26 (development candidate)
 
 - Integrate the shared fragment-only continuation from Webuzo `1e18268e`: browser batches and ESI reuse the same individual native objects, canonical fragment URLs, application claims and remaining lifetimes. Private batches require one authenticated WordPress authority operation; native HIT does not imply zero PHP.
