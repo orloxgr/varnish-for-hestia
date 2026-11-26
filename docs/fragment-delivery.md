@@ -107,6 +107,29 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.3
+
+The exact shared correction from
+[Webuzo 5fb52940](https://github.com/orloxgr/varnish-for-webuzo/commit/5fb529406d1d90e99653f11730fe050febc5d87d)
+keeps canonical fragment Ajax outside full-document public selection. Ordinary
+site ingress, route/cookie policy, origin signed-descriptor/scope validation and
+HTTP cache decisions remain in force. No C, ABI, namespace, key, TTL, policy or
+limit change is involved; the native signature/DSO remain those of dev.2.
+
+A focused Hestia fixture reproduced PASS/PASS on immutable dev.2 and passed
+MISS/HIT after the correction. It also verifies no document prepare, exact purge
+without retiring a sibling or parent, and repeated origin403 for invalid/private
+requests. That method, hot-public caching-OFF and Hestia scoped ingress passed
+in one disposable run: three methods, zero skips/errors/failures, both profiles
+compiled. The Webuzo-specific global-gateway assertion is not claimed as a
+Hestia gateway check. Installed modules/services were unchanged.
+
+The installable candidate declares `0.24.18-dev.3` through the same addon metadata
+used by installer/panel status. Its coordinated WordPress companion is
+3.13.13-dev.1412, source `68569de6b0493ecbba55cc95ea44b5c00500cc97`.
+Normal Hestia update commands below remain unchanged. No live Hestia deployment,
+tag or public release accompanies this candidate; prior archives are preserved.
+
 ### Development candidate 0.24.18-dev.2
 
 This candidate adds only the two-file shared correction from

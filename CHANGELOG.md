@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.18-dev.3 - 2026-11-26 (development candidate)
+
+- Route canonical public fragment Ajax outside full-document selection after ordinary ingress, route and cookie checks. Origin descriptor/scope validation and ordinary HTTP freshness remain required; no cache admission is inferred from the query.
+- Reproduce registered top-level public fragment PASS/PASS on dev.2, then verify MISS/HIT, exact fragment purge with sibling/document HIT retained, origin403 for invalid/private requests, hot-public caching OFF and Hestia scoped ingress. Three targeted native methods pass with both profiles compiled; no C/ABI/key/TTL/policy/limit changes.
+- Prepare a distinct development ZIP matched to WordPress dev.1412; earlier candidate archives remain unchanged. No Hestia live installation, tag or GitHub release is performed.
+
 ## 0.24.18-dev.2 - 2026-11-26 (development candidate)
 
 - Preserve the original cookie classification during an exactly owned cookie-free finalizer return. Reuse requires native phase/site/host/URI/restart proof and matching captured cookie input; ordinary missing, changed, duplicate or forged inputs do not gain reuse.
