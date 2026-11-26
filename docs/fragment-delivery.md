@@ -46,6 +46,15 @@ DSO SHA256 was
 Both independent runs produced the same receipts. The installed module directory
 was verified unchanged; no installed service was reloaded.
 
+A follow-up from [Webuzo b0f82259](https://github.com/orloxgr/varnish-for-webuzo/commit/b0f82259f28ec5678d73faa94fef924ed085cea5)
+fixes capability discovery before route registration. An empty route must not be
+treated as an accepted declaration. A third disposable native run passed the new
+initial-discovery-to-registration method and repeated the Hestia scoped-ingress
+method, with no skips or failures and both profiles compiled. This adds one
+distinct method to the 47 above. The shared change is VCL-only; C/build inputs
+and native module identity are unchanged. Installed modules/services remain
+untouched.
+
 Every one of the twenty shared delta files was checked against its base hash
 before application, then against the immutable canonical target. The product
 source comparison also passes. Historical test-fixture comparison is separate:
