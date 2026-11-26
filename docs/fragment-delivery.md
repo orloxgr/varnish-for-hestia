@@ -107,6 +107,47 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.5
+
+The six shared files match
+[Webuzo 25f5c613](https://github.com/orloxgr/varnish-for-webuzo/commit/25f5c613ac5f14ac804b8265ecf0aec196908be7)
+after verifying every base and target hash. Explicit anonymous schema2 identity
+can retain actual product/content dependencies without becoming owner-bound.
+Nonempty cache tags require a nonempty current per-URL content authority closure;
+empty tags still require an empty closure. The full scope, policy, revision,
+generation and writer validation remains required before native fill and final
+release. Personal claims and legacy schema1 are unchanged.
+
+The authenticated registered-route capability reply adds
+`X-UltraCache-VCL-Fragment-Anonymous-Authority: 1`. An unregistered route or full
+teardown omits it. Applications must observe this scoped capability before
+emitting anonymous content-tagged claims; older native versions omit the field.
+No transport version, native ABI field, cookie policy, object key/store or TTL
+change accompanies the refinement. Basic still has no ESI or application dependency.
+
+A disposable Hestia native run passed **37 methods with zero failures, errors or
+skips**, and both profiles compiled: four focused native batch methods, one
+Hestia scoped-ingress method, eleven portable batch-codec methods, fifteen legacy
+envelope methods and six build/source-identity checks. The content-tag scenario
+fills and reuses an anonymous body, begins a real native authority mutation while
+that body remains a storage HIT, refuses browser release with state-conflict,
+then commits and publishes a fresh generation before refill/HIT. Capability
+registration, storage OFF, read-only scope and full teardown also pass.
+
+Normal native build signature:
+`996a9475cf85d85ea8497d9dd59afc91f0e3c666e5529e7540099a7e9c3b965c`;
+Lab DSO SHA256:
+`1d6c479339e08b4b5b82d7fb44c1384fa5f502ab05a08173bd5f017a13b727d9`.
+Both match the canonical Webuzo normal build. The installed Lab module directory
+was hash-verified unchanged; no installed service was reloaded.
+
+This is native trusted-mock-producer evidence. Actual WordPress product database
+editing, the corresponding application content-tag normalization and paired
+browser acceptance remain separate, with the matching WordPress development
+identity pending. Earlier dev.4 WordPress receipts retain their exact versions
+and scopes. The dev.5 archive is distinct; prior ZIPs remain unchanged. No Hestia
+live installation, manual Refresh, tag or public release was performed.
+
 ### Development candidate 0.24.18-dev.4
 
 The exact shared delta from

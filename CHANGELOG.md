@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.18-dev.5 - 2026-11-26 (development candidate)
+
+- Keep explicitly anonymous fragment identity separate from product/content dependencies. Tagged anonymous schema2 claims require their actual current per-URL content authority closure, including revision/generation and writer validation before fill and release; stateless claims still require empty tags and empty authority. Personal and legacy schema1 claims are unchanged.
+- Advertise `X-UltraCache-VCL-Fragment-Anonymous-Authority: 1` only through authenticated capabilities for a registered fragment route. Older native versions omit it; applications must observe the scoped capability before using tagged anonymous claims. No native ABI, cookie policy, object key/store or TTL change.
+- Pass 37 focused disposable Lab methods with zero failures/errors/skips: four native batch methods, Hestia scoped ingress, twenty-six portable batch/legacy parser methods and six native build/source-identity checks. Both profiles compile; native product-tag writer retirement and generation/refill checks are mock-producer evidence, not actual WordPress database-edit acceptance.
+- Prepare a distinct development candidate while preserving previous archives. Matching WordPress content-dependency acceptance remains separate; no Hestia live deployment, tag or release is performed.
+
 ## 0.24.18-dev.4 - 2026-11-26 (development candidate)
 
 - Add read-only `cacheScope` to successful browser fragment results after normal native object dispatch and final authority validation: anonymous/private for retained objects, none for request-local output. Errors/retired results do not receive it; producer inputs, permissions, keys, TTLs and cookie policy are unchanged.
