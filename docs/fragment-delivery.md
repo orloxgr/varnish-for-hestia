@@ -107,6 +107,22 @@ downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
 
+### Development candidate 0.24.18-dev.1
+
+The installable development ZIP contains the committed Hestia sources and
+declares `0.24.18-dev.1` in `addon.json`, which is also the installer/panel version
+source. It is distinct from the existing 0.24.17 release. No GitHub release/tag
+or live Hestia installation accompanies this candidate. Shared native/VCL inputs
+remain identical to the qualified Webuzo `6dc41a6c` implementation above.
+
+For an existing Git source installation, use the normal pull/installer commands
+below. The installer reconciles the enabled site routes and generated policy;
+Hestia needs no Webuzo-style Refresh or separate domain rebuild. Capability
+discovery occurs through the matching WordPress integration's normal detection.
+Use the coordinated WordPress development candidate for the new fragment mode;
+this document does not designate an older WordPress version as compatible with
+the new controls.
+
 These native tests use trusted mock HTTP application producers. They do not prove
 actual WordPress session/provider ownership, standalone SQL storage, browser
 initialization, consent or component behavior. Those checks belong to the matching

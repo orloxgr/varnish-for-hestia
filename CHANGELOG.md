@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.18-dev.1 - 2026-11-26 (development candidate)
 
 - Integrate the shared fragment-only continuation from Webuzo `1e18268e`: browser batches and ESI reuse the same individual native objects, canonical fragment URLs, application claims and remaining lifetimes. Private batches require one authenticated WordPress authority operation; native HIT does not imply zero PHP.
 - Negotiate the independent fragment caching flag through authenticated installation capabilities. OFF bypasses retained fragment reads/fills and fragment reuse while preserving ordinary parent HTML caching and cookie policies.
@@ -8,9 +8,7 @@
 - Keep fragment participation independent of parent delivery: parent OFF bypasses retained HTML while a complete fragment declaration retains the same authority and fragment objects. Storage OFF remains request-local delivery; full teardown omits fragment participation and revokes authority. Echo the accepted parent-delivery state without changing cookie policy or object keys.
 - Allow an explicitly authenticated stateless anonymous schema2 claim to reuse its native object with an empty per-item dependency list, while requiring the complete current namespace tuple. Personal claims still require their dependency closure; legacy parent parsers reject the new field. This adds no cookie inference or key/store/lifetime change.
 - Add strict batch framing, schema2 result/authority validation, current-generation checks and sanitized browser JSON without exposing infrastructure credentials or private cache claims. Keep the legacy schema1 parser and Basic behavior.
-- Qualify the actual Hestia renderer with 47 disposable Lab methods and six local source/render checks. Matching WordPress producer, frontend and standalone acceptance remain coordinated work; no release or live Hestia deployment is claimed. See [qualification](docs/fragment-delivery.md).
-
-## Unreleased
+- Qualify the current Hestia native source with 59 disposable Lab methods and zero skips; earlier profile/private-TTL and local source-render receipts retain their documented scope. Package a distinct installable development ZIP without a GitHub release or tag. Matching WordPress/Hestia application acceptance and production deployment remain separate. See [qualification](docs/fragment-delivery.md).
 
 ## 0.24.17 - 2026-11-26
 
