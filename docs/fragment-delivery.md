@@ -74,6 +74,30 @@ DSO SHA256 is
 `c1ba6fe1acd2ee9c094da156cbcddd2d62b1b48497c22aa1640c5dea27f9ddea`,
 identical to the canonical Webuzo build. Installed modules/services were unchanged.
 
+The prerelease stateless extension from
+[Webuzo 6dc41a6c](https://github.com/orloxgr/varnish-for-webuzo/commit/6dc41a6c52d931c2fdd447d3c8fb7c838f3f9d23)
+permits only an explicit authenticated schema2 `cache.identityState: "anonymous"`
+claim with empty cache tags and exact per-URL empty authority. The complete
+current scope/epoch/incarnation/revision/policy tuple remains required.
+Missing identity state does not imply anonymous; personal claims still require
+their complete nonempty dependency list. The legacy parent/envelope/reuse
+metadata parsers reject the new field. No object key, store, lifetime or cookie
+policy changes accompany this extension.
+
+On that exact source, a fifth disposable Hestia run passed **59 methods** with
+zero failures/errors/skips and both profiles compiled: eight native batch plus
+one Hestia ingress method, ten portable batch-codec, fifteen legacy envelope,
+twenty public-selection parser and five build-receipt methods. The focused native
+test proves stateless first-MISS-to-HIT reuse without another render and rejection
+of a hot claim after actual reuse-policy namespace revocation. These are mock
+producer checks, not evidence of the real WooCommerce stateless claim lifecycle.
+Native build signature:
+`b93c7db7b4e2a5a8094c3fa8f541dc4129f9dd3fefb7dc83ce3eaa99d3af71d2`;
+DSO SHA256:
+`a7146f614a213490561bd822689f42cc8c3489dba8f525ef04dc6798d4642b89`.
+Both match the canonical Webuzo normal build. Installed modules/services were
+unchanged; no live deployment or release was performed.
+
 Every one of the twenty shared delta files was checked against its base hash
 before application, then against the immutable canonical target. The product
 source comparison also passes. Historical test-fixture comparison is separate:
