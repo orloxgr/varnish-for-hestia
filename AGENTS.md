@@ -2,6 +2,9 @@
 
 - Work directly on `main`. Do not create branches or worktrees unless the human
   explicitly changes this instruction. `main` is the authoritative implementation.
+- Do not bypass the main-only rule with detached-HEAD development checkouts.
+  Isolated builds and tests use disposable source exports, not additional Git
+  worktrees or alternate development checkouts.
 - Use normal numbered product releases. Do not introduce `.dev` versions or
   prereleases unless the human explicitly changes this preference. Qualification
   work stays on `main` until it is ready for the next normal release.
