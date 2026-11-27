@@ -2,6 +2,12 @@
 
 - Work directly on `main`. Do not create branches or worktrees unless the human
   explicitly changes this instruction. `main` is the authoritative implementation.
+- Use normal numbered product releases. Do not introduce `.dev` versions or
+  prereleases unless the human explicitly changes this preference. Qualification
+  work stays on `main` until it is ready for the next normal release.
+- Preserve already published tags and release assets. A normal successor receives
+  a new version and tag; do not rename, replace or rewrite an earlier prerelease
+  to make it appear to have been a normal release.
 - Inspect status, remote updates and the diff before editing or pushing. Preserve
   existing work. Never reset, replace or merge an older checkpoint over newer code.
 - Before retiring old worktrees or refs, save a verified private Git bundle and
