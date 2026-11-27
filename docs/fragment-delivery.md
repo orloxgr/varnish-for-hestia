@@ -1,7 +1,8 @@
 # Fragment-only transport: Hestia integration qualification
 
-This development change integrates the common implementation from
-[Webuzo 1e18268e](https://github.com/orloxgr/varnish-for-webuzo/commit/1e18268e5c521c6283a51c95571332f83558d992).
+The current implementation integrates the common runtime from
+[Webuzo e944d8ef](https://github.com/orloxgr/varnish-for-webuzo/commit/e944d8ef0a68159f58432daf908e5cbc11832be3).
+Earlier qualification receipts below retain their original source and scope.
 The exact request, producer and browser contracts are in
 [the shared protocol](../shared/FRAGMENT-DELIVERY.md).
 
@@ -106,6 +107,72 @@ that those historical fixture files are identical. The retired recognition
 downloader is not part of the common runtime comparison.
 
 ## Remaining acceptance and upgrade boundary
+
+### 0.24.18: selected batches and native private reuse
+
+The coordinated implementation follows the immutable shared source in
+[Webuzo e944d8ef](https://github.com/orloxgr/varnish-for-webuzo/commit/e944d8ef0a68159f58432daf908e5cbc11832be3),
+including its preceding selected-batch codec. The authenticated capability
+contract advertises `indices-v1` selection and `native-v1` reuse separately.
+A selector can choose only existing signed rows, in canonical increasing order;
+invalid or empty selectors cannot fall back to executing the complete batch.
+An absent selector retains the legacy complete-batch contract.
+
+A successful application preparation can supply descriptor-level reuse facts
+through the existing signed backend execution context. The native engine records
+acceptance of the exact complete ticket and reuses the existing individual body
+objects. It validates actual identity and full render inputs separately, current
+authority and writer state, namespace policies, and original remaining deadlines
+before releasing a private HIT. It neither creates another body cache nor adds
+batch selection or browser scheduling to individual object keys. Unknown tickets,
+changed inputs, missing bodies, expiry and retired authority take the existing
+preparation path. Fragment storage OFF and teardown also refuse old admission;
+parent HTML caching remains independent.
+
+Two disposable Hestia runs passed **84 test executions with zero failures,
+errors or skips**, compiling both generated profiles. The focused set covers
+strict selection, Hestia scoped ingress, bidirectional public ESI/Ajax object
+reuse, private owner/input isolation, overlapping batches, unknown or tampered
+tickets, missing-body refill, deadlines, writers, storage OFF and teardown.
+The regression set covers existing reuse-cookie inputs, wire parsing, build
+receipts and parent reuse. These native scenarios use trusted test producers.
+Installed modules and system services were unchanged.
+
+The normal native build signature is
+`b06fa327ead5bfdd8e09b70c2bb0d291a0847e3f8e0ddd227c6ac700c097dbfb`;
+Lab DSO SHA256 is
+`c2e241f8f89a5fe4b2c040436b611eb6132566fd1d0deaab23f3f32c328bf002`.
+Both match the canonical shared build. Dependency versions may change valid
+local build receipts.
+
+An independent actual WordPress test paired that native source with the normal
+**UltraCache 3.13.13-dev.1431 ZIP**, through Hestia-generated VCL and disposable
+Apache/PHP-FPM. All 503 product files remained byte-exact to that ZIP. Excluded
+test providers registered ordinary private fragments with TTL 120 and consumed
+real WordPress session claims plus an explicitly declared render-only cookie.
+No product source or native admission facts were overlaid.
+
+Twelve actual HTTP requests covered two real users, selected and overlapping
+complete batches, a render-input change and return, and real WordPress session
+revocation. Five complete private native HITs produced **zero additional origin
+calls, preparation envelopes or renderer executions**. Seven real preparations
+handled the other requests. Each new owner initially produced request-local
+output before a subsequent private admission; those requests are recorded as
+MISS, not counted as helper-free HITs. After session revocation the next request
+again prepared and returned no previously cached private-owner HTML. The fresh
+PHP-FPM log contained no fatal errors. Settings and original test fixtures were
+restored exactly, both temporary users were removed, and owned ports closed.
+
+A separate actual WordPress selection check used three uncached test providers:
+each requested index executed only that provider, and a duplicate selector was
+rejected before another renderer execution. This is selection evidence, not a
+positive-lifetime cache claim. The private test above supplies the latter.
+
+These receipts qualify the native transport and real WordPress session-provider
+integration. They do not replace the WordPress owner's separate browser tests
+for activation timing, discovered-part defaults and application-specific widgets.
+Basic still has no ESI or WordPress dependency. No live Hestia deployment was
+performed.
 
 ### Development candidate 0.24.18-dev.6
 
@@ -317,8 +384,9 @@ actual WordPress session/provider ownership, standalone SQL storage, browser
 initialization, consent or component behavior. Those checks belong to the matching
 WordPress implementation and coordinated acceptance in
 [UltraCache issue 1084](https://github.com/orloxgr/ultracache-dev/issues/1084).
-No live Hestia installation, new addon release or installation-ready companion
-version is claimed by this document.
+Those earlier development checkpoints do not claim the later application
+acceptance. The 0.24.18 section above records the matched WordPress dev.1431
+integration; no live Hestia installation was performed.
 
 When coordinated releases are qualified, an existing Hestia source installation
 uses the normal upgrade:

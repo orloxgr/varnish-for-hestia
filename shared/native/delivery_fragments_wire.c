@@ -39,24 +39,94 @@ void delivery_fragment_results_free(struct delivery_fragment_results *r) {
         }
         free(r->authority->scope); free(r->authority);
     }
-    free(r);
+    delivery_fragment_admission_free(r->admission); free(r);
 }
 
-char *delivery_fragment_batch_token(const char *uri) {
-    static const char prefix[] = "ultracache_fragment_delivery=";
-    const char *p;
+void delivery_fragment_admission_free(struct delivery_fragment_admission *value) {
+    if (!value) return;
+    delivery_reuse_admitted_free(value->fragments); free(value);
+}
+int delivery_fragment_metadata_key(const struct delivery_reuse_context *context,
+    const char *incarnation, const char *revision, const char *descriptor,
+    const char *binding, char key[65]) {
+    struct reuse_frame frame = {NULL,0,0};
+    const char *fields[] = {"ultracache-fragment-admission-v1", context ? context->site_id : NULL,
+        context ? context->canonical_host : NULL, context ? context->scope : NULL,
+        context ? context->epoch : NULL, incarnation, revision,
+        context ? context->native_policy : NULL, context ? context->wordpress_policy : NULL,
+        context ? context->reuse_policy : NULL, descriptor, binding};
+    size_t i;
+    int valid = 0;
+    if (!context || !key) return 0;
+    for (i = 0; i < sizeof(fields)/sizeof(fields[0]); ++i)
+        if (!fields[i] || !reuse_lp(&frame,fields[i],strlen(fields[i]))) goto done;
+    valid = delivery_selection_digest(frame.bytes,frame.length,key);
+done:
+    delivery_reuse_frame_free(frame.bytes,frame.length); return valid;
+}
+int delivery_fragment_admission_parse(const char *body, size_t length,
+    struct delivery_fragment_admission **out) {
+    struct reader r;
+    struct delivery_reuse_record rows = {0};
+    struct delivery_fragment_admission *value = NULL;
+    struct delivery_reuse_admitted_fragment *f, *other;
+    unsigned seen = 0;
+    int valid = 0;
+    if (!out) return 0;
+    *out = NULL;
+    if (!body || !length || length == SIZE_MAX || !(r.buffer = malloc(length+1))) return 0;
+    memcpy(r.buffer,body,length); r.buffer[length] = 0; r.length = length; r.offset = 0;
+    value = calloc(1,sizeof(*value));
+    if (!value || !take(&r,'{')) goto done;
+    for (;;) {
+        struct text key;
+        unsigned bit;
+        uint64_t version;
+        if (!string(&r,&key) || !take(&r,':')) goto done;
+        if (equal(key,"version")) bit = 1;
+        else if (equal(key,"cookieValidUntil")) bit = 2;
+        else if (equal(key,"fragments")) bit = 4;
+        else goto done;
+        if (seen & bit) goto done;
+        seen |= bit;
+        if (bit == 1) { if (!number(&r,&version) || version != 1) goto done; }
+        else if (bit == 2) { if (!number(&r,&value->cookie_valid_until) || !value->cookie_valid_until) goto done; }
+        else if (!reuse_metadata_fragments(&r,body,&rows)) goto done;
+        if (take(&r,'}')) break;
+        if (!take(&r,',')) goto done;
+    }
+    whitespace(&r);
+    if (seen != 7 || r.offset != length || !rows.fragments) goto done;
+    for (f = rows.fragments; f; f = f->next) {
+        const struct delivery_reuse_authority *a;
+        size_t count = 0, i;
+        if (!f->inputs || !*f->input_binding) goto done;
+        for (other = f->next; other; other = other->next)
+            if (!strcmp(other->url,f->url) || !strcmp(other->descriptor,f->descriptor)) goto done;
+        for (a = f->authority; a; a = a->next) {
+            ++count;
+            for (i = 0; i < f->identity_tag_count; ++i) if (!strcmp(f->identity_tags[i],a->tag)) break;
+            if (i == f->identity_tag_count) goto done;
+        }
+        if (count != f->identity_tag_count) goto done;
+    }
+    value->fragments = rows.fragments; rows.fragments = NULL;
+    *out = value; value = NULL; valid = 1;
+done:
+    delivery_reuse_admitted_free(rows.fragments); delivery_fragment_admission_free(value); free(r.buffer); return valid;
+}
+
+static char *fragment_query_value(const char *p, size_t length) {
+    const char *end = p+length;
     char *out, *cursor;
-    if (!delivery_relative(uri) || !(p = strchr(uri,'?')) ||
-        strncmp(++p,prefix,sizeof(prefix)-1)) return NULL;
-    p += sizeof(prefix)-1;
-    if (!*p || strchr(p,'&')) return NULL;
-    cursor = out = malloc(strlen(p)+1);
+    if (!length || length == SIZE_MAX) return NULL;
+    cursor = out = malloc(length+1);
     if (!out) return NULL;
-    while (*p) {
+    while (p < end) {
         unsigned char c = (unsigned char)*p++;
         if (c == '%') {
             int high, low;
-            if (!p[0] || !p[1] || (high = hex_digit((unsigned char)p[0])) < 0 ||
+            if (end-p < 2 || (high = hex_digit((unsigned char)p[0])) < 0 ||
                 (low = hex_digit((unsigned char)p[1])) < 0) goto invalid;
             c = (unsigned char)((high<<4)|low); p += 2;
         }
@@ -67,6 +137,119 @@ char *delivery_fragment_batch_token(const char *uri) {
     return out;
 invalid:
     free(out); return NULL;
+}
+
+int delivery_fragment_batch_operation(const char *uri) {
+    const char *p = uri ? strchr(uri,'?') : NULL;
+    if (!p) return 0;
+    for (++p; *p;) {
+        const char *end = strchr(p,'&'), *equal_at;
+        size_t name;
+        if (!end) end = p+strlen(p);
+        equal_at = memchr(p,'=',(size_t)(end-p));
+        name = (size_t)((equal_at ? equal_at : end)-p);
+        if ((name == sizeof("ultracache_fragment_delivery")-1 &&
+            !memcmp(p,"ultracache_fragment_delivery",name)) ||
+            (name == sizeof("ultracache_fragment_subset")-1 &&
+            !memcmp(p,"ultracache_fragment_subset",name))) return 1;
+        if (!*end) break;
+        p = end+1;
+    }
+    return 0;
+}
+
+int delivery_fragment_batch_request(const char *uri, char **token, char **subset) {
+    const char *p;
+    unsigned seen = 0;
+    if (!token || !subset) return 0;
+    *token = *subset = NULL;
+    if (!uri || !delivery_relative(uri) || !(p = strchr(uri,'?')) || !*++p) return 0;
+    for (;;) {
+        const char *end = strchr(p,'&'), *equal_at;
+        size_t name;
+        unsigned bit;
+        char *value;
+        if (!end) end = p+strlen(p);
+        equal_at = memchr(p,'=',(size_t)(end-p));
+        if (!equal_at) goto invalid;
+        name = (size_t)(equal_at-p);
+        if (name == sizeof("ultracache_fragment_delivery")-1 &&
+            !memcmp(p,"ultracache_fragment_delivery",name)) bit = 1;
+        else if (name == sizeof("ultracache_fragment_subset")-1 &&
+            !memcmp(p,"ultracache_fragment_subset",name)) bit = 2;
+        else goto invalid;
+        if (seen & bit) goto invalid;
+        value = fragment_query_value(equal_at+1,(size_t)(end-equal_at-1));
+        if (!value) goto invalid;
+        if (bit == 1) *token = value; else *subset = value;
+        seen |= bit;
+        if (!*end) break;
+        p = end+1;
+        if (!*p) goto invalid;
+    }
+    if (seen & 1) return 1;
+invalid:
+    free(*token); free(*subset); *token = *subset = NULL;
+    return 0;
+}
+
+char *delivery_fragment_batch_token(const char *uri) {
+    char *token = NULL, *subset = NULL;
+    if (!delivery_fragment_batch_request(uri,&token,&subset)) return NULL;
+    /* Legacy callers must not accidentally execute an explicit full batch. */
+    if (subset) { free(token); token = NULL; }
+    free(subset); return token;
+}
+
+int delivery_fragment_batch_select(struct delivery_fragment_batch *b,
+    const char *token, const char *subset) {
+    static const char purpose[] = "ultracache-fragment-delivery-subset-v1\n";
+    struct delivery_fragment_request *item, **link;
+    unsigned char *selected = NULL;
+    const char *p = subset;
+    size_t count = 0, previous = 0, chosen = 0, index, i, token_length, subset_length, length;
+    char *frame = NULL, digest[65];
+    int valid = 0;
+    if (!b || !token) return 0;
+    if (!subset) return 1;
+    if (!*subset) return 0;
+    for (item = b->requested; item; item = item->next) {
+        if (count == SIZE_MAX) return 0;
+        ++count;
+    }
+    if (!count || !(selected = calloc(count,1))) return 0;
+    for (;;) {
+        index = 0;
+        if (*p < '0' || *p > '9' || (*p == '0' && p[1] >= '0' && p[1] <= '9')) goto done;
+        while (*p >= '0' && *p <= '9') {
+            unsigned digit = (unsigned)(*p++-'0');
+            if (index > (SIZE_MAX-digit)/10) goto done;
+            index = index*10+digit;
+        }
+        if (index >= count || (chosen && index <= previous)) goto done;
+        selected[index] = 1; previous = index; ++chosen;
+        if (!*p) break;
+        if (*p++ != ',' || !*p) goto done;
+    }
+    token_length = strlen(token); subset_length = strlen(subset);
+    if (token_length > SIZE_MAX-sizeof(purpose) ||
+        subset_length > SIZE_MAX-sizeof(purpose)-token_length) goto done;
+    length = sizeof(purpose)-1+token_length+1+subset_length;
+    frame = malloc(length);
+    if (!frame) goto done;
+    memcpy(frame,purpose,sizeof(purpose)-1);
+    memcpy(frame+sizeof(purpose)-1,token,token_length);
+    frame[sizeof(purpose)-1+token_length] = '\n';
+    memcpy(frame+sizeof(purpose)+token_length,subset,subset_length);
+    if (!delivery_selection_digest((const unsigned char *)frame,length,digest)) goto done;
+    link = &b->requested; b->occurrences = 0; i = 0;
+    while ((item = *link) != NULL) {
+        if (!selected[i++]) { *link = item->next; free(item->url); free(item); }
+        else { b->occurrences += item->occurrences; link = &item->next; }
+    }
+    memcpy(b->digest,digest,sizeof(digest)); valid = 1;
+done:
+    free(frame); free(selected); return valid;
 }
 
 static int fragment_batch_context(struct reader *r, struct delivery_fragment_batch *b) {
@@ -454,6 +637,7 @@ int delivery_fragment_envelope_parse_v1(const char *body, size_t length,
         else if (equal(key,"renderedFragments")) bit = 16;
         else if (equal(key,"failedFragments")) bit = 32;
         else if (equal(key,"authority")) bit = 64;
+        else if (equal(key,"reuseAdmission")) bit = 128;
         else goto done;
         if (seen & bit) goto done;
         seen |= bit;
@@ -465,12 +649,19 @@ int delivery_fragment_envelope_parse_v1(const char *body, size_t length,
             uint64_t total;
             if (!selection_fragments_mode(&r,&result->rendered,&total,1)) goto done;
         } else if (bit == 32) { if (!fragment_batch_failures(&r,result)) goto done; }
-        else if (!fragment_batch_authority(&r,result)) goto done;
+        else if (bit == 64) { if (!fragment_batch_authority(&r,result)) goto done; }
+        else {
+            size_t start;
+            whitespace(&r); start = r.offset;
+            if (!reuse_skip_value(&r)) goto done;
+            /* Optional admission can decline without losing completed results. */
+            (void)delivery_fragment_admission_parse(body+start,r.offset-start,&result->admission);
+        }
         if (take(&r,'}')) break;
         if (!take(&r,',')) goto done;
     }
     whitespace(&r);
-    if ((seen & ~64U) != 63 || r.offset != r.length || !fragment_results_complete(batch,result)) goto done;
+    if ((seen & ~192U) != 63 || r.offset != r.length || !fragment_results_complete(batch,result)) goto done;
     *out = result; result = NULL; ok = 1;
 done:
     delivery_fragment_results_free(result); free(r.buffer); return ok;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.18 - 2026-11-27
+
+- Execute only selected rows from an existing signed fragment batch through the authenticated `indices-v1` capability. Reject invalid selectors before application execution; preserve legacy full batches and the same individual ESI/Ajax object identity.
+- Reuse valid private fragment admissions natively through the existing application identity, render inputs, authority and remaining deadlines. Complete private HITs require no PHP preparation or external helper. Unknown tickets, changed inputs, expiry, missing bodies, pending writers, storage OFF and revoked authority use the existing preparation path.
+- Mirror the canonical Webuzo `e944d8ef` runtime and qualify 84 native/regression test executions with both Hestia profiles compiled. Pair the normal WordPress UltraCache dev.1431 ZIP with two real sessions: five complete private HITs make no additional origin/prepare/renderer calls; actual session revocation refuses the old private body. Basic remains independent of WordPress and has no ESI. See [qualification and upgrade instructions](docs/fragment-delivery.md).
+- Preserve previous development archives. No live Hestia deployment is part of this release preparation.
+
 ## 0.24.18-dev.6 - 2026-11-27 (development candidate)
 
 - Negotiate authenticated `deflate-v1` self-contained fragment batch tickets through the existing registered capability contract. Verify the native MAC before output allocation/inflation; preserve legacy tickets, application signatures, individual fragment keys, owner/content authority and lifetimes.
